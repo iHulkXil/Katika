@@ -1,0 +1,607 @@
+KATIKA.BET — SPRINT 1
+STABLE MVP FOUNDATION
+
+You are building the foundation of Katika.Bet.
+
+Katika.Bet will eventually become a Web3 gaming platform. For now, we are building a $0 MVP and will add functionality incrementally in separate sprints.
+
+IMPORTANT:
+
+This is Sprint 1 ONLY.
+
+Your priority is STABILITY and SIMPLICITY.
+
+Do not attempt to build the entire product.
+
+Do not build casino games.
+
+Do not build betting.
+
+Do not build wagering.
+
+Do not build real-money functionality.
+
+Do not build demo credits.
+
+Do not build the wallet system yet.
+
+Do not build AI.
+
+Do not use Supabase.
+
+Do not require a paid Replit upgrade.
+
+Do not create unnecessary microservices.
+
+Do not create a complex monorepo.
+
+Do not migrate the project to Next.js if Replit provides a React + Vite starter.
+
+==================================================
+1. INSPECT THE STARTER FIRST
+==================================================
+
+Before making changes, inspect the existing Replit starter.
+
+Use the framework that Replit provides.
+
+If the starter is:
+
+React + Vite + TypeScript
+
+keep it.
+
+Do NOT migrate to Next.js.
+
+Do NOT replace the working starter with a different framework.
+
+Keep the project as a single application.
+
+==================================================
+2. TECHNOLOGY
+==================================================
+
+Use the existing supported stack.
+
+Preferred:
+
+React
+Vite
+TypeScript
+Tailwind CSS
+
+Use the database available through the free Replit environment when database functionality is required.
+
+Do NOT connect the Replit-managed Supabase integration.
+
+Do NOT ask me to upgrade Replit.
+
+==================================================
+3. APPLICATION FOUNDATION
+==================================================
+
+Create a clean mobile-first application shell for Katika.Bet.
+
+Create these routes/pages:
+
+/
+
+Landing page
+
+/dashboard
+
+Dashboard placeholder
+
+/games
+
+Game lobby placeholder
+
+/wallet
+
+Wallet placeholder
+
+/rewards
+
+Rewards placeholder
+
+/leaderboard
+
+Leaderboard placeholder
+
+/profile
+
+Profile placeholder
+
+Create a 404/not-found experience.
+
+The pages do not need full functionality yet.
+
+They only need to establish the navigation and application structure.
+
+==================================================
+4. NAVIGATION
+==================================================
+
+Create a responsive navigation system.
+
+Mobile-first.
+
+Use bottom navigation on mobile where appropriate.
+
+Suggested navigation:
+
+Home
+Games
+Wallet
+Rewards
+Profile
+
+Leaderboard can be accessible from Home/Profile/Rewards.
+
+Desktop can use a sidebar or top navigation.
+
+Keep the implementation simple.
+
+==================================================
+5. BRANDING
+==================================================
+
+Use the brand:
+
+Katika.Bet
+
+Create a clean premium dark gaming interface.
+
+Initial design direction:
+
+Background:
+very dark charcoal/black
+
+Cards:
+slightly lighter dark surfaces
+
+Primary accent:
+emerald/green
+
+Secondary accent:
+gold
+
+Text:
+white/light gray
+
+Do not spend excessive time perfecting the design.
+
+We will refine UI/UX after the MVP functionality exists.
+
+Use clean typography and generous spacing.
+
+The product should feel:
+
+Premium
+Trustworthy
+Modern
+Fast
+
+Avoid excessive neon effects and animations.
+
+==================================================
+6. LANDING PAGE
+==================================================
+
+Create a simple but polished landing page.
+
+Include:
+
+Katika.Bet branding
+
+Headline explaining the platform.
+
+Short description.
+
+Primary CTA:
+
+Play Demo
+
+Secondary CTA:
+
+Connect Wallet
+
+For now, these buttons may navigate to the appropriate placeholder pages.
+
+Include a simple featured games section showing:
+
+Dice
+Coin Flip
+Mines
+Roulette
+
+These are visual placeholders only.
+
+Do NOT implement the games.
+
+Include a short trust section explaining:
+
+- Web3 wallet-based access
+- Fair gameplay
+- Demo mode during development
+
+Do not make legal claims such as "licensed" or "regulated."
+
+Include a simple footer.
+
+==================================================
+7. DASHBOARD
+==================================================
+
+Create a dashboard placeholder.
+
+Display:
+
+Welcome to Katika.Bet
+
+Demo Balance:
+Coming Soon
+
+Games:
+Dice
+Coin Flip
+Mines
+Roulette
+
+Leaderboard:
+Coming Soon
+
+Rewards:
+Coming Soon
+
+This is only a visual foundation.
+
+Do not create fake balances.
+
+Do not create fake transactions.
+
+==================================================
+8. GAME LOBBY
+==================================================
+
+Create a Games page showing cards for:
+
+Dice
+Coin Flip
+Mines
+Roulette
+
+Each card should show:
+
+Game name
+Short description
+Coming Soon status
+
+Do not implement game mechanics.
+
+Clicking a game can lead to a simple placeholder page or display "Coming Soon."
+
+==================================================
+9. PLACEHOLDER PAGES
+==================================================
+
+Create clean placeholder pages for:
+
+Wallet
+Rewards
+Leaderboard
+Profile
+
+Each page should clearly indicate that the functionality will be added in future development sprints.
+
+Do not create fake data that could later be mistaken for real account data.
+
+==================================================
+10. COMPONENTS
+==================================================
+
+Create reusable UI components where useful.
+
+Examples:
+
+Button
+Card
+PageHeader
+GameCard
+Navigation
+Logo/Brand
+
+Do not create dozens of abstractions.
+
+Only abstract components that are actually reused.
+
+==================================================
+11. DATABASE — MINIMUM FOUNDATION
+==================================================
+
+Do NOT build a large database system in this sprint.
+
+Create only the minimum database foundation necessary for future development.
+
+If the free Replit PostgreSQL database is available and straightforward to configure, create a basic users table/schema placeholder.
+
+The eventual application will need:
+
+users
+profiles
+wallets
+transactions
+games
+game_sessions
+game_seeds
+rewards
+missions
+referrals
+leaderboards
+admin_users
+audit_logs
+
+DO NOT implement all of these tables now.
+
+Document the planned schema in:
+
+docs/database.md
+
+The purpose is to record the future design without making Sprint 1 unnecessarily complex.
+
+==================================================
+12. AUTHENTICATION
+==================================================
+
+Do NOT implement full Privy authentication in Sprint 1.
+
+Only prepare the application so Privy can be added cleanly in Sprint 2.
+
+If the starter already contains Privy configuration, do not break it.
+
+Do not request or require:
+
+PRIVY_APP_SECRET
+
+during Sprint 1.
+
+Do not create fake authentication.
+
+The Connect Wallet button can remain a placeholder until Sprint 2.
+
+==================================================
+13. CODE QUALITY
+==================================================
+
+Use:
+
+TypeScript
+
+Reusable React components
+
+Clear naming
+
+Simple folder structure
+
+No unnecessary dependencies.
+
+Do not rewrite working files unless necessary.
+
+Do not introduce complex architecture.
+
+Do not create unused services.
+
+Do not create unused APIs.
+
+Do not create unused database repositories.
+
+==================================================
+14. FOLDER STRUCTURE
+==================================================
+
+Use a simple structure similar to:
+
+src/
+  components/
+  pages/
+  layouts/
+  lib/
+  types/
+  assets/
+
+docs/
+
+Adapt this to the existing Vite starter rather than forcing an exact structure.
+
+==================================================
+15. RESPONSIVENESS
+==================================================
+
+The product is mobile-first.
+
+Test the layout at approximately:
+
+360px
+390px
+430px
+
+Also ensure it works on desktop.
+
+Avoid:
+
+horizontal overflow
+tiny buttons
+tiny text
+overcrowded layouts
+
+==================================================
+16. ACCESSIBILITY
+==================================================
+
+Use:
+
+semantic HTML
+
+accessible buttons
+
+visible focus states
+
+reasonable contrast
+
+descriptive labels
+
+==================================================
+17. DOCUMENTATION
+==================================================
+
+Create:
+
+docs/architecture.md
+
+docs/database.md
+
+docs/roadmap.md
+
+Keep them concise.
+
+architecture.md:
+
+Explain the current React/Vite application structure and how future backend/database functionality will fit into it.
+
+database.md:
+
+Document the planned database entities without implementing the entire schema.
+
+roadmap.md:
+
+Document the planned development sequence:
+
+Sprint 1 — Foundation
+Sprint 2 — Privy authentication
+Sprint 3 — Demo wallet and credit ledger
+Sprint 4 — Provably fair engine
+Sprint 5 — Coin Flip
+Sprint 6 — Dice
+Sprint 7 — Mines
+Sprint 8 — Roulette
+Sprint 9 — Rewards and missions
+Sprint 10 — Referrals and leaderboard
+Sprint 11 — Admin dashboard
+Sprint 12 — Beta testing and polish
+
+==================================================
+18. SECURITY
+==================================================
+
+Even though this sprint has no financial functionality:
+
+- Do not hard-code secrets.
+- Do not create fake API keys.
+- Do not expose environment variables unnecessarily.
+- Do not create financial functionality.
+- Do not create wallet transaction functionality.
+
+==================================================
+19. TESTING
+==================================================
+
+Verify:
+
+- Application starts.
+- Application builds.
+- Landing page works.
+- Navigation works.
+- Every planned route loads.
+- Mobile layout works.
+- Desktop layout works.
+- No console-breaking errors.
+- No broken imports.
+- No horizontal overflow.
+
+Fix any errors you introduce.
+
+==================================================
+20. IMPORTANT CREDIT CONTROL
+==================================================
+
+Keep this sprint small.
+
+Do not spend time on:
+
+- advanced animations
+- elaborate design systems
+- backend architecture
+- authentication verification
+- blockchain transactions
+- game engines
+- financial systems
+- advanced testing frameworks
+- deployment optimization
+
+The objective is a stable foundation that can be extended in later prompts.
+
+==================================================
+21. COMPLETION CRITERIA
+==================================================
+
+Sprint 1 is complete when:
+
+✓ React/Vite application runs.
+
+✓ Katika.Bet landing page exists.
+
+✓ Navigation exists.
+
+✓ Dashboard exists.
+
+✓ Games page exists.
+
+✓ Wallet page exists.
+
+✓ Rewards page exists.
+
+✓ Leaderboard page exists.
+
+✓ Profile page exists.
+
+✓ Mobile layout works.
+
+✓ Desktop layout works.
+
+✓ Basic branding is present.
+
+✓ Future database architecture is documented.
+
+✓ Future roadmap is documented.
+
+✓ No casino game logic exists.
+
+✓ No betting exists.
+
+✓ No real-money functionality exists.
+
+✓ No paid Replit service is required.
+
+✓ No Supabase integration is required.
+
+✓ Application builds successfully.
+
+STOP HERE.
+
+Do not begin Sprint 2.
+
+==================================================
+FINAL REPORT
+==================================================
+
+When finished, report only:
+
+1. What was built.
+2. Current framework/stack.
+3. Routes created.
+4. Important files created.
+5. Whether the application builds successfully.
+6. Any errors or warnings.
+7. Recommended next sprint.
+
+Do not automatically continue development.

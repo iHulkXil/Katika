@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --font-sans: var(--app-font-sans);
+  --font-mono: var(--app-font-mono);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+:root {
+  --background: 165 22% 7%;
+  --foreground: 54 24% 92%;
+  --border: 160 12% 20%;
+  --input: 160 12% 22%;
+  --ring: 155 55% 48%;
+  --card: 165 18% 10%;
+  --card-foreground: 54 24% 92%;
+  --primary: 155 55% 48%;
+  --primary-foreground: 165 28% 8%;
+  --secondary: 43 74% 60%;
+  --secondary-foreground: 165 28% 8%;
+  --muted: 162 13% 15%;
+  --muted-foreground: 158 10% 61%;
+  --accent: 163 32% 18%;
+  --accent-foreground: 155 61% 69%;
+  --app-font-sans: 'Space Grotesk', sans-serif;
+  --app-font-mono: 'DM Mono', monospace;
+  --radius: 0.875rem;
+  --shadow-sm: 0 8px 28px hsl(165 46% 3% / .26);
+  --shadow-lg: 0 26px 70px hsl(165 46% 3% / .42);
+}
+
+.dark { 
+  --background: 165 22% 7%;
+  --foreground: 54 24% 92%;
+  --border: 160 12% 20%;
+  --input: 160 12% 22%;
+  --ring: 155 55% 48%;
+  --card: 165 18% 10%;
+  --card-foreground: 54 24% 92%;
+  --primary: 155 55% 48%;
+  --primary-foreground: 165 28% 8%;
+  --secondary: 43 74% 60%;
+  --secondary-foreground: 165 28% 8%;
+  --muted: 162 13% 15%;
+  --muted-foreground: 158 10% 61%;
+  --accent: 163 32% 18%;
+  --accent-foreground: 155 61% 69%;
+}
+
+@layer base {
+  * { @apply border-border; }
+  html { background: hsl(var(--background)); }
+  body { @apply font-sans antialiased bg-background text-foreground; margin: 0; }
+  ::selection { background: hsl(var(--primary) / .32); color: hsl(var(--foreground)); }
+}
+
+@layer utilities {
+  .font-mono-custom { font-family: var(--app-font-mono); }
+  .surface-grid {
+    background-image: linear-gradient(hsl(var(--border) / .28) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / .28) 1px, transparent 1px);
+    background-size: 42px 42px;
+  }
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: .035;
+  z-index: 50;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.6'/%3E%3C/svg%3E");
+}
+
+.reveal { animation: reveal .6s ease-out both; }
+@keyframes reveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }

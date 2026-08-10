@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Katika.Bet"
+description = "A premium dark gaming platform foundation for Katika.Bet, with a mobile-first landing experience, navigation shell, game lobby placeholders, and clearly scoped future-development screens."
+version = "1.0.0"
+id = "artifacts/katika-bet"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24074
+
+[services.development]
+run = "pnpm --filter @workspace/katika-bet run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/katika-bet", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/katika-bet/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24074"
+BASE_PATH = "/"
