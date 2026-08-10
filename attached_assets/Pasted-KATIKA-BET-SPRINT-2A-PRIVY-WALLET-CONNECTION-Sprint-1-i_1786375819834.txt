@@ -1,0 +1,225 @@
+KATIKA.BET — SPRINT 2A
+PRIVY WALLET CONNECTION
+
+Sprint 1 is complete and has been pushed to GitHub.
+
+DO NOT modify the overall application architecture.
+
+Current stack:
+
+- React
+- Vite
+- TypeScript
+- Tailwind CSS
+- Wouter
+- Lucide icons
+
+This sprint ONLY adds Privy wallet authentication/connection to the existing application.
+
+==================================================
+SCOPE
+==================================================
+
+Implement Privy wallet connection.
+
+DO NOT implement:
+
+- betting
+- wagering
+- games
+- demo credits
+- deposits
+- withdrawals
+- real-money balances
+- transactions
+- rewards
+- referrals
+- AI
+
+==================================================
+PRIVY
+==================================================
+
+Install and configure the current Privy React SDK appropriate for this project.
+
+Use:
+
+PRIVY_APP_ID
+
+The App ID may be exposed to the client as required by Privy's architecture.
+
+Do NOT expose:
+
+PRIVY_APP_SECRET
+
+Do not request the App Secret in this sprint.
+
+The App Secret will be handled later when we implement server-side verification.
+
+Use the existing Replit Secret/environment-variable mechanism.
+
+Do not hard-code the App ID.
+
+==================================================
+APPLICATION INTEGRATION
+==================================================
+
+Wrap the existing React application with the appropriate Privy provider.
+
+Do not rewrite App.tsx unnecessarily.
+
+Preserve all existing routes and pages.
+
+Add a reusable authentication/wallet UI component.
+
+For example:
+
+Connect Wallet
+
+When connected:
+
+Wallet address:
+0x1234...5678
+
+Disconnect
+
+==================================================
+LANDING PAGE
+==================================================
+
+Connect the existing:
+
+"Connect Wallet"
+
+CTA to Privy.
+
+When the user clicks it:
+
+Open the Privy wallet login/connection flow.
+
+==================================================
+DASHBOARD
+==================================================
+
+If authenticated:
+
+Display the connected wallet.
+
+Example:
+
+Wallet Connected
+0x1234...5678
+
+If not authenticated:
+
+Display:
+
+Connect Wallet
+
+Do not create a fake balance.
+
+==================================================
+PROFILE
+==================================================
+
+Display available Privy identity information where appropriate.
+
+For example:
+
+Wallet address
+Connected status
+
+Do not create database records yet.
+
+==================================================
+SESSION BEHAVIOR
+==================================================
+
+Verify:
+
+- Wallet connection works.
+- Disconnect works.
+- Refreshing the page preserves the Privy session where supported.
+- Navigation between pages preserves the connection.
+- No authentication state is duplicated in multiple competing systems.
+
+Use Privy's own client-side authentication state.
+
+==================================================
+SECURITY
+==================================================
+
+Do NOT:
+
+- expose PRIVY_APP_SECRET
+- create a fake secret
+- hard-code credentials
+- place secrets in client code
+- commit secrets to GitHub
+
+Only use PRIVY_APP_ID for this sprint.
+
+==================================================
+UI
+==================================================
+
+Keep the existing Katika.Bet design.
+
+Do not redesign the application.
+
+Make the wallet connection UI visually consistent with the existing design.
+
+Mobile-first.
+
+==================================================
+TESTING
+==================================================
+
+Verify:
+
+1. Application starts.
+2. Application builds.
+3. Privy provider initializes.
+4. Connect Wallet opens Privy.
+5. Wallet can connect.
+6. Connected wallet appears in UI.
+7. Disconnect works.
+8. Existing routes still work.
+9. Refresh does not break the application.
+10. PRIVY_APP_SECRET does not exist in the client bundle.
+
+==================================================
+CREDIT CONTROL
+==================================================
+
+Keep this sprint small.
+
+Do not create:
+
+- database migrations
+- server authentication
+- API authentication
+- repositories
+- user tables
+- wallet tables
+
+Those will be Sprint 2B.
+
+==================================================
+FINAL REPORT
+==================================================
+
+When finished, STOP.
+
+Report:
+
+1. Privy SDK/version used.
+2. Files changed.
+3. Environment variable required.
+4. Whether wallet connection works.
+5. Whether build succeeds.
+6. Tests performed.
+7. Any warnings/errors.
+8. Any manual setup still required.
+
+Do NOT automatically begin Sprint 2B.
