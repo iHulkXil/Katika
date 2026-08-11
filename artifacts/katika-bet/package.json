@@ -73,5 +73,9 @@
     "vite": "catalog:",
     "wouter": "^3.3.5",
     "zod": "catalog:"
+  },
+  "dependencies": {
+    "@privy-io/react-auth": "^3.37.0",
+    "@stripe/stripe-js": "^9.13.0"
   }
 }

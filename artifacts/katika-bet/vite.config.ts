@@ -29,6 +29,11 @@ if (!basePath) {
 
 export default defineConfig({
   base: basePath,
+  define: {
+    'import.meta.env.VITE_PRIVY_APP_ID': JSON.stringify(
+      process.env.PRIVY_APP_ID ?? '',
+    ),
+  },
   plugins: [
     react(),
     tailwindcss(),
