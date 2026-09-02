@@ -39,11 +39,16 @@ createRoot(document.getElementById('root')!, {
       <PrivyProvider
         appId={privyAppId}
         config={{
-          loginMethods: ['wallet'],
+          loginMethods: ['email', 'google', 'wallet'],
           appearance: {
             theme: 'dark',
             accentColor: '#35d399',
-            showWalletLoginFirst: true,
+            showWalletLoginFirst: false,
+          },
+          embeddedWallets: {
+            ethereum: {
+              createOnLogin: 'users-without-wallets',
+            },
           },
         }}
       >
