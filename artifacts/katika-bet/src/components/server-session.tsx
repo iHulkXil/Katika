@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -17,11 +18,13 @@ export type ServerUser = {
 type ServerSessionValue = {
   serverUser: ServerUser | null;
   loading: boolean;
+  refresh: () => Promise<void>;
 };
 
 const ServerSessionContext = createContext<ServerSessionValue>({
   serverUser: null,
   loading: false,
+  refresh: async () => {},
 });
 
 export function useServerSession() {
@@ -45,6 +48,20 @@ export function ServerSessionSync({ children }: { children?: ReactNode }) {
     return () => setAuthTokenGetter(null);
   }, [authenticated, getAccessToken]);
 
+  const refresh = useCallback(async () => {
+    if (!authenticated) {
+      setServerUser(null);
+      return;
+    }
+    const token = await getAccessToken();
+    if (!token) return;
+    const response = await fetch('/api/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) return;
+    setServerUser((await response.json()) as ServerUser);
+  }, [authenticated, getAccessToken]);
+
   useEffect(() => {
     if (!ready || !authenticated) {
       setServerUser(null);
@@ -54,31 +71,16 @@ export function ServerSessionSync({ children }: { children?: ReactNode }) {
 
     let cancelled = false;
     setLoading(true);
-
-    void (async () => {
-      try {
-        const token = await getAccessToken();
-        if (!token || cancelled) return;
-        const response = await fetch('/api/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) return;
-        const body = (await response.json()) as ServerUser;
-        if (!cancelled) setServerUser(body);
-      } catch {
-        // API may be down.
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
+    void refresh().finally(() => {
+      if (!cancelled) setLoading(false);
+    });
     return () => {
       cancelled = true;
     };
-  }, [ready, authenticated, getAccessToken]);
+  }, [ready, authenticated, refresh]);
 
   return (
-    <ServerSessionContext.Provider value={{ serverUser, loading }}>
+    <ServerSessionContext.Provider value={{ serverUser, loading, refresh }}>
       {children ?? null}
     </ServerSessionContext.Provider>
   );
