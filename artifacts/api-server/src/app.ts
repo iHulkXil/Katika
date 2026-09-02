@@ -32,5 +32,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+app.use("/api", (_req, res) => {
+  res.status(404).json({ error: "Unknown API route. Restart the API after pulling Dice." });
+});
 
 export default app;

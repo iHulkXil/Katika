@@ -8,6 +8,14 @@ import {
 } from "../lib/privy-auth";
 
 const router: IRouter = Router();
+const HOUSE_EDGE = 0.01;
+
+function diceStats(target: number, prediction: "over" | "under") {
+  const winOutcomes = prediction === "over" ? 100 - target : target - 1;
+  const winChance = winOutcomes / 100;
+  const multiplier = HOUSE_EDGE < 1 && winChance > 0 ? (1 - HOUSE_EDGE) / winChance : 0;
+  return { winOutcomes, winChance, multiplier };
+}
 
 router.post("/games/dice", async (req, res) => {
   try {
@@ -18,18 +26,28 @@ router.post("/games/dice", async (req, res) => {
     }
 
     const wager = Number(req.body?.wager);
+    const target = Number(req.body?.target);
     const prediction = req.body?.prediction;
 
     if (!Number.isInteger(wager) || wager < 10 || wager > 1000) {
       return res.status(400).json({ error: "Wager must be an integer from 10 to 1000" });
     }
-    if (prediction !== "low" && prediction !== "high") {
-      return res.status(400).json({ error: "Prediction must be low or high" });
+    if (prediction !== "over" && prediction !== "under") {
+      return res.status(400).json({ error: "Prediction must be over or under" });
+    }
+    if (!Number.isInteger(target) || target < 2 || target > 98) {
+      return res.status(400).json({ error: "Target must be an integer from 2 to 98" });
     }
 
-    const roll = randomInt(1, 7);
-    const won = prediction === "low" ? roll <= 3 : roll >= 4;
-    const delta = won ? wager : -wager;
+    const { winChance, multiplier } = diceStats(target, prediction);
+    if (winChance <= 0 || winChance >= 1) {
+      return res.status(400).json({ error: "Target is outside a playable range" });
+    }
+
+    const roll = randomInt(1, 101);
+    const won = prediction === "over" ? roll > target : roll < target;
+    const creditReturn = won ? Math.max(wager, Math.floor(wager * multiplier)) : 0;
+    const delta = won ? creditReturn - wager : -wager;
 
     const { db, usersTable } = await import("@workspace/db");
 
@@ -50,12 +68,7 @@ router.post("/games/dice", async (req, res) => {
         demoCredits: sql`${usersTable.demoCredits} + ${delta}`,
         updatedAt: new Date(),
       })
-      .where(
-        and(
-          eq(usersTable.id, user.id),
-          gte(usersTable.demoCredits, wager),
-        ),
-      )
+      .where(and(eq(usersTable.id, user.id), gte(usersTable.demoCredits, wager)))
       .returning();
 
     if (!updated[0]) {
@@ -64,9 +77,12 @@ router.post("/games/dice", async (req, res) => {
 
     return res.json({
       roll,
+      target,
       prediction,
       wager,
       won,
+      multiplier: Number(multiplier.toFixed(4)),
+      winChance: Number((winChance * 100).toFixed(2)),
       payout: delta,
       demoCredits: updated[0].demoCredits,
     });
