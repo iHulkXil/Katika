@@ -17,6 +17,7 @@ export function WalletAuthButton({
 }: WalletAuthButtonProps) {
   const { ready, authenticated, user, login, connectWallet } = usePrivy();
   const { logout } = useLogout();
+  const { serverUser } = useServerSession();
   const address = user?.wallet?.address;
 
   const openWalletFlow = () => {
@@ -44,6 +45,14 @@ export function WalletAuthButton({
   if (authenticated && address) {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
+        {typeof serverUser?.demoCredits === 'number' ? (
+          <span
+            className={`rounded-lg border border-secondary/40 bg-card px-3 py-2 font-mono-custom text-xs text-foreground ${compact ? 'hidden sm:inline' : ''}`}
+            data-testid="status-demo-credits-chip"
+          >
+            {serverUser.demoCredits} demo
+          </span>
+        ) : null}
         <span
           className={`inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-accent px-3 py-2 font-mono-custom text-xs text-accent-foreground ${
             compact ? 'hidden sm:inline-flex' : ''
