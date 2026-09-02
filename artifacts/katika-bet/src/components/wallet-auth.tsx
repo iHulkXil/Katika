@@ -14,9 +14,17 @@ export function WalletAuthButton({
   compact = false,
   className = '',
 }: WalletAuthButtonProps) {
-  const { ready, authenticated, user, connectWallet } = usePrivy();
+  const { ready, authenticated, user, login, connectWallet } = usePrivy();
   const { logout } = useLogout();
   const address = user?.wallet?.address;
+
+  const openWalletFlow = () => {
+    if (authenticated) {
+      void connectWallet();
+      return;
+    }
+    void login();
+  };
 
   if (!ready) {
     return (
@@ -60,7 +68,7 @@ export function WalletAuthButton({
   return (
     <button
       type="button"
-      onClick={() => connectWallet()}
+      onClick={openWalletFlow}
       className={`inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2.5 text-xs font-semibold text-secondary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${className}`}
       data-testid="button-connect-wallet"
     >
