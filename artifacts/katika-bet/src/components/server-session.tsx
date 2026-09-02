@@ -1,14 +1,6 @@
 import { useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
-import { useQuery } from '@tanstack/react-query';
 import { setAuthTokenGetter } from '@workspace/api-client-react';
-
-type MeResponse = {
-  id: number;
-  privyUserId: string;
-  createdAt: string;
-  updatedAt: string;
-};
 
 export function ServerSessionSync() {
   const { ready, authenticated, getAccessToken } = usePrivy();
@@ -25,41 +17,29 @@ export function ServerSessionSync() {
     return () => setAuthTokenGetter(null);
   }, [authenticated, getAccessToken]);
 
-  const meQuery = useQuery({
-    queryKey: ['api', 'me', authenticated],
-    enabled: ready && authenticated,
-    queryFn: async (): Promise<MeResponse> => {
-      const token = await getAccessToken();
-      if (!token) {
-        throw new Error('Missing Privy access token');
-      }
-      const response = await fetch('/api/me', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw new Error(body?.error ?? `HTTP ${response.status}`);
-      }
-      return response.json() as Promise<MeResponse>;
-    },
-    retry: false,
-  });
+  useEffect(() => {
+    if (!ready || !authenticated) {
+      return;
+    }
 
-  if (!ready || !authenticated) {
-    return null;
-  }
+    let cancelled = false;
 
-  if (meQuery.isPending) {
-    return (
-      <p className="sr-only" data-testid="status-server-session-loading">
-        Syncing account
-      </p>
-    );
-  }
+    void (async () => {
+      try {
+        const token = await getAccessToken();
+        if (!token || cancelled) return;
+        await fetch('/api/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch {
+        // API may be down until Neon + secret are configured.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, authenticated, getAccessToken]);
 
   return null;
 }
