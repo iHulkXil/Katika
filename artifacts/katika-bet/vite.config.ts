@@ -17,6 +17,8 @@ const privyAppId =
   process.env.VITE_PRIVY_APP_ID ??
   'cmske7xuh00750djms91aexl3';
 
+const apiProxyTarget = process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:5000';
+
 async function replitPlugins(): Promise<PluginOption[]> {
   if (process.env.REPL_ID === undefined) {
     return [];
@@ -88,6 +90,12 @@ export default defineConfig({
     allowedHosts: true,
     fs: {
       strict: true,
+    },
+    proxy: {
+      '/api': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
     },
   },
   preview: {

@@ -3,6 +3,7 @@ import { PrivyProvider } from '@privy-io/react-auth';
 
 import App from './App';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { ServerSessionSync } from '@/components/server-session';
 
 import './index.css';
 
@@ -46,6 +47,7 @@ createRoot(document.getElementById('root')!, {
           },
         }}
       >
+        <ServerSessionSync />
         <App />
       </PrivyProvider>
     ) : (
