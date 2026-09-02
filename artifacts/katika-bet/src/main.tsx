@@ -47,8 +47,9 @@ createRoot(document.getElementById('root')!, {
           },
         }}
       >
-        <ServerSessionSync />
-        <App />
+        <ServerSessionSync>
+          <App />
+        </ServerSessionSync>
       </PrivyProvider>
     ) : (
       <MissingPrivyConfig />

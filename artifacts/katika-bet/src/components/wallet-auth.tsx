@@ -1,5 +1,6 @@
 import { LogOut, WalletCards } from 'lucide-react';
 import { useLogout, usePrivy } from '@privy-io/react-auth';
+import { useServerSession } from '@/components/server-session';
 
 function shortenAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -80,6 +81,7 @@ export function WalletAuthButton({
 
 export function ConnectedWalletStatus() {
   const { ready, authenticated, user } = usePrivy();
+  const { serverUser, loading } = useServerSession();
   const address = user?.wallet?.address;
 
   if (!ready) {
@@ -91,6 +93,12 @@ export function ConnectedWalletStatus() {
       <div className="rounded-xl border border-primary/30 bg-accent/50 p-4">
         <p className="text-xs uppercase tracking-[.18em] text-primary">Wallet Connected</p>
         <p className="mt-2 break-all font-mono-custom text-sm text-foreground">{address}</p>
+        <p className="mt-3 font-mono-custom text-sm text-foreground" data-testid="status-demo-credits">
+          {loading && !serverUser
+            ? 'Loading demo credits...'
+            : `Demo credits: ${serverUser?.demoCredits ?? '—'}`}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">Not real money. No cash-out.</p>
       </div>
     );
   }

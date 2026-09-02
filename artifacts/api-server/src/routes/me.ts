@@ -8,6 +8,22 @@ import {
 
 const router: IRouter = Router();
 
+function toMeResponse(user: {
+  id: number;
+  privyUserId: string;
+  demoCredits: number;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  return {
+    id: user.id,
+    privyUserId: user.privyUserId,
+    demoCredits: user.demoCredits,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+}
+
 router.get("/me", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
@@ -18,7 +34,7 @@ router.get("/me", async (req, res) => {
       });
     }
 
-    const { db, usersTable } = await import("@workspace/db");
+    const { db, usersTable, DEFAULT_DEMO_CREDITS } = await import("@workspace/db");
 
     const existing = await db
       .select()
@@ -27,27 +43,20 @@ router.get("/me", async (req, res) => {
       .limit(1);
 
     if (existing[0]) {
-      return res.json({
-        id: existing[0].id,
-        privyUserId: existing[0].privyUserId,
-        createdAt: existing[0].createdAt,
-        updatedAt: existing[0].updatedAt,
-      });
+      return res.json(toMeResponse(existing[0]));
     }
 
     try {
       const inserted = await db
         .insert(usersTable)
-        .values({ privyUserId: identity.privyUserId })
+        .values({
+          privyUserId: identity.privyUserId,
+          demoCredits: DEFAULT_DEMO_CREDITS,
+        })
         .returning();
 
       if (inserted[0]) {
-        return res.json({
-          id: inserted[0].id,
-          privyUserId: inserted[0].privyUserId,
-          createdAt: inserted[0].createdAt,
-          updatedAt: inserted[0].updatedAt,
-        });
+        return res.json(toMeResponse(inserted[0]));
       }
     } catch {
       const raced = await db
@@ -57,12 +66,7 @@ router.get("/me", async (req, res) => {
         .limit(1);
 
       if (raced[0]) {
-        return res.json({
-          id: raced[0].id,
-          privyUserId: raced[0].privyUserId,
-          createdAt: raced[0].createdAt,
-          updatedAt: raced[0].updatedAt,
-        });
+        return res.json(toMeResponse(raced[0]));
       }
       throw new Error("Failed to persist user");
     }
