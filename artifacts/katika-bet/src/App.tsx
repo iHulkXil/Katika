@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { ConnectedWalletStatus, WalletAuthButton } from '@/components/wallet-auth';
 import { DicePage } from '@/components/dice-page';
+import { CoinFlipPage } from '@/components/coinflip-page';
 import { DemoNotice, LayoutShell, MenuRow } from '@/components/layout-shell';
 import { useServerSession } from '@/components/server-session';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
@@ -39,7 +40,7 @@ type Game = {
 
 const games: Game[] = [
   { name: 'Dice', description: '1–100 slider. Auto play.', href: '/games/dice', icon: <Dice5 />, accent: 'from-emerald-400/25 to-emerald-950/20' },
-  { name: 'Coin Flip', description: 'Coming soon', icon: <CircleDot />, accent: 'from-amber-300/20 to-amber-950/20' },
+  { name: 'Coin Flip', description: 'Heads or tails. 1.98x.', href: '/games/coinflip', icon: <CircleDot />, accent: 'from-amber-300/20 to-amber-950/20' },
   { name: 'Mines', description: 'Coming soon', icon: <Gem />, accent: 'from-teal-300/20 to-teal-950/20' },
   { name: 'Roulette', description: 'Coming soon', icon: <Grid2X2 />, accent: 'from-yellow-300/20 to-yellow-950/20' },
 ];
@@ -64,32 +65,19 @@ function Home() {
     <div className="px-3 pt-3">
       <div className="overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-r from-accent to-card p-4">
         <p className="font-mono-custom text-[10px] tracking-[.2em] text-primary">CASINO / DEMO</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-[-.04em]">Play Dice with demo credits.</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Sports markets stay locked. Casino tables open one at a time.</p>
-        <Link href="/games/dice" className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
-          Open Dice
-        </Link>
+        <h1 className="mt-2 text-2xl font-semibold tracking-[-.04em]">Dice and Coin Flip are live.</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Demo credits only. Sports and cash stay locked.</p>
+        <div className="mt-4 flex gap-2">
+          <Link href="/games/dice" className="inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Dice</Link>
+          <Link href="/games/coinflip" className="inline-flex rounded-lg border border-border px-4 py-2 text-sm font-semibold">Coin Flip</Link>
+        </div>
       </div>
-
       <div className="mt-5 flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-[.16em] text-secondary">Hot</p>
         <Link href="/games" className="text-xs text-primary">Casino lobby</Link>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-3">
         {games.map((game) => <GameTile key={game.name} game={game} />)}
-      </div>
-
-      <p className="mt-6 text-xs font-semibold uppercase tracking-[.16em] text-secondary">Upcoming sports</p>
-      <div className="mt-3 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-        {['Exhibition A vs Exhibition B', 'Club Select vs Club Select', 'Night Fixture vs Night Fixture'].map((row) => (
-          <div key={row} className="flex items-center justify-between px-3 py-3">
-            <div>
-              <p className="text-sm">{row}</p>
-              <p className="text-[11px] text-muted-foreground">Locked · demo sportsbook</p>
-            </div>
-            <span className="rounded-md border border-border px-2 py-1 font-mono-custom text-[11px] text-muted-foreground">—</span>
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -99,7 +87,7 @@ function Games() {
   return (
     <div className="px-3 pt-3">
       <h1 className="text-2xl font-semibold tracking-[-.04em]">Casino</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Stake-style lobby. Only Dice settles on the server.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Dice and Coin Flip settle on the server. Mines and Roulette stay closed.</p>
       <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
         {games.map((game) => <GameTile key={game.name} game={game} />)}
       </div>
@@ -120,11 +108,7 @@ function Wallet() {
 function DemoAction({ label }: { label: string }) {
   const { toast } = useToast();
   return (
-    <button
-      type="button"
-      onClick={() => toast({ title: `${label} is demo-only`, description: 'No real-money payments in this build.' })}
-      className="rounded-xl border border-border bg-card px-3 py-3 text-sm font-semibold"
-    >
+    <button type="button" onClick={() => toast({ title: `${label} is demo-only`, description: 'No real-money payments in this build.' })} className="rounded-xl border border-border bg-card px-3 py-3 text-sm font-semibold">
       {label}
     </button>
   );
@@ -135,14 +119,11 @@ function Profile() {
   const { logout } = useLogout();
   const { serverUser } = useServerSession();
   const name = user?.email?.address ?? user?.google?.email ?? user?.wallet?.address?.slice(0, 8) ?? 'Guest';
-
   return (
     <div className="px-3 pt-3">
       <div className="rounded-2xl border border-border bg-gradient-to-b from-accent to-card p-4">
         <div className="flex items-center gap-3">
-          <span className="grid h-14 w-14 place-items-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
-            {name.slice(0, 1).toUpperCase()}
-          </span>
+          <span className="grid h-14 w-14 place-items-center rounded-full bg-primary text-lg font-bold text-primary-foreground">{name.slice(0, 1).toUpperCase()}</span>
           <div>
             <p className="text-lg font-semibold">{authenticated ? name : 'Not signed in'}</p>
             <p className="font-mono-custom text-[11px] text-muted-foreground">Demo tier</p>
@@ -151,42 +132,19 @@ function Profile() {
         <p className="mt-4 text-xs text-muted-foreground">Total balance</p>
         <p className="font-mono-custom text-2xl">{serverUser?.demoCredits ?? 0} DEMO</p>
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <button type="button" className="rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground" disabled>
-            Deposit
-          </button>
+          <button type="button" className="rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground" disabled>Deposit</button>
           <DemoAction label="Withdraw" />
         </div>
-        <p className="mt-2 text-[11px] text-muted-foreground">Deposit stays off until cash is in scope.</p>
       </div>
-
       <div className="mt-4 grid grid-cols-3 gap-2">
-        {[
-          { href: '/wallet', label: 'Bet History', icon: History },
-          { href: '/wallet', label: 'Transactions', icon: Coins },
-          { href: '/rewards', label: 'Gifts', icon: Gift },
-        ].map((item) => (
+        {[{ href: '/wallet', label: 'Bet History', icon: History }, { href: '/wallet', label: 'Transactions', icon: Coins }, { href: '/rewards', label: 'Gifts', icon: Gift }].map((item) => (
           <Link key={item.label} href={item.href} className="rounded-xl border border-border bg-card px-2 py-3 text-center text-[11px]">
             <item.icon size={16} className="mx-auto text-secondary" />
             <span className="mt-2 block">{item.label}</span>
           </Link>
         ))}
       </div>
-
-      <div className="mt-2">
-        <MenuRow href="/profile" icon={UserRound} label="Personal page" />
-        <MenuRow href="/rewards" icon={Crown} label="Missions" />
-        <MenuRow href="/wallet" icon={Headset} label="Support" />
-        <MenuRow href="/games" icon={ShieldCheck} label="How to play" />
-        <MenuRow href="/profile" icon={Settings} label="Settings" />
-      </div>
-
-      {authenticated ? (
-        <button type="button" onClick={() => void logout()} className="mt-6 w-full rounded-xl bg-accent py-3 text-sm font-semibold">
-          Logout
-        </button>
-      ) : (
-        <div className="mt-6"><WalletAuthButton /></div>
-      )}
+      {authenticated ? <button type="button" onClick={() => void logout()} className="mt-6 w-full rounded-xl bg-accent py-3 text-sm font-semibold">Logout</button> : <div className="mt-6"><WalletAuthButton /></div>}
     </div>
   );
 }
@@ -195,13 +153,12 @@ function MenuPage() {
   return (
     <div className="px-3 pt-3">
       <h1 className="text-2xl font-semibold tracking-[-.04em]">Menu</h1>
-      <DemoNotice>Casino is live. Sports and cash stay closed.</DemoNotice>
+      <DemoNotice>Casino tables open one at a time. Cash stays off.</DemoNotice>
       <div className="mt-2">
         <MenuRow href="/games" icon={Grid2X2} label="Casino" />
         <MenuRow href="/games/dice" icon={Dice5} label="Dice" />
+        <MenuRow href="/games/coinflip" icon={CircleDot} label="Coin Flip" />
         <MenuRow href="/wallet" icon={WalletCards} label="Wallet" />
-        <MenuRow href="/rewards" icon={Crown} label="Rewards" />
-        <MenuRow href="/leaderboard" icon={Trophy} label="Leaderboard" />
         <MenuRow href="/profile" icon={UserRound} label="Profile" />
       </div>
     </div>
@@ -209,22 +166,11 @@ function MenuPage() {
 }
 
 function Placeholder({ title, copy }: { title: string; copy: string }) {
-  return (
-    <div className="px-3 pt-6">
-      <h1 className="text-2xl font-semibold">{title}</h1>
-      <p className="mt-2 text-sm text-muted-foreground">{copy}</p>
-    </div>
-  );
+  return <div className="px-3 pt-6"><h1 className="text-2xl font-semibold">{title}</h1><p className="mt-2 text-sm text-muted-foreground">{copy}</p></div>;
 }
 
 function NotFound() {
-  return (
-    <div className="px-3 pt-16 text-center">
-      <p className="font-mono-custom text-xs text-secondary">404</p>
-      <h1 className="mt-3 text-3xl font-semibold">Off the table</h1>
-      <Link href="/" className="mt-6 inline-flex text-sm text-primary">Return home</Link>
-    </div>
-  );
+  return <div className="px-3 pt-16 text-center"><p className="font-mono-custom text-xs text-secondary">404</p><h1 className="mt-3 text-3xl font-semibold">Off the table</h1><Link href="/" className="mt-6 inline-flex text-sm text-primary">Return home</Link></div>;
 }
 
 function Router() {
@@ -235,10 +181,11 @@ function Router() {
         <Route path="/dashboard" component={Home} />
         <Route path="/menu" component={MenuPage} />
         <Route path="/games/dice" component={DicePage} />
+        <Route path="/games/coinflip" component={CoinFlipPage} />
         <Route path="/games" component={Games} />
         <Route path="/wallet" component={Wallet} />
-        <Route path="/rewards" component={() => <Placeholder title="Rewards" copy="Loyalty and missions land after more games." />} />
-        <Route path="/leaderboard" component={() => <Placeholder title="Leaderboard" copy="Rankings stay off until play volume exists." />} />
+        <Route path="/rewards" component={() => <Placeholder title="Rewards" copy="Later." />} />
+        <Route path="/leaderboard" component={() => <Placeholder title="Leaderboard" copy="Later." />} />
         <Route path="/profile" component={Profile} />
         <Route component={NotFound} />
       </Switch>
@@ -256,9 +203,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <LayoutShell>
-            <Router />
-          </LayoutShell>
+          <LayoutShell><Router /></LayoutShell>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>
