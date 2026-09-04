@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { Gem } from 'lucide-react';
 import { useServerSession } from '@/components/server-session';
@@ -6,84 +6,132 @@ import { WalletAuthButton } from '@/components/wallet-auth';
 
 const TILES = 25;
 
+async function api(path: string, token: string, body: object) {
+  const response = await fetch(path, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const text = await response.text();
+  if (!text) throw new Error('Empty API response. Restart API on 5000.');
+  const json = JSON.parse(text);
+  if (!response.ok) throw new Error(json.error ?? `HTTP ${response.status}`);
+  return json;
+}
+
 export function MinesPage() {
   const { authenticated, getAccessToken } = usePrivy();
   const { serverUser, loading, refresh } = useServerSession();
   const [wager, setWager] = useState(50);
   const [mines, setMines] = useState(3);
-  const [picks, setPicks] = useState<number[]>([]);
+  const [active, setActive] = useState(false);
+  const [revealed, setRevealed] = useState<number[]>([]);
+  const [mineTiles, setMineTiles] = useState<number[]>([]);
+  const [mult, setMult] = useState(0);
+  const [cashoutValue, setCashoutValue] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ mines: number[]; hit: number | null; won: boolean; payout: number; demoCredits: number } | null>(null);
+  const [note, setNote] = useState<string | null>(null);
 
-  const toggle = (i: number) => {
-    if (result || busy) return;
-    setPicks((prev) => prev.includes(i) ? prev.filter((p) => p !== i) : [...prev, i]);
+  const token = async () => {
+    const value = await getAccessToken();
+    if (!value) throw new Error('Sign in first');
+    return value;
   };
 
-  const play = async () => {
+  const start = async () => {
     setError(null);
+    setNote(null);
     setBusy(true);
     try {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Sign in first');
-      const response = await fetch('/api/games/mines', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wager, mines, picks }),
-      });
-      const text = await response.text();
-      if (!text) throw new Error('Empty API response. Restart API on 5000.');
-      const body = JSON.parse(text);
-      if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
-      setResult(body);
+      const body = await api('/api/games/mines/start', await token(), { wager, mines });
+      setActive(true);
+      setRevealed([]);
+      setMineTiles([]);
+      setMult(body.multiplier);
+      setCashoutValue(body.cashoutValue);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Play failed');
+      setError(err instanceof Error ? err.message : 'Start failed');
     } finally {
       setBusy(false);
     }
   };
 
-  const revealed = useMemo(() => new Set(result?.mines ?? []), [result]);
+  const reveal = async (tile: number) => {
+    if (!active || busy || revealed.includes(tile)) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const body = await api('/api/games/mines/reveal', await token(), { tile });
+      setRevealed(body.revealed ?? []);
+      setMult(body.multiplier);
+      setCashoutValue(body.cashoutValue);
+      if (body.active === false) {
+        setActive(false);
+        setMineTiles(body.mines ?? []);
+        setNote(body.won ? `Cleared +${body.payout}` : 'Hit a mine');
+        await refresh();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Reveal failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const cashout = async () => {
+    setBusy(true);
+    try {
+      const body = await api('/api/games/mines/cashout', await token(), {});
+      setActive(false);
+      setMineTiles(body.mines ?? []);
+      setNote(`Cashed ${body.cashoutValue} (${body.payout > 0 ? '+' : ''}${body.payout})`);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Cashout failed');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="px-3 pt-4">
-      <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">MINES / DEMO</p>
-      <h1 className="mt-2 text-3xl font-semibold">Pick gems. Avoid mines.</h1>
-      <p className="mt-2 text-sm text-muted-foreground">5×5 grid. Select tiles, then cash the reveal. Demo credits only.</p>
+      <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">MINES / LIVE ROUND</p>
+      <h1 className="mt-2 text-3xl font-semibold">Open gems. Cash out.</h1>
+      <p className="mt-2 text-sm text-muted-foreground">Wager locks on start. Each gem raises the multiplier. Hit a mine and the wager is gone.</p>
       <div className="mt-5 rounded-2xl border border-border bg-card p-4">
         <p className="font-mono-custom text-sm">Demo credits: {loading && !serverUser ? '—' : (serverUser?.demoCredits ?? '—')}</p>
+        <p className="mt-1 font-mono-custom text-xs text-muted-foreground">{mult ? `${mult.toFixed(2)}x · cashout ${cashoutValue}` : 'Start a round'}</p>
         <div className="mt-4 grid grid-cols-5 gap-2">
           {Array.from({ length: TILES }, (_, i) => {
-            const selected = picks.includes(i);
-            const isMine = revealed.has(i);
+            const open = revealed.includes(i);
+            const boom = mineTiles.includes(i);
             return (
-              <button key={i} type="button" onClick={() => toggle(i)} className={`aspect-square rounded-lg border text-xs ${
-                isMine ? 'border-destructive bg-destructive/20' : selected ? 'border-primary bg-accent text-primary' : 'border-border bg-background'
+              <button key={i} type="button" disabled={!active || busy} onClick={() => void reveal(i)} className={`aspect-square rounded-lg border text-xs ${
+                boom ? 'border-destructive bg-destructive/30' : open ? 'border-primary bg-accent text-primary' : 'border-border bg-background'
               }`}>
-                {result ? (isMine ? 'M' : selected ? 'G' : '') : selected ? <Gem size={14} className="mx-auto" /> : ''}
+                {boom ? 'M' : open ? <Gem size={14} className="mx-auto" /> : ''}
               </button>
             );
           })}
         </div>
         {!authenticated ? <div className="mt-4"><WalletAuthButton /></div> : (
-          <>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <label className="text-sm text-muted-foreground">Wager
-                <input type="number" min={10} max={1000} value={wager} onChange={(e) => setWager(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-2" />
-              </label>
-              <label className="text-sm text-muted-foreground">Mines
-                <input type="number" min={1} max={10} value={mines} onChange={(e) => { setMines(Number(e.target.value)); setResult(null); }} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-2" />
-              </label>
-            </div>
-            <button type="button" disabled={busy || picks.length === 0} onClick={() => void play()} className="mt-4 w-full rounded-lg bg-secondary py-3 text-sm font-semibold text-secondary-foreground disabled:opacity-60">
-              {busy ? 'Revealing...' : `Reveal ${picks.length} tile${picks.length === 1 ? '' : 's'}`}
-            </button>
-            <button type="button" className="mt-2 w-full text-xs text-muted-foreground" onClick={() => { setPicks([]); setResult(null); }}>Clear</button>
-          </>
+          <div className="mt-4 space-y-2">
+            {!active ? (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="text-sm text-muted-foreground">Wager<input type="number" min={10} max={1000} value={wager} onChange={(e) => setWager(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-2" /></label>
+                  <label className="text-sm text-muted-foreground">Mines<input type="number" min={1} max={10} value={mines} onChange={(e) => setMines(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-2" /></label>
+                </div>
+                <button type="button" disabled={busy} onClick={() => void start()} className="w-full rounded-lg bg-secondary py-3 text-sm font-semibold text-secondary-foreground">Bet and start</button>
+              </>
+            ) : (
+              <button type="button" disabled={busy || revealed.length < 1} onClick={() => void cashout()} className="w-full rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60">Cash out {cashoutValue}</button>
+            )}
+          </div>
         )}
-        {result ? <p className={`mt-3 text-sm ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.won ? 'Clear' : 'Hit a mine'} {result.payout > 0 ? '+' : ''}{result.payout}</p> : null}
+        {note ? <p className="mt-3 text-sm text-primary">{note}</p> : null}
         {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
       </div>
     </div>
