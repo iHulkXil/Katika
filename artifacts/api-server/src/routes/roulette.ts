@@ -6,6 +6,7 @@ import {
   AuthError,
   authenticateRequest,
 } from "../lib/privy-auth";
+import { recordBet } from "../lib/record-bet";
 
 const router: IRouter = Router();
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
@@ -13,9 +14,7 @@ const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 
 router.post("/games/roulette", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
-    if (!process.env.DATABASE_URL) {
-      return res.status(503).json({ error: "Database is not configured" });
-    }
+    if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Database is not configured" });
     const wager = Number(req.body?.wager);
     const bet = req.body?.bet;
     const number = Number(req.body?.number);
@@ -29,7 +28,6 @@ router.post("/games/roulette", async (req, res) => {
     if (bet === "number" && (!Number.isInteger(number) || number < 0 || number > 36)) {
       return res.status(400).json({ error: "Number must be 0-36" });
     }
-
     const roll = randomInt(0, 37);
     const color = roll === 0 ? "green" : RED.has(roll) ? "red" : "black";
     let won = false;
@@ -39,10 +37,8 @@ router.post("/games/roulette", async (req, res) => {
     if (bet === "odd") { won = roll > 0 && roll % 2 === 1; multiplier = 1.98; }
     if (bet === "even") { won = roll > 0 && roll % 2 === 0; multiplier = 1.98; }
     if (bet === "number") { won = roll === number; multiplier = 35; }
-
     const creditReturn = won ? Math.max(wager, Math.floor(wager * multiplier)) : 0;
     const delta = won ? creditReturn - wager : -wager;
-
     const { db, usersTable } = await import("@workspace/db");
     const existing = await db.select().from(usersTable).where(eq(usersTable.privyUserId, identity.privyUserId)).limit(1);
     const user = existing[0];
@@ -52,16 +48,17 @@ router.post("/games/roulette", async (req, res) => {
       updatedAt: new Date(),
     }).where(and(eq(usersTable.id, user.id), gte(usersTable.demoCredits, wager))).returning();
     if (!updated[0]) return res.status(400).json({ error: "Not enough demo credits" });
-
-    return res.json({
-      roll,
-      color,
-      bet,
-      number: bet === "number" ? number : null,
+    await recordBet({
+      userId: user.id,
+      privyUserId: identity.privyUserId,
+      game: "roulette",
       wager,
-      won,
-      multiplier,
       payout: delta,
+      won,
+      detail: { roll, color, bet, number: bet === "number" ? number : null },
+    });
+    return res.json({
+      roll, color, bet, number: bet === "number" ? number : null, wager, won, multiplier, payout: delta,
       demoCredits: updated[0].demoCredits,
     });
   } catch (error) {
