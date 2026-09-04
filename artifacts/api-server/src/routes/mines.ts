@@ -6,22 +6,11 @@ import {
   AuthError,
   authenticateRequest,
 } from "../lib/privy-auth";
+import { recordBet } from "../lib/record-bet";
 
 const router: IRouter = Router();
 const TILES = 25;
 const HOUSE = 0.99;
-
-type Round = {
-  userId: number;
-  privyUserId: string;
-  wager: number;
-  minesCount: number;
-  mines: number[];
-  revealed: number[];
-  settled: boolean;
-};
-
-const rounds = new Map<string, Round>();
 
 function pickMines(count: number) {
   const set = new Set<number>();
@@ -38,6 +27,32 @@ function multiplier(mines: number, reveals: number) {
   return HOUSE / chance;
 }
 
+function asNumbers(value: unknown) {
+  return Array.isArray(value) ? value.map(Number).filter((n) => Number.isInteger(n)) : [];
+}
+
+function publicRound(row: {
+  wager: number;
+  minesCount: number;
+  mines: unknown;
+  revealed: unknown;
+  settled: boolean;
+}, extra: Record<string, unknown> = {}) {
+  const revealed = asNumbers(row.revealed);
+  const mines = asNumbers(row.mines);
+  const mult = multiplier(row.minesCount, revealed.length);
+  return {
+    active: !row.settled,
+    wager: row.wager,
+    minesCount: row.minesCount,
+    revealed,
+    mines: row.settled ? mines : [],
+    multiplier: Number(mult.toFixed(4)),
+    cashoutValue: Math.floor(row.wager * mult),
+    ...extra,
+  };
+}
+
 async function adjustCredits(privyUserId: string, delta: number, need: number) {
   const { db, usersTable } = await import("@workspace/db");
   const existing = await db.select().from(usersTable).where(eq(usersTable.privyUserId, privyUserId)).limit(1);
@@ -51,27 +66,34 @@ async function adjustCredits(privyUserId: string, delta: number, need: number) {
   return { user, row: updated[0] };
 }
 
-function publicRound(round: Round, extra: Record<string, unknown> = {}) {
-  const mult = multiplier(round.minesCount, round.revealed.length);
-  return {
-    active: !round.settled,
-    wager: round.wager,
-    minesCount: round.minesCount,
-    revealed: round.revealed,
-    mines: round.settled ? round.mines : [],
-    multiplier: Number(mult.toFixed(4)),
-    cashoutValue: Math.floor(round.wager * mult),
-    ...extra,
-  };
+async function openRound(privyUserId: string) {
+  const { db, minesRoundsTable } = await import("@workspace/db");
+  const rows = await db.select().from(minesRoundsTable).where(
+    and(eq(minesRoundsTable.privyUserId, privyUserId), eq(minesRoundsTable.settled, false)),
+  ).limit(1);
+  return { db, minesRoundsTable, row: rows[0] };
 }
+
+router.get("/games/mines/active", async (req, res) => {
+  try {
+    const identity = await authenticateRequest(req);
+    if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Database is not configured" });
+    const { row } = await openRound(identity.privyUserId);
+    if (!row) return res.json({ active: false });
+    return res.json(publicRound(row));
+  } catch (error) {
+    if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
+    if (error instanceof AuthError) return res.status(401).json({ error: error.message });
+    return res.status(500).json({ error: "Mines lookup failed" });
+  }
+});
 
 router.post("/games/mines/start", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
     if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Database is not configured" });
-    if (rounds.get(identity.privyUserId)?.settled === false) {
-      return res.status(400).json({ error: "Cash out or finish the open Mines round first" });
-    }
+    const existing = await openRound(identity.privyUserId);
+    if (existing.row) return res.status(400).json({ error: "Cash out or finish the open Mines round first" });
     const wager = Number(req.body?.wager);
     const minesCount = Number(req.body?.mines);
     if (!Number.isInteger(wager) || wager < 10 || wager > 1000) {
@@ -82,7 +104,8 @@ router.post("/games/mines/start", async (req, res) => {
     }
     const paid = await adjustCredits(identity.privyUserId, -wager, wager);
     if ("error" in paid && paid.error) return res.status(paid.status).json({ error: paid.error });
-    const round: Round = {
+    const { db, minesRoundsTable } = await import("@workspace/db");
+    const created = await db.insert(minesRoundsTable).values({
       userId: paid.row.id,
       privyUserId: identity.privyUserId,
       wager,
@@ -90,9 +113,8 @@ router.post("/games/mines/start", async (req, res) => {
       mines: pickMines(minesCount),
       revealed: [],
       settled: false,
-    };
-    rounds.set(identity.privyUserId, round);
-    return res.json({ ...publicRound(round), demoCredits: paid.row.demoCredits });
+    }).returning();
+    return res.json({ ...publicRound(created[0]), demoCredits: paid.row.demoCredits });
   } catch (error) {
     if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
     if (error instanceof AuthError) return res.status(401).json({ error: error.message });
@@ -103,29 +125,56 @@ router.post("/games/mines/start", async (req, res) => {
 router.post("/games/mines/reveal", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
-    const round = rounds.get(identity.privyUserId);
-    if (!round || round.settled) return res.status(400).json({ error: "No open Mines round" });
+    const { db, minesRoundsTable, row } = await openRound(identity.privyUserId);
+    if (!row) return res.status(400).json({ error: "No open Mines round" });
     const tile = Number(req.body?.tile);
     if (!Number.isInteger(tile) || tile < 0 || tile >= TILES) {
       return res.status(400).json({ error: "Tile must be 0-24" });
     }
-    if (round.revealed.includes(tile)) return res.status(400).json({ error: "Tile already open" });
-    if (round.mines.includes(tile)) {
-      round.settled = true;
-      round.revealed.push(tile);
-      return res.json({ ...publicRound(round, { hit: tile, won: false, payout: -round.wager }), demoCredits: undefined });
+    const mines = asNumbers(row.mines);
+    const revealed = asNumbers(row.revealed);
+    if (revealed.includes(tile)) return res.status(400).json({ error: "Tile already open" });
+    revealed.push(tile);
+    if (mines.includes(tile)) {
+      const updated = await db.update(minesRoundsTable).set({
+        revealed, settled: true, updatedAt: new Date(),
+      }).where(eq(minesRoundsTable.id, row.id)).returning();
+      await recordBet({
+        userId: row.userId,
+        privyUserId: identity.privyUserId,
+        game: "mines",
+        wager: row.wager,
+        payout: -row.wager,
+        won: false,
+        detail: { hit: tile, minesCount: row.minesCount },
+      });
+      return res.json(publicRound(updated[0], { hit: tile, won: false, payout: -row.wager }));
     }
-    round.revealed.push(tile);
-    const safeLeft = TILES - round.minesCount - round.revealed.length;
+    const safeLeft = TILES - row.minesCount - revealed.length;
     if (safeLeft <= 0) {
-      const paid = await adjustCredits(identity.privyUserId, Math.floor(round.wager * multiplier(round.minesCount, round.revealed.length)), 0);
-      round.settled = true;
+      const creditReturn = Math.floor(row.wager * multiplier(row.minesCount, revealed.length));
+      const paid = await adjustCredits(identity.privyUserId, creditReturn, 0);
+      const updated = await db.update(minesRoundsTable).set({
+        revealed, settled: true, updatedAt: new Date(),
+      }).where(eq(minesRoundsTable.id, row.id)).returning();
+      await recordBet({
+        userId: row.userId,
+        privyUserId: identity.privyUserId,
+        game: "mines",
+        wager: row.wager,
+        payout: creditReturn - row.wager,
+        won: true,
+        detail: { cleared: true, minesCount: row.minesCount },
+      });
       return res.json({
-        ...publicRound(round, { hit: null, won: true, payout: Math.floor(round.wager * multiplier(round.minesCount, round.revealed.length)) - round.wager }),
+        ...publicRound(updated[0], { hit: null, won: true, payout: creditReturn - row.wager }),
         demoCredits: "row" in paid ? paid.row.demoCredits : undefined,
       });
     }
-    return res.json({ ...publicRound(round, { hit: null, won: null }), demoCredits: undefined });
+    const updated = await db.update(minesRoundsTable).set({
+      revealed, updatedAt: new Date(),
+    }).where(eq(minesRoundsTable.id, row.id)).returning();
+    return res.json(publicRound(updated[0], { hit: null, won: null }));
   } catch (error) {
     if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
     if (error instanceof AuthError) return res.status(401).json({ error: error.message });
@@ -136,15 +185,27 @@ router.post("/games/mines/reveal", async (req, res) => {
 router.post("/games/mines/cashout", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
-    const round = rounds.get(identity.privyUserId);
-    if (!round || round.settled) return res.status(400).json({ error: "No open Mines round" });
-    if (round.revealed.length < 1) return res.status(400).json({ error: "Open at least one gem first" });
-    const creditReturn = Math.floor(round.wager * multiplier(round.minesCount, round.revealed.length));
+    const { db, minesRoundsTable, row } = await openRound(identity.privyUserId);
+    if (!row) return res.status(400).json({ error: "No open Mines round" });
+    const revealed = asNumbers(row.revealed);
+    if (revealed.length < 1) return res.status(400).json({ error: "Open at least one gem first" });
+    const creditReturn = Math.floor(row.wager * multiplier(row.minesCount, revealed.length));
     const paid = await adjustCredits(identity.privyUserId, creditReturn, 0);
     if ("error" in paid && paid.error) return res.status(paid.status).json({ error: paid.error });
-    round.settled = true;
+    const updated = await db.update(minesRoundsTable).set({
+      settled: true, updatedAt: new Date(),
+    }).where(eq(minesRoundsTable.id, row.id)).returning();
+    await recordBet({
+      userId: row.userId,
+      privyUserId: identity.privyUserId,
+      game: "mines",
+      wager: row.wager,
+      payout: creditReturn - row.wager,
+      won: true,
+      detail: { cashout: true, tiles: revealed.length, minesCount: row.minesCount },
+    });
     return res.json({
-      ...publicRound(round, { hit: null, won: true, payout: creditReturn - round.wager }),
+      ...publicRound(updated[0], { hit: null, won: true, payout: creditReturn - row.wager }),
       demoCredits: paid.row.demoCredits,
     });
   } catch (error) {
