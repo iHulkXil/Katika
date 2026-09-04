@@ -1,9 +1,11 @@
 import { createRoot } from 'react-dom/client';
 import { PrivyProvider } from '@privy-io/react-auth';
+import { toSolanaWalletConnectors } from '@privy-io/react-auth/solana';
 
 import App from './App';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { ServerSessionSync } from '@/components/server-session';
+import { arbitrumSepolia, baseSepolia, polygonAmoy, sepolia } from '@/lib/testnet-chains';
 
 import './index.css';
 import './game-motion.css';
@@ -32,8 +34,21 @@ createRoot(document.getElementById('root')!, {
         appId={privyAppId}
         config={{
           loginMethods: ['email', 'google', 'wallet'],
-          appearance: { theme: 'dark', accentColor: '#35d399', showWalletLoginFirst: false },
-          embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } },
+          appearance: {
+            theme: 'dark',
+            accentColor: '#35d399',
+            showWalletLoginFirst: false,
+            walletChainType: 'ethereum-and-solana',
+          },
+          defaultChain: sepolia,
+          supportedChains: [sepolia, baseSepolia, arbitrumSepolia, polygonAmoy],
+          embeddedWallets: {
+            ethereum: { createOnLogin: 'users-without-wallets' },
+            solana: { createOnLogin: 'users-without-wallets' },
+          },
+          externalWallets: {
+            solana: { connectors: toSolanaWalletConnectors() },
+          },
         }}
       >
         <ServerSessionSync>
