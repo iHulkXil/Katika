@@ -5,7 +5,6 @@ import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 
 const TILES = 25;
-
 async function api(path: string, token: string, body: object) {
   const response = await fetch(path, {
     method: 'POST',
@@ -40,100 +39,73 @@ export function MinesPage() {
   };
 
   const start = async () => {
-    setError(null);
-    setNote(null);
-    setBusy(true);
+    setError(null); setNote(null); setBusy(true);
     try {
       const body = await api('/api/games/mines/start', await token(), { wager, mines });
-      setActive(true);
-      setRevealed([]);
-      setMineTiles([]);
-      setMult(body.multiplier);
-      setCashoutValue(body.cashoutValue);
+      setActive(true); setRevealed([]); setMineTiles([]);
+      setMult(body.multiplier); setCashoutValue(body.cashoutValue);
       await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Start failed');
-    } finally {
-      setBusy(false);
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Start failed'); }
+    finally { setBusy(false); }
   };
 
   const reveal = async (tile: number) => {
     if (!active || busy || revealed.includes(tile)) return;
-    setBusy(true);
-    setError(null);
+    setBusy(true); setError(null);
     try {
       const body = await api('/api/games/mines/reveal', await token(), { tile });
-      setRevealed(body.revealed ?? []);
-      setMult(body.multiplier);
-      setCashoutValue(body.cashoutValue);
+      setRevealed(body.revealed ?? []); setMult(body.multiplier); setCashoutValue(body.cashoutValue);
       if (body.active === false) {
-        setActive(false);
-        setMineTiles(body.mines ?? []);
+        setActive(false); setMineTiles(body.mines ?? []);
         setNote(body.won ? `Cleared +${body.payout}` : 'Hit a mine');
         await refresh();
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Reveal failed');
-    } finally {
-      setBusy(false);
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Reveal failed'); }
+    finally { setBusy(false); }
   };
 
   const cashout = async () => {
     setBusy(true);
     try {
       const body = await api('/api/games/mines/cashout', await token(), {});
-      setActive(false);
-      setMineTiles(body.mines ?? []);
-      setNote(`Cashed ${body.cashoutValue} (${body.payout > 0 ? '+' : ''}${body.payout})`);
+      setActive(false); setMineTiles(body.mines ?? []);
+      setNote(`Cashed ${body.cashoutValue}`);
       await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cashout failed');
-    } finally {
-      setBusy(false);
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Cashout failed'); }
+    finally { setBusy(false); }
   };
 
   return (
     <div className="px-3 pt-4">
-      <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">MINES / LIVE ROUND</p>
+      <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">MINES</p>
       <h1 className="mt-2 text-3xl font-semibold">Open gems. Cash out.</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Wager locks on start. Each gem raises the multiplier. Hit a mine and the wager is gone.</p>
-      <div className="mt-5 rounded-2xl border border-border bg-card p-4">
-        <p className="font-mono-custom text-sm">Demo credits: {loading && !serverUser ? '—' : (serverUser?.demoCredits ?? '—')}</p>
-        <p className="mt-1 font-mono-custom text-xs text-muted-foreground">{mult ? `${mult.toFixed(2)}x · cashout ${cashoutValue}` : 'Start a round'}</p>
-        <div className="mt-4 grid grid-cols-5 gap-2">
-          {Array.from({ length: TILES }, (_, i) => {
-            const open = revealed.includes(i);
-            const boom = mineTiles.includes(i);
-            return (
-              <button key={i} type="button" disabled={!active || busy} onClick={() => void reveal(i)} className={`aspect-square rounded-lg border text-xs ${
-                boom ? 'border-destructive bg-destructive/30' : open ? 'border-primary bg-accent text-primary' : 'border-border bg-background'
-              }`}>
-                {boom ? 'M' : open ? <Gem size={14} className="mx-auto" /> : ''}
-              </button>
-            );
-          })}
-        </div>
-        {!authenticated ? <div className="mt-4"><WalletAuthButton /></div> : (
-          <div className="mt-4 space-y-2">
-            {!active ? (
-              <>
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="text-sm text-muted-foreground">Wager<input type="number" min={10} max={1000} value={wager} onChange={(e) => setWager(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-2" /></label>
-                  <label className="text-sm text-muted-foreground">Mines<input type="number" min={1} max={10} value={mines} onChange={(e) => setMines(Number(e.target.value))} className="mt-1 w-full rounded-lg border border-border bg-background px-2 py-2" /></label>
-                </div>
-                <button type="button" disabled={busy} onClick={() => void start()} className="w-full rounded-lg bg-secondary py-3 text-sm font-semibold text-secondary-foreground">Bet and start</button>
-              </>
-            ) : (
-              <button type="button" disabled={busy || revealed.length < 1} onClick={() => void cashout()} className="w-full rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60">Cash out {cashoutValue}</button>
-            )}
-          </div>
-        )}
-        {note ? <p className="mt-3 text-sm text-primary">{note}</p> : null}
-        {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
+      <p className="mt-2 font-mono-custom text-sm">Demo credits: {loading && !serverUser ? '—' : (serverUser?.demoCredits ?? '—')} · {mult ? `${mult.toFixed(2)}x` : 'idle'}</p>
+      <div className="mt-4 grid grid-cols-5 gap-2">
+        {Array.from({ length: TILES }, (_, i) => {
+          const open = revealed.includes(i);
+          const boom = mineTiles.includes(i);
+          return (
+            <button key={i} type="button" disabled={!active || busy} onClick={() => void reveal(i)} className={`fx-tile aspect-square rounded-xl border ${
+              boom ? 'boom border-destructive bg-destructive/40' : open ? 'open border-primary bg-accent text-primary' : 'border-border bg-card'
+            }`}>
+              {boom ? <span className="text-lg">✨</span> : open ? <Gem size={16} className="mx-auto" /> : ''}
+            </button>
+          );
+        })}
       </div>
+      {!authenticated ? <div className="mt-4"><WalletAuthButton /></div> : !active ? (
+        <div className="mt-4 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <input type="number" value={wager} onChange={(e) => setWager(Number(e.target.value))} className="rounded-lg border border-border bg-card px-3 py-2" />
+            <input type="number" min={1} max={10} value={mines} onChange={(e) => setMines(Number(e.target.value))} className="rounded-lg border border-border bg-card px-3 py-2" />
+          </div>
+          <button type="button" disabled={busy} onClick={() => void start()} className="w-full rounded-lg bg-secondary py-3 text-sm font-semibold text-secondary-foreground">Bet and start</button>
+        </div>
+      ) : (
+        <button type="button" disabled={busy || revealed.length < 1} onClick={() => void cashout()} className="mt-4 w-full rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground">Cash out {cashoutValue}</button>
+      )}
+      {note ? <p className="mt-3 text-sm text-primary">{note}</p> : null}
+      {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
     </div>
   );
 }

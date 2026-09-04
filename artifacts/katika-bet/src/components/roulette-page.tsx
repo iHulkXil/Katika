@@ -20,6 +20,7 @@ export function RoulettePage() {
   const play = async () => {
     setError(null); setBusy(true);
     try {
+      await new Promise((r) => setTimeout(r, 1100));
       const token = await getAccessToken();
       if (!token) throw new Error('Sign in first');
       const response = await fetch('/api/games/roulette', {
@@ -42,37 +43,39 @@ export function RoulettePage() {
     <div className="px-3 pt-4">
       <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">ROULETTE</p>
       <h1 className="mt-2 text-3xl font-semibold">European wheel.</h1>
-      <div className="mt-4 flex gap-1 overflow-x-auto pb-2">
+      <div className="mt-3 flex gap-1 overflow-x-auto pb-2">
         {ribbon.map((n, i) => (
           <span key={`${n}-${i}`} className={`min-w-8 rounded px-2 py-1 text-center font-mono-custom text-xs ${
-            n === 0 ? 'bg-primary text-primary-foreground' : RED.has(n) ? 'bg-destructive/80 text-white' : 'bg-card border border-border'
+            n === 0 ? 'bg-primary text-primary-foreground' : RED.has(n) ? 'bg-destructive/80 text-white' : 'border border-border'
           }`}>{n}</span>
         ))}
       </div>
-      <div className="rounded-2xl border border-border bg-card p-4">
-        <p className="font-mono-custom text-sm">Demo credits: {loading && !serverUser ? '—' : (serverUser?.demoCredits ?? '—')}</p>
-        <p className="mt-4 text-center text-6xl font-semibold">{result ? result.roll : '—'}</p>
-        {result ? <p className={`text-center text-sm ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.color} · {result.payout}</p> : null}
-        <div className="mt-4 grid grid-cols-6 gap-1">
-          {Array.from({ length: 37 }, (_, n) => (
-            <button key={n} type="button" onClick={() => { setBet('number'); setNumber(n); }} className={`rounded py-2 font-mono-custom text-[11px] ${
-              bet === 'number' && number === n ? 'ring-2 ring-primary' : ''
-            } ${n === 0 ? 'bg-primary/30' : RED.has(n) ? 'bg-destructive/40' : 'bg-background border border-border'}`}>{n}</button>
-          ))}
-        </div>
-        {!authenticated ? <div className="mt-4"><WalletAuthButton /></div> : (
-          <>
-            <input type="number" min={10} max={1000} value={wager} onChange={(e) => setWager(Number(e.target.value))} className="mt-4 w-full rounded-lg border border-border bg-background px-3 py-2" />
-            <div className="mt-2 grid grid-cols-4 gap-2">
-              {(['red', 'black', 'odd', 'even'] as Bet[]).map((item) => (
-                <button key={item} type="button" onClick={() => setBet(item)} className={`rounded-lg py-2 text-xs capitalize ${bet === item ? 'bg-primary text-primary-foreground' : 'border border-border'}`}>{item}</button>
-              ))}
-            </div>
-            <button type="button" disabled={busy} onClick={() => void play()} className="mt-4 w-full rounded-lg bg-secondary py-3 text-sm font-semibold text-secondary-foreground">Spin</button>
-          </>
-        )}
-        {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
+      <div className={`fx-stage mt-2 ${result?.won ? 'fx-win' : ''}`}>
+        <span className="fx-pointer" />
+        <div className={`fx-wheel ${busy ? 'spin' : ''}`} />
+        <div className="fx-wheel-center">{result ? result.roll : '•'}</div>
       </div>
+      {result ? <p className={`mt-3 text-center text-sm ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.color} · {result.payout}</p> : null}
+      <p className="mt-2 text-center font-mono-custom text-xs text-muted-foreground">Demo credits: {loading && !serverUser ? '—' : (serverUser?.demoCredits ?? '—')}</p>
+      <div className="mt-4 grid grid-cols-6 gap-1">
+        {Array.from({ length: 37 }, (_, n) => (
+          <button key={n} type="button" onClick={() => { setBet('number'); setNumber(n); }} className={`rounded py-2 font-mono-custom text-[11px] ${
+            bet === 'number' && number === n ? 'ring-2 ring-primary' : ''
+          } ${n === 0 ? 'bg-primary/30' : RED.has(n) ? 'bg-destructive/40' : 'border border-border bg-card'}`}>{n}</button>
+        ))}
+      </div>
+      {!authenticated ? <div className="mt-4"><WalletAuthButton /></div> : (
+        <div className="mt-4 space-y-2">
+          <input type="number" value={wager} onChange={(e) => setWager(Number(e.target.value))} className="w-full rounded-lg border border-border bg-card px-3 py-2" />
+          <div className="grid grid-cols-4 gap-2">
+            {(['red', 'black', 'odd', 'even'] as Bet[]).map((item) => (
+              <button key={item} type="button" onClick={() => setBet(item)} className={`rounded-lg py-2 text-xs capitalize ${bet === item ? 'bg-primary text-primary-foreground' : 'border border-border'}`}>{item}</button>
+            ))}
+          </div>
+          <button type="button" disabled={busy} onClick={() => void play()} className="w-full rounded-lg bg-secondary py-3 text-sm font-semibold text-secondary-foreground">Spin</button>
+        </div>
+      )}
+      {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
     </div>
   );
 }

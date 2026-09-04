@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
-import { CircleDot } from 'lucide-react';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 
@@ -39,18 +38,21 @@ export function CoinFlipPage() {
 
   const play = async () => {
     setError(null); setBusy(true);
-    try { await playOnce(); } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
+    try {
+      await new Promise((r) => setTimeout(r, 820));
+      await playOnce();
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
     finally { setBusy(false); }
   };
 
   const startAuto = async () => {
-    setAutoPlaying(true); setBusy(true); stopRef.current = false; setError(null);
+    setAutoPlaying(true); setBusy(true); stopRef.current = false;
     try {
       for (let i = 0; i < Math.min(30, autoCount); i += 1) {
         if (stopRef.current) break;
         const last = await playOnce();
         if (last.demoCredits < wager) break;
-        await new Promise((r) => setTimeout(r, 320));
+        await new Promise((r) => setTimeout(r, 500));
       }
     } catch (err) { setError(err instanceof Error ? err.message : 'Auto failed'); }
     finally { setAutoPlaying(false); setBusy(false); }
@@ -60,31 +62,29 @@ export function CoinFlipPage() {
     <div className="px-3 pt-4">
       <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">COIN FLIP</p>
       <h1 className="mt-2 text-3xl font-semibold">Heads or tails.</h1>
-      <div className="mt-5 rounded-2xl border border-border bg-card p-5">
-        <p className="font-mono-custom text-sm">Demo credits: {loading && !serverUser ? '—' : (serverUser?.demoCredits ?? '—')}</p>
-        <p className="mt-8 text-center text-5xl font-semibold">{result ? result.result.toUpperCase() : '—'}</p>
-        {result ? <p className={`text-center text-sm ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.won ? 'Win' : 'Lose'} {result.payout}</p> : null}
-        {!authenticated ? <div className="mt-6"><WalletAuthButton /></div> : (
-          <>
-            <div className="mt-4 flex gap-2">
-              <button type="button" className="rounded-lg border px-3 text-xs" onClick={() => setWager(Math.max(10, Math.floor(wager / 2)))}>½</button>
-              <input type="number" value={wager} onChange={(e) => setWager(Number(e.target.value))} className="w-full rounded-lg border border-border bg-background px-3 py-2" />
-              <button type="button" className="rounded-lg border px-3 text-xs" onClick={() => setWager(Math.min(1000, wager * 2))}>2×</button>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => setSide('heads')} className={`py-3 rounded-lg ${side === 'heads' ? 'bg-primary text-primary-foreground' : 'border border-border'}`}>Heads</button>
-              <button type="button" onClick={() => setSide('tails')} className={`py-3 rounded-lg ${side === 'tails' ? 'bg-primary text-primary-foreground' : 'border border-border'}`}>Tails</button>
-            </div>
-            <button type="button" disabled={busy} onClick={() => void play()} className="mt-4 w-full rounded-lg bg-secondary py-3 text-sm font-semibold text-secondary-foreground">Flip</button>
-            <div className="mt-3 flex gap-2">
-              <input type="number" min={1} max={30} value={autoCount} onChange={(e) => setAutoCount(Number(e.target.value))} className="w-20 rounded border border-border bg-background px-2 py-2 text-sm" />
-              {autoPlaying ? <button type="button" className="flex-1 rounded-lg border py-2 text-sm" onClick={() => { stopRef.current = true; }}>Stop</button> : <button type="button" disabled={busy} className="flex-1 rounded-lg border border-primary/40 py-2 text-sm" onClick={() => void startAuto()}>Auto</button>}
-            </div>
-          </>
-        )}
-        {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
-        <div className="mt-4 flex flex-wrap gap-1">{history.map((item, i) => <span key={i} className={`rounded px-2 py-1 font-mono-custom text-[10px] ${item.won ? 'bg-accent text-primary' : 'border border-border'}`}>{item.result[0].toUpperCase()}</span>)}</div>
+      <div className={`fx-stage mt-5 ${result?.won ? 'fx-win' : ''}`}>
+        <span className="fx-glow" />
+        <div className={`fx-coin ${busy ? 'spin' : ''}`}>{result ? (result.result === 'heads' ? 'H' : 'T') : '?'}</div>
       </div>
+      {result ? <p className={`mt-3 text-center text-sm ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.result} · {result.payout}</p> : null}
+      <p className="mt-2 text-center font-mono-custom text-xs text-muted-foreground">Demo credits: {loading && !serverUser ? '—' : (serverUser?.demoCredits ?? '—')}</p>
+      {!authenticated ? <div className="mt-6"><WalletAuthButton /></div> : (
+        <div className="mt-4 space-y-3">
+          <div className="flex gap-2">
+            <button type="button" className="rounded-lg border px-3 text-xs" onClick={() => setWager(Math.max(10, Math.floor(wager / 2)))}>½</button>
+            <input type="number" value={wager} onChange={(e) => setWager(Number(e.target.value))} className="w-full rounded-lg border border-border bg-card px-3 py-2" />
+            <button type="button" className="rounded-lg border px-3 text-xs" onClick={() => setWager(Math.min(1000, wager * 2))}>2×</button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setSide('heads')} className={`rounded-lg py-3 ${side === 'heads' ? 'bg-primary text-primary-foreground' : 'border border-border'}`}>Heads</button>
+            <button type="button" onClick={() => setSide('tails')} className={`rounded-lg py-3 ${side === 'tails' ? 'bg-primary text-primary-foreground' : 'border border-border'}`}>Tails</button>
+          </div>
+          <button type="button" disabled={busy} onClick={() => void play()} className="w-full rounded-lg bg-secondary py-3 text-sm font-semibold text-secondary-foreground">Flip</button>
+          {autoPlaying ? <button type="button" className="w-full rounded-lg border py-2 text-sm" onClick={() => { stopRef.current = true; }}>Stop</button> : <button type="button" disabled={busy} className="w-full rounded-lg border border-primary/40 py-2 text-sm" onClick={() => void startAuto()}>Auto ×{autoCount}</button>}
+        </div>
+      )}
+      {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
+      <div className="mt-4 flex flex-wrap gap-1">{history.map((item, i) => <span key={i} className={`rounded px-2 py-1 font-mono-custom text-[10px] ${item.won ? 'bg-accent text-primary' : 'border border-border'}`}>{item.result[0].toUpperCase()}</span>)}</div>
     </div>
   );
 }
