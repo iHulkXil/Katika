@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { Gem } from 'lucide-react';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
+import { playTableTone } from '@/lib/table-sound';
 
 const TILES = 25;
-async function api(path: string, token: string, body: object) {
+async function api(path: string, token: string, body?: object, method = 'POST') {
   const response = await fetch(path, {
-    method: 'POST',
+    method,
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: method === 'GET' ? undefined : JSON.stringify(body ?? {}),
   });
   const text = await response.text();
   if (!text) throw new Error('Empty API response. Restart API on 5000.');
@@ -29,6 +30,7 @@ export function MinesPage() {
   const [mult, setMult] = useState(0);
   const [cashoutValue, setCashoutValue] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [booting, setBooting] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
@@ -38,12 +40,39 @@ export function MinesPage() {
     return value;
   };
 
+  useEffect(() => {
+    if (!authenticated) {
+      setBooting(false);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const body = await api('/api/games/mines/active', await token(), undefined, 'GET');
+        if (cancelled || !body.active) return;
+        setActive(true);
+        setRevealed(body.revealed ?? []);
+        setMult(body.multiplier ?? 0);
+        setCashoutValue(body.cashoutValue ?? 0);
+        setNote('Resumed open round');
+      } catch {
+        /* no open round */
+      } finally {
+        if (!cancelled) setBooting(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authenticated]);
+
   const start = async () => {
     setError(null); setNote(null); setBusy(true);
     try {
       const body = await api('/api/games/mines/start', await token(), { wager, mines });
       setActive(true); setRevealed([]); setMineTiles([]);
       setMult(body.multiplier); setCashoutValue(body.cashoutValue);
+      playTableTone('tick');
       await refresh();
     } catch (err) { setError(err instanceof Error ? err.message : 'Start failed'); }
     finally { setBusy(false); }
@@ -55,9 +84,11 @@ export function MinesPage() {
     try {
       const body = await api('/api/games/mines/reveal', await token(), { tile });
       setRevealed(body.revealed ?? []); setMult(body.multiplier); setCashoutValue(body.cashoutValue);
+      playTableTone(body.active === false && !body.won ? 'lose' : 'tick');
       if (body.active === false) {
         setActive(false); setMineTiles(body.mines ?? []);
         setNote(body.won ? `Cleared +${body.payout}` : 'Hit a mine');
+        if (body.won) playTableTone('win');
         await refresh();
       }
     } catch (err) { setError(err instanceof Error ? err.message : 'Reveal failed'); }
@@ -70,6 +101,7 @@ export function MinesPage() {
       const body = await api('/api/games/mines/cashout', await token(), {});
       setActive(false); setMineTiles(body.mines ?? []);
       setNote(`Cashed ${body.cashoutValue}`);
+      playTableTone('win');
       await refresh();
     } catch (err) { setError(err instanceof Error ? err.message : 'Cashout failed'); }
     finally { setBusy(false); }
@@ -79,7 +111,7 @@ export function MinesPage() {
     <div className="px-3 pt-4">
       <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">MINES</p>
       <h1 className="mt-2 text-3xl font-semibold">Open gems. Cash out.</h1>
-      <p className="mt-2 font-mono-custom text-sm">Demo credits: {loading && !serverUser ? '—' : (serverUser?.demoCredits ?? '—')} · {mult ? `${mult.toFixed(2)}x` : 'idle'}</p>
+      <p className="mt-2 font-mono-custom text-sm">Demo credits: {loading && !serverUser ? '—' : (serverUser?.demoCredits ?? '—')} · {booting ? 'loading' : (mult ? `${mult.toFixed(2)}x` : 'idle')}</p>
       <div className="mt-4 grid grid-cols-5 gap-2">
         {Array.from({ length: TILES }, (_, i) => {
           const open = revealed.includes(i);
@@ -88,7 +120,7 @@ export function MinesPage() {
             <button key={i} type="button" disabled={!active || busy} onClick={() => void reveal(i)} className={`fx-tile aspect-square rounded-xl border ${
               boom ? 'boom border-destructive bg-destructive/40' : open ? 'open border-primary bg-accent text-primary' : 'border-border bg-card'
             }`}>
-              {boom ? <span className="text-lg">✨</span> : open ? <Gem size={16} className="mx-auto" /> : ''}
+              {boom ? <span className="text-lg">*</span> : open ? <Gem size={16} className="mx-auto" /> : ''}
             </button>
           );
         })}
@@ -99,7 +131,7 @@ export function MinesPage() {
             <input type="number" value={wager} onChange={(e) => setWager(Number(e.target.value))} className="rounded-lg border border-border bg-card px-3 py-2" />
             <input type="number" min={1} max={10} value={mines} onChange={(e) => setMines(Number(e.target.value))} className="rounded-lg border border-border bg-card px-3 py-2" />
           </div>
-          <button type="button" disabled={busy} onClick={() => void start()} className="w-full rounded-lg bg-secondary py-3 text-sm font-semibold text-secondary-foreground">Bet and start</button>
+          <button type="button" disabled={busy || booting} onClick={() => void start()} className="w-full rounded-lg bg-secondary py-3 text-sm font-semibold text-secondary-foreground">Bet and start</button>
         </div>
       ) : (
         <button type="button" disabled={busy || revealed.length < 1} onClick={() => void cashout()} className="mt-4 w-full rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground">Cash out {cashoutValue}</button>
