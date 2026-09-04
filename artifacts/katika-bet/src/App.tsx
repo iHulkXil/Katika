@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { ConnectedWalletStatus, WalletAuthButton } from '@/components/wallet-auth';
+import { BetHistory } from '@/components/bet-history';
 import { DicePage } from '@/components/dice-page';
 import { CoinFlipPage } from '@/components/coinflip-page';
 import { MinesPage } from '@/components/mines-page';
@@ -14,30 +15,30 @@ import { useServerSession } from '@/components/server-session';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import { useLogout, usePrivy } from '@privy-io/react-auth';
 import {
-  CircleDot, Coins, Crown, Dice5, Gem, Gift, Grid2X2, Headset, History,
-  Settings, ShieldCheck, Trophy, UserRound, WalletCards,
+  CircleDot, Dice5, Gem, Grid2X2, UserRound, WalletCards,
 } from 'lucide-react';
 
 const queryClient = new QueryClient();
 
-type Game = { name: string; description: string; href?: string; icon: ReactNode; accent: string };
+type Game = { name: string; description: string; href: string; icon: ReactNode; accent: string };
 const games: Game[] = [
-  { name: 'Dice', description: '1–100 slider.', href: '/games/dice', icon: <Dice5 />, accent: 'from-emerald-400/25 to-emerald-950/20' },
-  { name: 'Coin Flip', description: 'Heads or tails.', href: '/games/coinflip', icon: <CircleDot />, accent: 'from-amber-300/20 to-amber-950/20' },
-  { name: 'Mines', description: '5x5 gem grid.', href: '/games/mines', icon: <Gem />, accent: 'from-teal-300/20 to-teal-950/20' },
-  { name: 'Roulette', description: 'European 0–36.', href: '/games/roulette', icon: <Grid2X2 />, accent: 'from-yellow-300/20 to-yellow-950/20' },
+  { name: 'Dice', description: '1–100', href: '/games/dice', icon: <Dice5 />, accent: 'from-emerald-400/25 to-emerald-950/20' },
+  { name: 'Flip', description: '1.98x', href: '/games/coinflip', icon: <CircleDot />, accent: 'from-amber-300/20 to-amber-950/20' },
+  { name: 'Mines', description: 'Cash out', href: '/games/mines', icon: <Gem />, accent: 'from-teal-300/20 to-teal-950/20' },
+  { name: 'Roulette', description: '0–36', href: '/games/roulette', icon: <Grid2X2 />, accent: 'from-yellow-300/20 to-yellow-950/20' },
 ];
 
 function GameTile({ game }: { game: Game }) {
-  const inner = (
-    <div className={`relative min-h-[148px] overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${game.accent} p-4`}>
-      <span className="absolute right-3 top-3 rounded-full bg-primary px-2 py-0.5 font-mono-custom text-[10px] text-primary-foreground">PLAY</span>
-      <div className="mt-8 text-secondary [&_svg]:h-7 [&_svg]:w-7">{game.icon}</div>
-      <h3 className="mt-3 text-lg font-semibold">{game.name}</h3>
-      <p className="mt-1 text-xs text-muted-foreground">{game.description}</p>
-    </div>
+  return (
+    <Link href={game.href} className="block">
+      <div className={`relative min-h-[118px] overflow-hidden rounded-xl border border-border bg-gradient-to-br ${game.accent} p-3 transition hover:border-primary/50`}>
+        <span className="absolute right-2 top-2 rounded-full bg-primary px-1.5 py-0.5 font-mono-custom text-[9px] text-primary-foreground">PLAY</span>
+        <div className="mt-5 text-secondary [&_svg]:h-5 [&_svg]:w-5">{game.icon}</div>
+        <h3 className="mt-2 text-base font-semibold">{game.name}</h3>
+        <p className="text-[11px] text-muted-foreground">{game.description}</p>
+      </div>
+    </Link>
   );
-  return <Link href={game.href ?? '/games'} className="block">{inner}</Link>;
 }
 
 function Home() {
@@ -46,10 +47,9 @@ function Home() {
       <div className="overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-r from-accent to-card p-4">
         <p className="font-mono-custom text-[10px] tracking-[.2em] text-primary">CASINO / DEMO</p>
         <h1 className="mt-2 text-2xl font-semibold">Four tables are live.</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Demo credits only. No cash.</p>
-        <Link href="/games" className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Casino lobby</Link>
+        <p className="mt-2 text-sm text-muted-foreground">Demo credits only. Bets save to Wallet.</p>
       </div>
-      <div className="mt-5 grid grid-cols-2 gap-3">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
+      <div className="mt-4 grid grid-cols-2 gap-2">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
     </div>
   );
 }
@@ -58,14 +58,22 @@ function Games() {
   return (
     <div className="px-3 pt-3">
       <h1 className="text-2xl font-semibold">Casino</h1>
-      <p className="mt-1 text-sm text-muted-foreground">All four tables settle on the server with demo credits.</p>
-      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
+      <p className="mt-1 text-sm text-muted-foreground">Server-settled demo tables.</p>
+      <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
     </div>
   );
 }
 
 function Wallet() {
-  return <div className="px-3 pt-3"><h1 className="text-2xl font-semibold">Wallet</h1><p className="mt-1 text-sm text-muted-foreground">Demo credits only.</p><div className="mt-4"><ConnectedWalletStatus /></div></div>;
+  return (
+    <div className="px-3 pt-3">
+      <h1 className="text-2xl font-semibold">Wallet</h1>
+      <p className="mt-1 text-sm text-muted-foreground">Demo credits and recent table results.</p>
+      <div className="mt-4"><ConnectedWalletStatus /></div>
+      <h2 className="mt-6 text-sm font-semibold uppercase tracking-[.16em] text-secondary">Bet history</h2>
+      <BetHistory />
+    </div>
+  );
 }
 
 function DemoAction({ label }: { label: string }) {
@@ -76,13 +84,13 @@ function DemoAction({ label }: { label: string }) {
 function Profile() {
   const { user, authenticated } = usePrivy();
   const { logout } = useLogout();
-  const { serverUser } = useServerSession();
+  const { serverUser, loading } = useServerSession();
   const name = user?.email?.address ?? user?.google?.email ?? user?.wallet?.address?.slice(0, 8) ?? 'Guest';
   return (
     <div className="px-3 pt-3">
       <div className="rounded-2xl border border-border bg-gradient-to-b from-accent to-card p-4">
         <p className="text-lg font-semibold">{authenticated ? name : 'Not signed in'}</p>
-        <p className="mt-3 font-mono-custom text-2xl">{serverUser?.demoCredits ?? 0} DEMO</p>
+        <p className="mt-3 font-mono-custom text-2xl">{loading && !serverUser ? '...' : (serverUser?.demoCredits ?? 0)} DEMO</p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button type="button" disabled className="rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground">Deposit</button>
           <DemoAction label="Withdraw" />
