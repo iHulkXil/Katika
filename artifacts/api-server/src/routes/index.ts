@@ -8,12 +8,14 @@ import minesRouter from "./mines";
 import rouletteRouter from "./roulette";
 import kchipRouter from "./kchip";
 import walletRouter from "./wallet";
+import legendsRouter from "./legends";
 
 const router: IRouter = Router();
 router.use(healthRouter);
 router.use(meRouter);
 router.use(kchipRouter);
 router.use(walletRouter);
+router.use(legendsRouter);
 router.use(betsRouter);
 router.use(diceRouter);
 router.use(coinflipRouter);
