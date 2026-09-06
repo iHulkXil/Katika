@@ -1,6 +1,5 @@
 import { createRoot } from 'react-dom/client';
 import { PrivyProvider } from '@privy-io/react-auth';
-import { toSolanaWalletConnectors } from '@privy-io/react-auth/solana';
 
 import App from './App';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -23,11 +22,7 @@ function MissingPrivyConfig() {
   );
 }
 
-createRoot(document.getElementById('root')!, {
-  onCaughtError: (error, errorInfo) => {
-    console.error(error, errorInfo.componentStack);
-  },
-}).render(
+createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>
     {privyAppId ? (
       <PrivyProvider
@@ -38,16 +33,12 @@ createRoot(document.getElementById('root')!, {
             theme: 'dark',
             accentColor: '#35d399',
             showWalletLoginFirst: false,
-            walletChainType: 'ethereum-and-solana',
+            walletChainType: 'ethereum-only',
           },
           defaultChain: sepolia,
           supportedChains: [sepolia, baseSepolia, arbitrumSepolia, polygonAmoy],
           embeddedWallets: {
             ethereum: { createOnLogin: 'users-without-wallets' },
-            solana: { createOnLogin: 'users-without-wallets' },
-          },
-          externalWallets: {
-            solana: { connectors: toSolanaWalletConnectors() },
           },
         }}
       >
