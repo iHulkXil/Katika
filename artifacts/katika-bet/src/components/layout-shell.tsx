@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
+  ChevronRight,
   CircleDot,
   Crown,
   Dice5,
@@ -54,7 +55,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
           <Brand />
           <div className="flex items-center gap-2">
             <span className="rounded-full border border-primary/30 bg-accent px-2.5 py-1 font-mono-custom text-[11px] text-accent-foreground">
-              {typeof credits === 'number' ? credits.toLocaleString() : '—'} KCHIP
+              {typeof credits === 'number' ? credits.toLocaleString() : '\u2014'} KCHIP
             </span>
             <WalletAuthButton compact className="hidden sm:flex" />
           </div>
@@ -136,7 +137,7 @@ export function MenuRow({
         <Icon size={16} className="text-muted-foreground" />
         {label}
       </span>
-      <span className="text-muted-foreground">></span>
+      <ChevronRight size={16} className="text-muted-foreground" />
     </Link>
   );
 }
