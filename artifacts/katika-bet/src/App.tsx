@@ -45,9 +45,9 @@ function Home() {
   return (
     <div className="px-3 pt-3">
       <div className="overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-r from-accent to-card p-4">
-        <p className="font-mono-custom text-[10px] tracking-[.2em] text-primary">CASINO / DEMO</p>
+        <p className="font-mono-custom text-[10px] tracking-[.2em] text-primary">CASINO / SEPOLIA</p>
         <h1 className="mt-2 text-2xl font-semibold">Four tables are live.</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Demo credits only. Bets save to Wallet.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Play with table KCHIP. Claim and deposit from Wallet.</p>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
     </div>
@@ -58,7 +58,7 @@ function Games() {
   return (
     <div className="px-3 pt-3">
       <h1 className="text-2xl font-semibold">Casino</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Server-settled demo tables.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Tables settle in KCHIP.</p>
       <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
     </div>
   );
@@ -68,7 +68,7 @@ function Wallet() {
   return (
     <div className="px-3 pt-3">
       <h1 className="text-2xl font-semibold">Wallet</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Demo credits and recent table results.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Wallet KCHIP is on-chain. Table KCHIP is what you play with.</p>
       <div className="mt-4"><ConnectedWalletStatus /></div>
       <h2 className="mt-6 text-sm font-semibold uppercase tracking-[.16em] text-secondary">Bet history</h2>
       <BetHistory />
@@ -78,7 +78,7 @@ function Wallet() {
 
 function DemoAction({ label }: { label: string }) {
   const { toast } = useToast();
-  return <button type="button" onClick={() => toast({ title: `${label} is demo-only` })} className="rounded-xl border border-border bg-card px-3 py-3 text-sm font-semibold">{label}</button>;
+  return <button type="button" onClick={() => toast({ title: `Use Wallet to ${label.toLowerCase()} KCHIP` })} className="rounded-xl border border-border bg-card px-3 py-3 text-sm font-semibold">{label}</button>;
 }
 
 function Profile() {
@@ -90,9 +90,10 @@ function Profile() {
     <div className="px-3 pt-3">
       <div className="rounded-2xl border border-border bg-gradient-to-b from-accent to-card p-4">
         <p className="text-lg font-semibold">{authenticated ? name : 'Not signed in'}</p>
-        <p className="mt-3 font-mono-custom text-2xl">{loading && !serverUser ? '...' : (serverUser?.demoCredits ?? 0)} DEMO</p>
+        <p className="mt-3 font-mono-custom text-2xl">{loading && !serverUser ? '...' : (serverUser?.demoCredits ?? 0)} KCHIP</p>
+        <p className="mt-1 text-xs text-muted-foreground">Table balance</p>
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <button type="button" disabled className="rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground">Deposit</button>
+          <Link href="/wallet" className="rounded-xl bg-primary py-3 text-center text-sm font-semibold text-primary-foreground">Deposit</Link>
           <DemoAction label="Withdraw" />
         </div>
       </div>
@@ -105,7 +106,7 @@ function MenuPage() {
   return (
     <div className="px-3 pt-3">
       <h1 className="text-2xl font-semibold">Menu</h1>
-      <DemoNotice>Four demo tables. Cash stays off.</DemoNotice>
+      <DemoNotice>Sepolia testnet. KCHIP has no cash value.</DemoNotice>
       <MenuRow href="/games" icon={Grid2X2} label="Casino" />
       <MenuRow href="/games/dice" icon={Dice5} label="Dice" />
       <MenuRow href="/games/coinflip" icon={CircleDot} label="Coin Flip" />
