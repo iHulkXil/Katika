@@ -60,7 +60,7 @@ export function LegendPage() {
       const body = await response.json();
       if (!response.ok) throw new Error((body as { error?: string }).error ?? 'Save failed');
       setLegend(body as Legend);
-      setStatus(`Saved. ${body.allocatedKchip} KCHIP on the card.`);
+      setStatus(`Card saved. ${(body as Legend).allocatedKchip} KCHIP locked in the legend.`);
     } catch (err) {
       setStatus(err instanceof Error ? err.message : 'Save failed');
     }
@@ -77,32 +77,44 @@ export function LegendPage() {
   }
 
   const allocated = STATS.reduce((sum, key) => sum + Number(legend[key] || 0), 0);
+  const overall = Math.round(allocated / 6);
 
   return (
-    <div className="px-3 pt-3">
-      <p className="font-mono-custom text-[10px] tracking-[.2em] text-primary">CREATOR</p>
-      <h1 className="mt-2 text-2xl font-semibold">My legend</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Each point on the card is 1 KCHIP allocated. Playable = on-chain minus this sum.</p>
-      <label className="mt-4 block text-xs text-muted-foreground">Name
+    <div className="px-3 pt-3 pb-8">
+      <div className="overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-accent via-card to-background p-5">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="font-mono-custom text-[10px] tracking-[.2em] text-primary">PLAYER CARD</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">{legend.name || 'Unnamed'}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{legend.position}</p>
+          </div>
+          <div className="grid h-16 w-16 place-items-center rounded-2xl bg-primary text-primary-foreground">
+            <span className="font-mono-custom text-2xl font-bold">{overall}</span>
+          </div>
+        </div>
+        <p className="mt-4 font-mono-custom text-xs text-secondary">{allocated} KCHIP allocated</p>
+      </div>
+      <label className="mt-5 block text-xs text-muted-foreground">Name
         <input className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={legend.name} onChange={(event) => setLegend({ ...legend, name: event.target.value })} />
       </label>
-      <label className="mt-3 block text-xs text-muted-foreground">Position
-        <select className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={legend.position} onChange={(event) => setLegend({ ...legend, position: event.target.value })}>
-          {POSITIONS.map((position) => <option key={position}>{position}</option>)}
-        </select>
-      </label>
-      <div className="mt-4 space-y-3">
+      <div className="mt-3 flex flex-wrap gap-1">
+        {POSITIONS.map((position) => (
+          <button key={position} type="button" onClick={() => setLegend({ ...legend, position })} className={`rounded-full px-2.5 py-1 text-[11px] ${legend.position === position ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground'}`}>
+            {position}
+          </button>
+        ))}
+      </div>
+      <div className="mt-5 space-y-3 rounded-2xl border border-border bg-card p-4">
         {STATS.map((key) => (
-          <label key={key} className="block text-xs uppercase text-muted-foreground">
-            {key} {legend[key]}
-            <input type="range" min={1} max={99} value={legend[key]} className="mt-1 w-full" onChange={(event) => setLegend({ ...legend, [key]: Number(event.target.value) })} />
+          <label key={key} className="block text-[11px] uppercase tracking-wider text-muted-foreground">
+            <span className="flex justify-between"><span>{key}</span><span className="font-mono-custom text-foreground">{legend[key]}</span></span>
+            <input type="range" min={1} max={99} value={legend[key]} className="mt-1 w-full accent-emerald-400" onChange={(event) => setLegend({ ...legend, [key]: Number(event.target.value) })} />
           </label>
         ))}
       </div>
-      <p className="mt-4 font-mono-custom text-sm">Allocated {allocated} KCHIP</p>
-      <button type="button" onClick={() => void save()} className="mt-3 w-full rounded-lg bg-secondary py-2.5 text-sm font-semibold text-secondary-foreground">Save legend</button>
+      <button type="button" onClick={() => void save()} className="mt-4 w-full rounded-lg bg-secondary py-2.5 text-sm font-semibold text-secondary-foreground">Save card</button>
       {status ? <p className="mt-2 text-xs text-muted-foreground">{status}</p> : null}
-      <Link href="/play" className="mt-4 inline-block text-sm text-primary">Back to Play</Link>
+      <Link href="/play" className="mt-4 inline-block text-sm text-primary">To the floor</Link>
     </div>
   );
 }
