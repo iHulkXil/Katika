@@ -8,10 +8,6 @@ import {
 
 const router: IRouter = Router();
 
-async function adjust(req: Parameters<IRouter["post"]>[1] extends infer _ ? never : never, delta: number) {
-  return delta;
-}
-
 router.post("/kchip/deposit", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
@@ -32,10 +28,7 @@ router.post("/kchip/deposit", async (req, res) => {
       .where(eq(usersTable.privyUserId, identity.privyUserId))
       .returning();
     if (!rows[0]) return res.status(404).json({ error: "Sign in first" });
-    return res.json({
-      demoCredits: rows[0].demoCredits,
-      kchip: rows[0].demoCredits,
-    });
+    return res.json({ demoCredits: rows[0].demoCredits, kchip: rows[0].demoCredits });
   } catch (error) {
     if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
     if (error instanceof AuthError) return res.status(401).json({ error: error.message });
@@ -70,10 +63,7 @@ router.post("/kchip/withdraw", async (req, res) => {
       })
       .where(eq(usersTable.privyUserId, identity.privyUserId))
       .returning();
-    return res.json({
-      demoCredits: rows[0].demoCredits,
-      kchip: rows[0].demoCredits,
-    });
+    return res.json({ demoCredits: rows[0].demoCredits, kchip: rows[0].demoCredits });
   } catch (error) {
     if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
     if (error instanceof AuthError) return res.status(401).json({ error: error.message });
