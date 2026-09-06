@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { evmTestnets, SOLANA_DEVNET_RPC } from '@/lib/testnet-chains';
+import { useServerSession } from '@/components/server-session';
+import { evmTestnets } from '@/lib/testnet-chains';
 import {
   CHIP_ADDRESS,
   encodeApprove,
@@ -27,15 +28,14 @@ async function rpc(url: string, method: string, params: unknown[]) {
 }
 
 export function TestnetWallets() {
-  const { ready, authenticated, user } = usePrivy();
+  const { ready, authenticated, user, getAccessToken } = usePrivy();
+  const { refresh } = useServerSession();
   const { wallets } = useWallets();
   const [evm, setEvm] = useState('...');
-  const [sol, setSol] = useState('...');
   const [chip, setChip] = useState('...');
   const [status, setStatus] = useState<string | null>(null);
   const wallet = wallets[0];
   const evmAddress = wallet?.address ?? user?.wallet?.address;
-  const solAccount = user?.linkedAccounts?.find((account) => account.type === 'wallet' && 'chainType' in account && (account as { chainType?: string }).chainType === 'solana') as { address?: string } | undefined;
   const rpcUrl = evmTestnets[0].rpcUrls.default.http[0];
 
   useEffect(() => {
@@ -44,16 +44,6 @@ export function TestnetWallets() {
       .then((body) => setEvm((Number(BigInt(body.result ?? '0x0')) / 1e18).toFixed(5)))
       .catch(() => setEvm('n/a'));
   }, [evmAddress, rpcUrl]);
-
-  useEffect(() => {
-    if (!solAccount?.address) {
-      setSol('—');
-      return;
-    }
-    void rpc(SOLANA_DEVNET_RPC, 'getBalance', [solAccount.address])
-      .then((body) => setSol((Number(body.result?.value ?? 0) / 1e9).toFixed(4)))
-      .catch(() => setSol('n/a'));
-  }, [solAccount?.address]);
 
   useEffect(() => {
     if (!evmAddress || !CHIP_ADDRESS) {
@@ -75,25 +65,42 @@ export function TestnetWallets() {
     });
   };
 
+  const tableMove = async (path: string, amount: number) => {
+    const token = await getAccessToken();
+    if (!token) throw new Error('Sign in first');
+    const response = await fetch(path, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ amount }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error((body as { error?: string }).error ?? 'Table update failed');
+    await refresh();
+  };
+
   const claim = async () => {
     setStatus('Claiming on Sepolia...');
     try {
-      if (!CHIP_ADDRESS) throw new Error('Set VITE_SEPOLIA_CHIP after Remix deploy');
+      if (!CHIP_ADDRESS) throw new Error('Set VITE_SEPOLIA_CHIP');
       const hash = await send(CHIP_ADDRESS, SELECTORS.claim);
-      setStatus(`Claim tx ${String(hash).slice(0, 10)}...`);
+      setStatus(`Claimed to wallet ${String(hash).slice(0, 10)}... Deposit to play.`);
     } catch (err) {
       setStatus(err instanceof Error ? err.message : 'Claim failed');
     }
   };
 
   const lock = async () => {
-    setStatus('Approving then depositing 100 KCHIP...');
+    setStatus('Depositing 100 KCHIP to vault...');
     try {
       if (!CHIP_ADDRESS || !VAULT_ADDRESS) throw new Error('Set chip and vault addresses');
       const amount = 100n * 10n ** 18n;
       await send(CHIP_ADDRESS, encodeApprove(VAULT_ADDRESS, amount));
       await send(VAULT_ADDRESS, encodeDeposit(amount));
-      setStatus('Deposited 100 KCHIP into the Sepolia vault');
+      await tableMove('/api/kchip/deposit', 100);
+      setStatus('100 KCHIP is on the table');
     } catch (err) {
       setStatus(err instanceof Error ? err.message : 'Deposit failed');
     }
@@ -103,8 +110,9 @@ export function TestnetWallets() {
     setStatus('Withdrawing 100 KCHIP...');
     try {
       if (!VAULT_ADDRESS) throw new Error('Set VITE_SEPOLIA_VAULT');
+      await tableMove('/api/kchip/withdraw', 100);
       const hash = await send(VAULT_ADDRESS, encodeWithdraw(100n * 10n ** 18n));
-      setStatus(`Withdraw tx ${String(hash).slice(0, 10)}...`);
+      setStatus(`Withdrew 100 KCHIP ${String(hash).slice(0, 10)}...`);
     } catch (err) {
       setStatus(err instanceof Error ? err.message : 'Withdraw failed');
     }
@@ -114,12 +122,11 @@ export function TestnetWallets() {
 
   return (
     <div className="mt-4 rounded-2xl border border-border bg-card p-4">
-      <p className="text-xs uppercase tracking-[.16em] text-secondary">Sepolia testnet</p>
-      <p className="mt-2 text-xs text-muted-foreground">Stay on Sepolia. KCHIP is a test token. Tables still settle demo credits. Not mainnet cash.</p>
+      <p className="text-xs uppercase tracking-[.16em] text-secondary">Sepolia KCHIP</p>
+      <p className="mt-2 text-xs text-muted-foreground">Claim into the wallet, then deposit to the vault to load the table. Sepolia only. Not mainnet cash.</p>
       <div className="mt-3 space-y-1 font-mono-custom text-xs">
         <p>EVM {evmAddress ? shorten(evmAddress) : '—'} · {evm} ETH</p>
-        <p>KCHIP {chip}</p>
-        <p>SOL {solAccount?.address ? shorten(solAccount.address) : 'not linked'} · {sol}</p>
+        <p>Wallet KCHIP {chip}</p>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {wallet ? evmTestnets.map((chain) => (
@@ -130,14 +137,11 @@ export function TestnetWallets() {
       </div>
       <div className="mt-3 grid grid-cols-1 gap-2">
         <button type="button" onClick={() => void claim()} className="rounded-lg bg-secondary py-2 text-sm font-semibold text-secondary-foreground">Claim 1000 KCHIP</button>
-        <button type="button" onClick={() => void lock()} className="rounded-lg border border-border py-2 text-sm">Deposit 100 to vault</button>
-        <button type="button" onClick={() => void unlock()} className="rounded-lg border border-border py-2 text-sm">Withdraw 100 from vault</button>
+        <button type="button" onClick={() => void lock()} className="rounded-lg border border-border py-2 text-sm">Deposit 100 to table</button>
+        <button type="button" onClick={() => void unlock()} className="rounded-lg border border-border py-2 text-sm">Withdraw 100 from table</button>
       </div>
       {status ? <p className="mt-2 text-xs text-muted-foreground">{status}</p> : null}
-      <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-        <a className="text-primary" href="https://sepoliafaucet.com" target="_blank" rel="noreferrer">Sepolia ETH faucet</a>
-        <a className="text-primary" href="https://remix.ethereum.org" target="_blank" rel="noreferrer">Remix deploy</a>
-      </div>
+      <a className="mt-3 inline-block text-[11px] text-primary" href="https://sepoliafaucet.com" target="_blank" rel="noreferrer">Sepolia ETH faucet</a>
     </div>
   );
 }
