@@ -30,7 +30,6 @@ export function WalletAuthButton({
   const { ready, authenticated, user, login } = usePrivy();
   const { logout } = useLogout();
   const { serverUser } = useServerSession();
-  const address = user?.wallet?.address;
 
   if (!ready) {
     return (
@@ -46,7 +45,7 @@ export function WalletAuthButton({
       <div className={`flex items-center gap-2 ${className}`}>
         {typeof serverUser?.demoCredits === 'number' ? (
           <span className={`rounded-lg border border-secondary/40 bg-card px-3 py-2 font-mono-custom text-xs ${compact ? 'hidden sm:inline' : ''}`}>
-            {serverUser.demoCredits} demo
+            {serverUser.demoCredits} KCHIP
           </span>
         ) : null}
         <span className={`inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-accent px-3 py-2 font-mono-custom text-xs ${compact ? 'hidden sm:inline-flex' : ''}`}>
@@ -85,9 +84,9 @@ export function ConnectedWalletStatus() {
           {email ? <p className="mt-2 text-sm">{email}</p> : null}
           <p className="mt-2 break-all font-mono-custom text-sm">{address ?? 'Allocating embedded wallet...'}</p>
           <p className="mt-3 font-mono-custom text-sm">
-            {loading && !serverUser ? 'Loading demo credits...' : `Demo credits: ${serverUser?.demoCredits ?? '—'}`}
+            {loading && !serverUser ? 'Loading table...' : `Table KCHIP: ${serverUser?.demoCredits ?? 0}`}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">Tables use demo credits. Testnet tokens are not a stake.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Wallet KCHIP is on-chain. Table KCHIP is what the games use after you deposit.</p>
         </div>
         <TestnetWallets />
       </div>
@@ -96,7 +95,7 @@ export function ConnectedWalletStatus() {
 
   return (
     <div className="rounded-xl border border-dashed border-border bg-background/30 p-4">
-      <p className="text-sm text-muted-foreground">Sign in with email, Google, or a wallet. Default network is Sepolia.</p>
+      <p className="text-sm text-muted-foreground">Sign in. Default network is Sepolia.</p>
       <WalletAuthButton className="mt-4" />
     </div>
   );
