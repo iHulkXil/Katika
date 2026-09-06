@@ -5,38 +5,24 @@ import {
   AuthError,
   authenticateRequest,
 } from "../lib/privy-auth";
+import { allocatedFor, playableOf, syncPlayable } from "../lib/playable";
 
 const router: IRouter = Router();
 const ADDRESS = /^0x[a-fA-F0-9]{40}$/;
 
-function playable(onChain: number, allocated: number) {
-  return Math.max(0, onChain - allocated);
-}
-
-async function allocatedFor(privyUserId: string) {
-  try {
-    const { db, legendsTable } = await import("@workspace/db");
-    const rows = await db.select().from(legendsTable).where(eq(legendsTable.privyUserId, privyUserId)).limit(1);
-    const row = rows[0];
-    if (!row) return { allocated: 0, profileComplete: false };
-    return {
-      allocated: row.pace + row.shooting + row.passing + row.dribbling + row.defending + row.physical,
-      profileComplete: row.profileComplete,
-    };
-  } catch {
-    return { allocated: 0, profileComplete: false };
-  }
-}
-
 router.get("/wallet/me", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
+    const { db, usersTable } = await import("@workspace/db");
+    const users = await db.select().from(usersTable).where(eq(usersTable.privyUserId, identity.privyUserId)).limit(1);
+    const user = users[0];
     const card = await allocatedFor(identity.privyUserId);
+    const onChain = user?.onChainKchip ?? 0;
     return res.json({
-      walletAddress: null,
-      onChainKchip: 0,
+      walletAddress: user?.walletAddress ?? null,
+      onChainKchip: onChain,
       allocatedKchip: card.allocated,
-      playableKchip: playable(0, card.allocated),
+      playableKchip: user?.demoCredits ?? playableOf(onChain, card.allocated),
       profileComplete: card.profileComplete,
       chipContract: process.env.SEPOLIA_CHIP || process.env.VITE_SEPOLIA_CHIP || null,
     });
@@ -61,20 +47,24 @@ router.post("/wallet/link", async (req, res) => {
     } catch {
       onChain = 0;
     }
-    const card = await allocatedFor(identity.privyUserId);
+    const { db, usersTable } = await import("@workspace/db");
+    await db.update(usersTable).set({
+      walletAddress: address.toLowerCase(),
+      updatedAt: new Date(),
+    }).where(eq(usersTable.privyUserId, identity.privyUserId));
+    const synced = await syncPlayable(identity.privyUserId, onChain);
     return res.json({
       walletAddress: address.toLowerCase(),
-      onChainKchip: onChain,
-      allocatedKchip: card.allocated,
-      playableKchip: playable(onChain, card.allocated),
-      profileComplete: card.profileComplete,
+      onChainKchip: synced.onChain,
+      allocatedKchip: synced.allocated,
+      playableKchip: synced.playable,
+      profileComplete: synced.profileComplete,
       chipContract: process.env.SEPOLIA_CHIP || process.env.VITE_SEPOLIA_CHIP || null,
-      privyUserId: identity.privyUserId,
     });
   } catch (error) {
     if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
     if (error instanceof AuthError) return res.status(401).json({ error: error.message });
-    return res.status(500).json({ error: "Wallet link failed" });
+    return res.status(500).json({ error: "Wallet link failed. Add wallet_address columns in Neon." });
   }
 });
 
