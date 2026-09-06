@@ -5,6 +5,7 @@ import {
   AuthError,
   authenticateRequest,
 } from "../lib/privy-auth";
+import { syncPlayable } from "../lib/playable";
 
 const router: IRouter = Router();
 const POSITIONS = ["ST", "CF", "LW", "RW", "CAM", "CM", "CDM", "LB", "RB", "CB", "GK"];
@@ -15,26 +16,15 @@ function clamp(value: number) {
 }
 
 function allocated(row: {
-  pace: number;
-  shooting: number;
-  passing: number;
-  dribbling: number;
-  defending: number;
-  physical: number;
+  pace: number; shooting: number; passing: number;
+  dribbling: number; defending: number; physical: number;
 }) {
   return row.pace + row.shooting + row.passing + row.dribbling + row.defending + row.physical;
 }
 
 export function toLegend(row: {
-  name: string;
-  position: string;
-  pace: number;
-  shooting: number;
-  passing: number;
-  dribbling: number;
-  defending: number;
-  physical: number;
-  profileComplete: boolean;
+  name: string; position: string; pace: number; shooting: number; passing: number;
+  dribbling: number; defending: number; physical: number; profileComplete: boolean;
 }) {
   return {
     name: row.name,
@@ -81,7 +71,7 @@ router.put("/legends/me", async (req, res) => {
       defending: clamp(Number(body.defending)),
       physical: clamp(Number(body.physical)),
     };
-    const { db, legendsTable } = await import("@workspace/db");
+    const { db, legendsTable, usersTable } = await import("@workspace/db");
     const values = {
       privyUserId: identity.privyUserId,
       name,
@@ -96,8 +86,11 @@ router.put("/legends/me", async (req, res) => {
     } else {
       await db.insert(legendsTable).values(values);
     }
+    const users = await db.select().from(usersTable).where(eq(usersTable.privyUserId, identity.privyUserId)).limit(1);
+    const onChain = users[0]?.onChainKchip ?? 0;
+    const synced = await syncPlayable(identity.privyUserId, onChain);
     const rows = await db.select().from(legendsTable).where(eq(legendsTable.privyUserId, identity.privyUserId)).limit(1);
-    return res.json(toLegend(rows[0]));
+    return res.json({ ...toLegend(rows[0]), playableKchip: synced.playable });
   } catch (error) {
     if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
     if (error instanceof AuthError) return res.status(401).json({ error: error.message });
