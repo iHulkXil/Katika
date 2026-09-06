@@ -13,17 +13,32 @@ function playable(onChain: number, allocated: number) {
   return Math.max(0, onChain - allocated);
 }
 
+async function allocatedFor(privyUserId: string) {
+  try {
+    const { db, legendsTable } = await import("@workspace/db");
+    const rows = await db.select().from(legendsTable).where(eq(legendsTable.privyUserId, privyUserId)).limit(1);
+    const row = rows[0];
+    if (!row) return { allocated: 0, profileComplete: false };
+    return {
+      allocated: row.pace + row.shooting + row.passing + row.dribbling + row.defending + row.physical,
+      profileComplete: row.profileComplete,
+    };
+  } catch {
+    return { allocated: 0, profileComplete: false };
+  }
+}
+
 router.get("/wallet/me", async (req, res) => {
   try {
-    await authenticateRequest(req);
+    const identity = await authenticateRequest(req);
+    const card = await allocatedFor(identity.privyUserId);
     return res.json({
       walletAddress: null,
       onChainKchip: 0,
-      allocatedKchip: 0,
-      playableKchip: 0,
-      profileComplete: false,
+      allocatedKchip: card.allocated,
+      playableKchip: playable(0, card.allocated),
+      profileComplete: card.profileComplete,
       chipContract: process.env.SEPOLIA_CHIP || process.env.VITE_SEPOLIA_CHIP || null,
-      note: "Link a Sepolia address to read KCHIP",
     });
   } catch (error) {
     if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
@@ -46,12 +61,13 @@ router.post("/wallet/link", async (req, res) => {
     } catch {
       onChain = 0;
     }
+    const card = await allocatedFor(identity.privyUserId);
     return res.json({
       walletAddress: address.toLowerCase(),
       onChainKchip: onChain,
-      allocatedKchip: 0,
-      playableKchip: playable(onChain, 0),
-      profileComplete: false,
+      allocatedKchip: card.allocated,
+      playableKchip: playable(onChain, card.allocated),
+      profileComplete: card.profileComplete,
       chipContract: process.env.SEPOLIA_CHIP || process.env.VITE_SEPOLIA_CHIP || null,
       privyUserId: identity.privyUserId,
     });
