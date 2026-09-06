@@ -6,10 +6,12 @@ import diceRouter from "./dice";
 import coinflipRouter from "./coinflip";
 import minesRouter from "./mines";
 import rouletteRouter from "./roulette";
+import kchipRouter from "./kchip";
 
 const router: IRouter = Router();
 router.use(healthRouter);
 router.use(meRouter);
+router.use(kchipRouter);
 router.use(betsRouter);
 router.use(diceRouter);
 router.use(coinflipRouter);
