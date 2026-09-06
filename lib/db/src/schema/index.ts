@@ -14,6 +14,8 @@ export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   privyUserId: text("privy_user_id").notNull().unique(),
   demoCredits: integer("demo_credits").notNull().default(DEFAULT_DEMO_CREDITS),
+  walletAddress: text("wallet_address"),
+  onChainKchip: integer("on_chain_kchip").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
