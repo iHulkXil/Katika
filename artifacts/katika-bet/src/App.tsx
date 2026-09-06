@@ -11,12 +11,13 @@ import { CoinFlipPage } from '@/components/coinflip-page';
 import { MinesPage } from '@/components/mines-page';
 import { RoulettePage } from '@/components/roulette-page';
 import { PlayPage } from '@/components/play-page';
+import { LegendPage } from '@/components/legend-page';
 import { DemoNotice, LayoutShell, MenuRow } from '@/components/layout-shell';
 import { useServerSession } from '@/components/server-session';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import { useLogout, usePrivy } from '@privy-io/react-auth';
 import {
-  CircleDot, Dice5, Gem, Grid2X2, Play, UserRound, WalletCards,
+  CircleDot, Dice5, Gem, Grid2X2, Play, Shield, UserRound, WalletCards,
 } from 'lucide-react';
 
 const queryClient = new QueryClient();
@@ -49,7 +50,10 @@ function Home() {
         <p className="font-mono-custom text-[10px] tracking-[.2em] text-primary">CASINO / SEPOLIA</p>
         <h1 className="mt-2 text-2xl font-semibold">Four tables are live.</h1>
         <p className="mt-2 text-sm text-muted-foreground">Play with table KCHIP. Claim and deposit from Wallet.</p>
-        <Link href="/play" className="mt-3 inline-block text-sm font-semibold text-primary">Open the floor</Link>
+        <div className="mt-3 flex gap-3 text-sm font-semibold">
+          <Link href="/play" className="text-primary">Open the floor</Link>
+          <Link href="/legend" className="text-secondary">Create legend</Link>
+        </div>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
     </div>
@@ -109,6 +113,7 @@ function MenuPage() {
     <div className="px-3 pt-3">
       <h1 className="text-2xl font-semibold">Menu</h1>
       <DemoNotice>Sepolia testnet. KCHIP has no cash value.</DemoNotice>
+      <MenuRow href="/legend" icon={Shield} label="My legend" />
       <MenuRow href="/play" icon={Play} label="Play floor" />
       <MenuRow href="/games" icon={Grid2X2} label="Casino" />
       <MenuRow href="/games/dice" icon={Dice5} label="Dice" />
@@ -132,6 +137,7 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/dashboard" component={Home} />
         <Route path="/play" component={PlayPage} />
+        <Route path="/legend" component={LegendPage} />
         <Route path="/menu" component={MenuPage} />
         <Route path="/games/dice" component={DicePage} />
         <Route path="/games/coinflip" component={CoinFlipPage} />
