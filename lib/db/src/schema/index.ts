@@ -8,7 +8,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
-export const DEFAULT_DEMO_CREDITS = 1000;
+export const DEFAULT_DEMO_CREDITS = 0;
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
