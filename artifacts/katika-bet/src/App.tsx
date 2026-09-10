@@ -12,6 +12,7 @@ import { MinesPage } from '@/components/mines-page';
 import { RoulettePage } from '@/components/roulette-page';
 import { PlayPage } from '@/components/play-page';
 import { LegendPage } from '@/components/legend-page';
+import { HomeLegendHero, LegendCard, useLegend } from '@/components/legend-card';
 import { DemoNotice, LayoutShell, MenuRow } from '@/components/layout-shell';
 import { useServerSession } from '@/components/server-session';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
@@ -46,14 +47,10 @@ function GameTile({ game }: { game: Game }) {
 function Home() {
   return (
     <div className="px-3 pt-3">
-      <div className="overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-r from-accent to-card p-4">
-        <p className="font-mono-custom text-[10px] tracking-[.2em] text-primary">CASINO / SEPOLIA</p>
-        <h1 className="mt-2 text-2xl font-semibold">Four tables are live.</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Play with table KCHIP. Claim and deposit from Wallet.</p>
-        <div className="mt-3 flex gap-3 text-sm font-semibold">
-          <Link href="/play" className="text-primary">Open the floor</Link>
-          <Link href="/legend" className="text-secondary">Create legend</Link>
-        </div>
+      <HomeLegendHero />
+      <div className="mt-4 flex gap-3 text-sm font-semibold">
+        <Link href="/play" className="text-primary">Open the floor</Link>
+        <Link href="/legend" className="text-secondary">Edit card</Link>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
     </div>
@@ -64,7 +61,7 @@ function Games() {
   return (
     <div className="px-3 pt-3">
       <h1 className="text-2xl font-semibold">Casino</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Tables settle in KCHIP.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Tables settle in playable KCHIP.</p>
       <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
     </div>
   );
@@ -74,7 +71,7 @@ function Wallet() {
   return (
     <div className="px-3 pt-3">
       <h1 className="text-2xl font-semibold">Wallet</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Wallet KCHIP is on-chain. Table KCHIP is what you play with.</p>
+      <p className="mt-1 text-sm text-muted-foreground">On-chain KCHIP vs playable stack after the card.</p>
       <div className="mt-4"><ConnectedWalletStatus /></div>
       <h2 className="mt-6 text-sm font-semibold uppercase tracking-[.16em] text-secondary">Bet history</h2>
       <BetHistory />
@@ -91,15 +88,16 @@ function Profile() {
   const { user, authenticated } = usePrivy();
   const { logout } = useLogout();
   const { serverUser, loading } = useServerSession();
+  const { legend } = useLegend();
   const name = user?.email?.address ?? user?.google?.email ?? user?.wallet?.address?.slice(0, 8) ?? 'Guest';
   return (
     <div className="px-3 pt-3">
-      <div className="rounded-2xl border border-border bg-gradient-to-b from-accent to-card p-4">
-        <p className="text-lg font-semibold">{authenticated ? name : 'Not signed in'}</p>
-        <p className="mt-3 font-mono-custom text-2xl">{loading && !serverUser ? '...' : (serverUser?.demoCredits ?? 0)} KCHIP</p>
-        <p className="mt-1 text-xs text-muted-foreground">Table balance</p>
+      <LegendCard legend={legend} playable={serverUser?.demoCredits} variant={legend?.profileComplete ? 'full' : 'ghost'} />
+      <div className="mt-4 rounded-2xl border border-border bg-card p-4">
+        <p className="text-sm text-muted-foreground">{authenticated ? name : 'Not signed in'}</p>
+        <p className="mt-2 font-mono-custom text-2xl">{loading && !serverUser ? '...' : (serverUser?.demoCredits ?? 0)} PLAYABLE</p>
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <Link href="/wallet" className="rounded-xl bg-primary py-3 text-center text-sm font-semibold text-primary-foreground">Deposit</Link>
+          <Link href="/wallet" className="rounded-xl bg-primary py-3 text-center text-sm font-semibold text-primary-foreground">Wallet</Link>
           <DemoAction label="Withdraw" />
         </div>
       </div>
