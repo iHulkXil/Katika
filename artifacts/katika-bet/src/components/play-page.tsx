@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
+import { LegendCard, useLegend } from '@/components/legend-card';
 
 type WalletView = {
   walletAddress: string | null;
@@ -14,6 +15,7 @@ type WalletView = {
 export function PlayPage() {
   const { ready, authenticated, login, getAccessToken } = usePrivy();
   const { serverUser } = useServerSession();
+  const { legend } = useLegend();
   const [address, setAddress] = useState('');
   const [wallet, setWallet] = useState<WalletView | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -58,9 +60,8 @@ export function PlayPage() {
   if (!authenticated) {
     return (
       <div className="px-3 pt-6">
-        <p className="font-mono-custom text-[10px] tracking-[.2em] text-primary">PLAY</p>
-        <h1 className="mt-2 text-2xl font-semibold">Floor is locked</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Sign in, then link the Sepolia address that claimed KCHIP.</p>
+        <LegendCard legend={null} variant="ghost" />
+        <p className="mt-4 text-sm text-muted-foreground">Sign in, then link the Sepolia address that claimed KCHIP.</p>
         <button type="button" onClick={() => void login()} className="mt-4 rounded-lg bg-secondary px-4 py-2.5 text-sm font-semibold text-secondary-foreground">Sign in</button>
       </div>
     );
@@ -68,9 +69,11 @@ export function PlayPage() {
 
   return (
     <div className="px-3 pt-3">
-      <p className="font-mono-custom text-[10px] tracking-[.2em] text-primary">KATIKA FLOOR</p>
-      <h1 className="mt-2 text-2xl font-semibold">Play</h1>
-      <p className="mt-2 text-sm text-muted-foreground">On-chain KCHIP minus points on a legend card. Games use the playable stack. Table balance is still {serverUser?.demoCredits ?? 0} KCHIP until we debit playable only.</p>
+      <LegendCard
+        legend={legend}
+        playable={wallet?.playableKchip ?? serverUser?.demoCredits}
+        variant={legend?.profileComplete ? 'compact' : 'ghost'}
+      />
       <div className="mt-4 grid grid-cols-3 gap-2">
         <div className="rounded-xl border border-border bg-card p-3">
           <p className="text-[10px] uppercase text-muted-foreground">On-chain</p>
@@ -78,11 +81,11 @@ export function PlayPage() {
         </div>
         <div className="rounded-xl border border-border bg-card p-3">
           <p className="text-[10px] uppercase text-muted-foreground">Allocated</p>
-          <p className="mt-1 font-mono-custom text-lg">{wallet?.allocatedKchip ?? 0}</p>
+          <p className="mt-1 font-mono-custom text-lg">{wallet?.allocatedKchip ?? legend?.allocatedKchip ?? 0}</p>
         </div>
         <div className="rounded-xl border border-primary/40 bg-card p-3">
           <p className="text-[10px] uppercase text-primary">Playable</p>
-          <p className="mt-1 font-mono-custom text-lg text-primary">{wallet?.playableKchip ?? 0}</p>
+          <p className="mt-1 font-mono-custom text-lg text-primary">{wallet?.playableKchip ?? serverUser?.demoCredits ?? 0}</p>
         </div>
       </div>
       <form
@@ -107,7 +110,10 @@ export function PlayPage() {
         <Link href="/games/mines" className="rounded-xl border border-border bg-card p-3 text-sm font-semibold">Mines</Link>
         <Link href="/games/roulette" className="rounded-xl border border-border bg-card p-3 text-sm font-semibold">Roulette</Link>
       </div>
-      <Link href="/wallet" className="mt-4 inline-block text-xs text-primary">Claim / deposit KCHIP in Wallet</Link>
+      <div className="mt-4 flex gap-3 text-xs">
+        <Link href="/legend" className="text-primary">Edit card</Link>
+        <Link href="/wallet" className="text-primary">Claim in Wallet</Link>
+      </div>
     </div>
   );
 }
