@@ -2,14 +2,11 @@ import { type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
   ChevronRight,
-  CircleDot,
-  Crown,
-  Dice5,
   Gift,
   Grid2X2,
   Home as HomeIcon,
-  Menu,
-  Trophy,
+  Play,
+  Shield,
   UserRound,
   WalletCards,
 } from 'lucide-react';
@@ -29,16 +26,16 @@ export function Brand() {
 
 const chips = [
   { href: '/', label: 'Home' },
+  { href: '/legend', label: 'Legend' },
+  { href: '/play', label: 'Play' },
   { href: '/games', label: 'Casino' },
-  { href: '/games/dice', label: 'Live' },
-  { href: '/rewards', label: 'Promos' },
-  { href: '/leaderboard', label: 'More' },
+  { href: '/wallet', label: 'Wallet' },
 ];
 
 const bottom = [
   { href: '/', label: 'Home', icon: HomeIcon },
-  { href: '/menu', label: 'Menu', icon: Menu },
-  { href: '/games', label: 'Casino', icon: Grid2X2 },
+  { href: '/legend', label: 'Legend', icon: Shield },
+  { href: '/play', label: 'Play', icon: Play },
   { href: '/wallet', label: 'Wallet', icon: WalletCards },
   { href: '/profile', label: 'Profile', icon: UserRound },
 ];
@@ -55,23 +52,10 @@ export function LayoutShell({ children }: { children: ReactNode }) {
           <Brand />
           <div className="flex items-center gap-2">
             <span className="rounded-full border border-primary/30 bg-accent px-2.5 py-1 font-mono-custom text-[11px] text-accent-foreground">
-              {typeof credits === 'number' ? credits.toLocaleString() : '\u2014'} KCHIP
+              {typeof credits === 'number' ? credits.toLocaleString() : '—'} KCHIP
             </span>
             <WalletAuthButton compact className="hidden sm:flex" />
           </div>
-        </div>
-        <div className="mx-auto flex max-w-[520px] gap-2 overflow-x-auto px-3 pb-2 lg:max-w-[1240px] lg:px-6">
-          {[
-            { href: '/games/dice', label: 'Dice', icon: Dice5 },
-            { href: '/games', label: 'Casino', icon: CircleDot },
-            { href: '/rewards', label: 'Rewards', icon: Crown },
-            { href: '/leaderboard', label: 'Board', icon: Trophy },
-          ].map(({ href, label, icon: Icon }) => (
-            <Link key={label} href={href} className="flex min-w-[72px] flex-col items-center gap-1 rounded-xl border border-border bg-card px-2 py-2 text-[10px] text-muted-foreground">
-              <Icon size={16} className="text-secondary" />
-              {label}
-            </Link>
-          ))}
         </div>
         <div className="mx-auto flex max-w-[520px] gap-1 overflow-x-auto px-3 pb-2 lg:max-w-[1240px] lg:px-6">
           {chips.map((chip) => {
@@ -90,17 +74,12 @@ export function LayoutShell({ children }: { children: ReactNode }) {
       <footer className="mx-auto max-w-[520px] px-4 pb-28 text-center text-[11px] text-muted-foreground lg:max-w-[1240px]">
         <p className="font-semibold text-secondary">18+</p>
         <p className="mt-2">Katika.Bet Sepolia testnet. KCHIP has no cash value. No mainnet deposits.</p>
-        <div className="mt-3 flex justify-center gap-2 text-[10px] uppercase tracking-wider">
-          <span className="rounded border border-border px-2 py-1">Sepolia</span>
-          <span className="rounded border border-border px-2 py-1">KCHIP</span>
-          <span className="rounded border border-border px-2 py-1">Privy</span>
-        </div>
       </footer>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/80 bg-card/95 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl">
         <div className="mx-auto flex max-w-md items-center justify-around">
           {bottom.map(({ href, label, icon: Icon }) => {
-            const active = href === '/' ? location === '/' : location === href || (href === '/games' && location.startsWith('/games'));
+            const active = href === '/' ? location === '/' : location === href || location.startsWith(`${href}/`);
             return (
               <Link key={href} href={href} className={`flex min-w-[56px] flex-col items-center gap-1 rounded-lg py-1 text-[10px] ${active ? 'text-primary' : 'text-muted-foreground'}`}>
                 <Icon size={18} />
