@@ -68,13 +68,22 @@ export function LegendCard({
 }) {
   if (!legend || !legend.profileComplete || variant === 'ghost') {
     return (
-      <Link href="/legend" className="block">
-        <div className="rounded-3xl border border-dashed border-primary/35 bg-accent/30 p-5">
-          <p className="font-mono-custom text-[10px] tracking-[.2em] text-primary">PLAYER CARD</p>
-          <h2 className="mt-2 text-2xl font-semibold">Create your legend</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Setup writes a FIFA-style card. It lands on Home and Profile.</p>
+      <div className="rounded-[28px] border border-[#1C3A2E] bg-[#0E1A16] px-5 pb-7 pt-6 text-center">
+        <div className="flex items-start justify-between px-2">
+          <div className="grid h-16 w-14 place-items-center rounded-xl border border-dashed border-[#2A4A3C]">
+            <span className="font-mono-custom text-[10px] uppercase tracking-widest text-[#4A6B5C]">OVR</span>
+            <span className="-mt-1 text-lg text-[#4A6B5C]">—</span>
+          </div>
+          <div className="grid h-16 w-14 place-items-center rounded-xl border border-[#2A4A3C] bg-[#122019]">
+            <span className="text-lg font-semibold text-[#35D399]">K.</span>
+          </div>
         </div>
-      </Link>
+        <p className="mt-8 font-mono-custom text-[11px] tracking-[0.28em] text-[#8FA39A]">NO LEGEND</p>
+        <p className="mx-auto mt-2 max-w-[220px] text-sm leading-5 text-[#8FA39A]">Set up your FIFA card<br />to unlock the floor.</p>
+        <Link href="/legend" className="mt-6 inline-flex rounded-full bg-[#35D399] px-6 py-3 text-sm font-semibold text-[#062018] shadow-[0_0_24px_rgba(53,211,153,.35)]">
+          Create your legend
+        </Link>
+      </div>
     );
   }
 
@@ -105,7 +114,7 @@ export function LegendCard({
         <div>
           <p className="font-mono-custom text-[10px] tracking-[.22em] text-primary">PLAYER CARD</p>
           <h2 className="mt-2 text-3xl font-semibold tracking-tight">{legend.name}</h2>
-          <p className="mt-1 rounded-full border border-primary/30 px-2 py-0.5 text-[11px] text-primary inline-block">{legend.position}</p>
+          <p className="mt-1 inline-block rounded-full border border-primary/30 px-2 py-0.5 text-[11px] text-primary">{legend.position}</p>
         </div>
         <div className="grid h-[4.5rem] w-[4.5rem] place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[0_0_24px_rgba(53,211,153,.35)]">
           <span className="font-mono-custom text-[10px] uppercase">OVR</span>
@@ -131,7 +140,7 @@ export function LegendCard({
 export function HomeLegendHero() {
   const { legend, loading, authenticated } = useLegend();
   const { serverUser } = useServerSession();
-  if (!authenticated) return <LegendCard legend={null} variant="ghost" />;
-  if (loading && !legend) return <div className="h-40 animate-pulse rounded-3xl bg-card" />;
+  if (!authenticated || !legend?.profileComplete) return <LegendCard legend={null} variant="ghost" />;
+  if (loading && !legend) return <div className="h-52 animate-pulse rounded-[28px] bg-[#0E1A16]" />;
   return <LegendCard legend={legend} playable={serverUser?.demoCredits} />;
 }
