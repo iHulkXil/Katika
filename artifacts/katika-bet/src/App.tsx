@@ -18,27 +18,27 @@ import { useServerSession } from '@/components/server-session';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import { useLogout, usePrivy } from '@privy-io/react-auth';
 import {
-  CircleDot, Dice5, Gem, Grid2X2, Play, Shield, UserRound, WalletCards,
+  Bomb, CircleDollarSign, Dices, Gem, Grid2X2, Play, Shield, Ticket, UserRound, WalletCards,
 } from 'lucide-react';
 
 const queryClient = new QueryClient();
 
-type Game = { name: string; description: string; href: string; icon: ReactNode; accent: string };
+type Game = { name: string; description: string; href: string; icon: ReactNode };
 const games: Game[] = [
-  { name: 'Dice', description: '1–100', href: '/games/dice', icon: <Dice5 />, accent: 'from-emerald-400/25 to-emerald-950/20' },
-  { name: 'Flip', description: '1.98x', href: '/games/coinflip', icon: <CircleDot />, accent: 'from-amber-300/20 to-amber-950/20' },
-  { name: 'Mines', description: 'Cash out', href: '/games/mines', icon: <Gem />, accent: 'from-teal-300/20 to-teal-950/20' },
-  { name: 'Roulette', description: '0–36', href: '/games/roulette', icon: <Grid2X2 />, accent: 'from-yellow-300/20 to-yellow-950/20' },
+  { name: 'Dice', description: '1-100', href: '/games/dice', icon: <Dices /> },
+  { name: 'Flip', description: '1.98x', href: '/games/coinflip', icon: <CircleDollarSign /> },
+  { name: 'Mines', description: 'Cash out', href: '/games/mines', icon: <Bomb /> },
+  { name: 'Roulette', description: '0-36', href: '/games/roulette', icon: <Ticket /> },
 ];
 
 function GameTile({ game }: { game: Game }) {
   return (
     <Link href={game.href} className="block">
-      <div className={`relative min-h-[118px] overflow-hidden rounded-xl border border-border bg-gradient-to-br ${game.accent} p-3 transition hover:border-primary/50`}>
-        <span className="absolute right-2 top-2 rounded-full bg-primary px-1.5 py-0.5 font-mono-custom text-[9px] text-primary-foreground">PLAY</span>
-        <div className="mt-5 text-secondary [&_svg]:h-5 [&_svg]:w-5">{game.icon}</div>
-        <h3 className="mt-2 text-base font-semibold">{game.name}</h3>
-        <p className="text-[11px] text-muted-foreground">{game.description}</p>
+      <div className="relative min-h-[132px] rounded-[22px] border border-[#1C3A2E] bg-[#0E1A16] p-4">
+        <span className="absolute right-3 top-3 rounded-full bg-[#35D399] px-2 py-0.5 text-[9px] font-semibold tracking-wide text-[#062018]">PLAY</span>
+        <div className="mt-1 text-[#F2C14E] [&_svg]:h-7 [&_svg]:w-7">{game.icon}</div>
+        <h3 className="mt-4 text-lg font-semibold">{game.name}</h3>
+        <p className="text-[12px] text-[#8FA39A]">{game.description}</p>
       </div>
     </Link>
   );
@@ -48,11 +48,11 @@ function Home() {
   return (
     <div className="px-3 pt-3">
       <HomeLegendHero />
-      <div className="mt-4 flex gap-3 text-sm font-semibold">
-        <Link href="/play" className="text-primary">Open the floor</Link>
-        <Link href="/legend" className="text-secondary">Edit card</Link>
+      <div className="mt-6 flex items-end justify-between px-0.5">
+        <h2 className="text-lg font-semibold">Floor</h2>
+        <Link href="/games" className="text-sm text-[#8FA39A]">View all →</Link>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-2">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
+      <div className="mt-3 grid grid-cols-2 gap-3">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
     </div>
   );
 }
@@ -62,7 +62,7 @@ function Games() {
     <div className="px-3 pt-3">
       <h1 className="text-2xl font-semibold">Casino</h1>
       <p className="mt-1 text-sm text-muted-foreground">Tables settle in playable KCHIP.</p>
-      <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
+      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
     </div>
   );
 }
@@ -109,15 +109,15 @@ function Profile() {
 function MenuPage() {
   return (
     <div className="px-3 pt-3">
-      <h1 className="text-2xl font-semibold">Menu</h1>
+      <h1 className="text-2xl font-semibold">Kit</h1>
       <DemoNotice>Sepolia testnet. KCHIP has no cash value.</DemoNotice>
       <MenuRow href="/legend" icon={Shield} label="My legend" />
       <MenuRow href="/play" icon={Play} label="Play floor" />
       <MenuRow href="/games" icon={Grid2X2} label="Casino" />
-      <MenuRow href="/games/dice" icon={Dice5} label="Dice" />
-      <MenuRow href="/games/coinflip" icon={CircleDot} label="Coin Flip" />
+      <MenuRow href="/games/dice" icon={Dices} label="Dice" />
+      <MenuRow href="/games/coinflip" icon={CircleDollarSign} label="Coin Flip" />
       <MenuRow href="/games/mines" icon={Gem} label="Mines" />
-      <MenuRow href="/games/roulette" icon={Grid2X2} label="Roulette" />
+      <MenuRow href="/games/roulette" icon={Ticket} label="Roulette" />
       <MenuRow href="/wallet" icon={WalletCards} label="Wallet" />
       <MenuRow href="/profile" icon={UserRound} label="Profile" />
     </div>
@@ -137,6 +137,7 @@ function Router() {
         <Route path="/play" component={PlayPage} />
         <Route path="/legend" component={LegendPage} />
         <Route path="/menu" component={MenuPage} />
+        <Route path="/kit" component={MenuPage} />
         <Route path="/games/dice" component={DicePage} />
         <Route path="/games/coinflip" component={CoinFlipPage} />
         <Route path="/games/mines" component={MinesPage} />
