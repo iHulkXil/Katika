@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { usePrivy } from '@privy-io/react-auth';
+import { useServerSession } from '@/components/server-session';
 
 const POSITIONS = ['ST', 'CF', 'LW', 'RW', 'CAM', 'CM', 'CDM', 'LB', 'RB', 'CB', 'GK'];
 const STATS = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical'] as const;
@@ -20,17 +21,18 @@ type Legend = {
 
 export function LegendPage() {
   const { ready, authenticated, login, getAccessToken } = usePrivy();
+  const { serverUser } = useServerSession();
   const [legend, setLegend] = useState<Legend>({
-    name: '',
-    position: 'CAM',
-    pace: 50,
-    shooting: 50,
-    passing: 50,
-    dribbling: 50,
-    defending: 50,
-    physical: 50,
+    name: 'K. Ronaldo',
+    position: 'ST',
+    pace: 52,
+    shooting: 55,
+    passing: 48,
+    dribbling: 55,
+    defending: 42,
+    physical: 60,
     profileComplete: false,
-    allocatedKchip: 300,
+    allocatedKchip: 312,
   });
   const [status, setStatus] = useState<string | null>(null);
 
@@ -60,61 +62,91 @@ export function LegendPage() {
       const body = await response.json();
       if (!response.ok) throw new Error((body as { error?: string }).error ?? 'Save failed');
       setLegend(body as Legend);
-      setStatus(`Card saved. ${(body as Legend).allocatedKchip} KCHIP locked in the legend.`);
+      setStatus('Card saved');
     } catch (err) {
       setStatus(err instanceof Error ? err.message : 'Save failed');
     }
   };
 
-  if (!ready) return <p className="px-3 pt-6 text-sm text-muted-foreground">Loading...</p>;
+  if (!ready) return <p className="px-3 pt-6 text-sm text-[#8FA39A]">Loading...</p>;
   if (!authenticated) {
     return (
       <div className="px-3 pt-6">
-        <h1 className="text-2xl font-semibold">Create a legend</h1>
-        <button type="button" onClick={() => void login()} className="mt-4 rounded-lg bg-secondary px-4 py-2.5 text-sm font-semibold">Sign in</button>
+        <p className="text-sm text-[#8FA39A]">Sign in to build the card.</p>
+        <button type="button" onClick={() => void login()} className="mt-4 rounded-full bg-[#35D399] px-6 py-3 text-sm font-semibold text-[#062018]">Sign in</button>
       </div>
     );
   }
 
   const allocated = STATS.reduce((sum, key) => sum + Number(legend[key] || 0), 0);
-  const overall = Math.round(allocated / 6);
+  const playable = serverUser?.demoCredits ?? 0;
 
   return (
-    <div className="px-3 pt-3 pb-8">
-      <div className="overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-accent via-card to-background p-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="font-mono-custom text-[10px] tracking-[.2em] text-primary">PLAYER CARD</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">{legend.name || 'Unnamed'}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{legend.position}</p>
-          </div>
-          <div className="grid h-16 w-16 place-items-center rounded-2xl bg-primary text-primary-foreground">
-            <span className="font-mono-custom text-2xl font-bold">{overall}</span>
-          </div>
-        </div>
-        <p className="mt-4 font-mono-custom text-xs text-secondary">{allocated} KCHIP allocated</p>
-      </div>
-      <label className="mt-5 block text-xs text-muted-foreground">Name
-        <input className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" value={legend.name} onChange={(event) => setLegend({ ...legend, name: event.target.value })} />
+    <div className="px-3 pt-2 pb-8">
+      <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Name
+        <input
+          className="mt-2 w-full rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] px-4 py-3.5 text-sm text-[#E8F2EC] outline-none focus:border-[#35D399]/50"
+          value={legend.name}
+          onChange={(event) => setLegend({ ...legend, name: event.target.value })}
+        />
       </label>
-      <div className="mt-3 flex flex-wrap gap-1">
+
+      <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Position</p>
+      <div className="mt-2 flex flex-wrap gap-2">
         {POSITIONS.map((position) => (
-          <button key={position} type="button" onClick={() => setLegend({ ...legend, position })} className={`rounded-full px-2.5 py-1 text-[11px] ${legend.position === position ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground'}`}>
+          <button
+            key={position}
+            type="button"
+            onClick={() => setLegend({ ...legend, position })}
+            className={`rounded-full px-3 py-1.5 text-xs ${legend.position === position ? 'bg-[#35D399] font-semibold text-[#062018]' : 'bg-[#0E1A16] text-[#8FA39A] ring-1 ring-[#1C3A2E]'}`}
+          >
             {position}
           </button>
         ))}
       </div>
-      <div className="mt-5 space-y-3 rounded-2xl border border-border bg-card p-4">
+
+      <div className="mt-6 flex items-end justify-between">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Attributes · 1 pt = 1 KCHIP</p>
+        <p className="font-mono-custom text-xs text-[#35D399]">{allocated} alloc</p>
+      </div>
+
+      <div className="mt-3 space-y-4">
         {STATS.map((key) => (
-          <label key={key} className="block text-[11px] uppercase tracking-wider text-muted-foreground">
-            <span className="flex justify-between"><span>{key}</span><span className="font-mono-custom text-foreground">{legend[key]}</span></span>
-            <input type="range" min={1} max={99} value={legend[key]} className="mt-1 w-full accent-emerald-400" onChange={(event) => setLegend({ ...legend, [key]: Number(event.target.value) })} />
+          <label key={key} className="grid grid-cols-[88px_1fr_36px] items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-[#8FA39A]">
+            <span>{key}</span>
+            <input
+              type="range"
+              min={1}
+              max={99}
+              value={legend[key]}
+              className="w-full accent-[#35D399]"
+              onChange={(event) => setLegend({ ...legend, [key]: Number(event.target.value) })}
+            />
+            <span className="text-right font-mono-custom text-sm text-[#E8F2EC]">{legend[key]}</span>
           </label>
         ))}
       </div>
-      <button type="button" onClick={() => void save()} className="mt-4 w-full rounded-lg bg-secondary py-2.5 text-sm font-semibold text-secondary-foreground">Save card</button>
-      {status ? <p className="mt-2 text-xs text-muted-foreground">{status}</p> : null}
-      <Link href="/play" className="mt-4 inline-block text-sm text-primary">To the floor</Link>
+
+      <div className="mt-6 flex items-end justify-between border-t border-[#1C3A2E] pt-4">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[#8FA39A]">Allocated</p>
+          <p className="mt-1 font-mono-custom text-2xl">{allocated}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[#8FA39A]">Est. playable</p>
+          <p className="mt-1 font-mono-custom text-2xl text-[#35D399]">{playable.toLocaleString()}</p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => void save()}
+        className="mt-6 w-full rounded-full bg-[#35D399] py-3.5 text-sm font-semibold text-[#062018] shadow-[0_0_28px_rgba(53,211,153,.35)]"
+      >
+        Save card
+      </button>
+      {status ? <p className="mt-2 text-center text-xs text-[#8FA39A]">{status}</p> : null}
+      <Link href="/play" className="mt-4 block text-center text-sm text-[#8FA39A]">To the floor →</Link>
     </div>
   );
 }
