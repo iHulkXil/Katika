@@ -40,11 +40,29 @@ const bottom = [
   { href: '/profile', label: 'Profile', icon: UserRound },
 ];
 
+function chipClass(active: boolean) {
+  return active
+    ? 'whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs bg-[#122019] text-[#35D399] ring-1 ring-[#1C3A2E]'
+    : 'whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs text-[#8FA39A]';
+}
+
+function tabClass(active: boolean) {
+  return active
+    ? 'flex min-w-[56px] flex-col items-center gap-1 rounded-lg py-1 text-[10px] text-[#35D399]'
+    : 'flex min-w-[56px] flex-col items-center gap-1 rounded-lg py-1 text-[10px] text-[#5C7368]';
+}
+
 export function LayoutShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { serverUser, loading, error } = useServerSession();
   const credits = serverUser?.demoCredits;
-  const label = loading ? '...' : typeof credits === 'number' ? `${credits.toLocaleString()} $KTK` : error ? 'API' : '— $KTK';
+  const label = loading
+    ? '...'
+    : typeof credits === 'number'
+      ? credits.toLocaleString() + ' KCHIP'
+      : error
+        ? 'API'
+        : '- KCHIP';
 
   return (
     <div className="min-h-[100dvh] bg-[#07110E] text-[#E8F2EC]">
@@ -60,9 +78,9 @@ export function LayoutShell({ children }: { children: ReactNode }) {
         </div>
         <div className="mx-auto flex max-w-[520px] gap-1.5 overflow-x-auto px-3 pb-3">
           {chips.map((chip) => {
-            const active = chip.href === '/' ? location === '/' : location === chip.href || location.startsWith(`${chip.href}/`);
+            const active = chip.href === '/' ? location === '/' : location === chip.href || location.startsWith(chip.href + '/');
             return (
-              <Link key={chip.href + chip.label} href={chip.href} className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs ${active ? 'bg-[#122019] text-[#35D399] ring-1 ring-[#1C3A2E]' : 'text-[#8FA39A]'`}>
+              <Link key={chip.href + chip.label} href={chip.href} className={chipClass(active)}>
                 {chip.label}
               </Link>
             );
@@ -73,17 +91,18 @@ export function LayoutShell({ children }: { children: ReactNode }) {
       <main className="mx-auto max-w-[520px] pb-24">{children}</main>
 
       <footer className="mx-auto max-w-[520px] px-4 pb-28 text-center text-[11px] text-[#5C7368]">
-        18+ · $KTK is off-chain test credit · no cash value
+        18+ Sepolia testnet. KCHIP has no cash value.
       </footer>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#1C3A2E] bg-[#07110E] pb-[max(8px,env(safe-area-inset-bottom))] pt-2">
         <div className="mx-auto flex max-w-md items-center justify-around">
-          {bottom.map(({ href, label: tab, icon: Icon }) => {
-            const active = href === '/' ? location === '/' : location === href || location.startsWith(`${href}/`);
+          {bottom.map((item) => {
+            const active = item.href === '/' ? location === '/' : location === item.href || location.startsWith(item.href + '/');
+            const Icon = item.icon;
             return (
-              <Link key={href} href={href} className={`flex min-w-[56px] flex-col items-center gap-1 rounded-lg py-1 text-[10px] ${active ? 'text-[#35D399]' : 'text-[#5C7368]'}`}>
+              <Link key={item.href} href={item.href} className={tabClass(active)}>
                 <Icon size={18} />
-                {tab}
+                {item.label}
               </Link>
             );
           })}
