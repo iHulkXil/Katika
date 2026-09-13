@@ -43,6 +43,14 @@ router.get("/me", async (req, res) => {
       .limit(1);
 
     if (existing[0]) {
+      if ((existing[0].demoCredits ?? 0) <= 0) {
+        const topped = await db
+          .update(usersTable)
+          .set({ demoCredits: DEFAULT_DEMO_CREDITS, updatedAt: new Date() })
+          .where(eq(usersTable.privyUserId, identity.privyUserId))
+          .returning();
+        return res.json(toMeResponse(topped[0] ?? { ...existing[0], demoCredits: DEFAULT_DEMO_CREDITS }));
+      }
       return res.json(toMeResponse(existing[0]));
     }
 
