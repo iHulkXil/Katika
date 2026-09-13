@@ -8,7 +8,11 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
-export const DEFAULT_DEMO_CREDITS = 0;
+export const DEFAULT_DEMO_CREDITS = 1000;
+export const KTK_GRANT = 1000;
+export const KTK_LEGEND_CAP_RATIO = 1 / 3;
+export const KTK_MAX_FIRST_ALLOC = 333;
+export const KTK_ROLLOVER_X = 3;
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
