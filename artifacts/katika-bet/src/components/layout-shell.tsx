@@ -52,7 +52,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
           <Brand />
           <div className="flex items-center gap-2">
             <span className="rounded-full border border-[#35D399]/40 bg-[#0E1A16] px-2.5 py-1 font-mono-custom text-[11px] text-[#35D399]">
-              {typeof credits === 'number' ? credits.toLocaleString() : '—'} KCHIP
+              {typeof credits === 'number' ? credits.toLocaleString() : '—'} $KTK
             </span>
             <WalletAuthButton compact className="hidden sm:flex" />
           </div>
@@ -72,7 +72,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
       <main className="mx-auto max-w-[520px] pb-24">{children}</main>
 
       <footer className="mx-auto max-w-[520px] px-4 pb-28 text-center text-[11px] text-[#5C7368]">
-        18+ · Sepolia testnet · KCHIP has no cash value
+        18+ · $KTK is off-chain test credit · no cash value
       </footer>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#1C3A2E] bg-[#07110E] pb-[max(8px,env(safe-area-inset-bottom))] pt-2">
