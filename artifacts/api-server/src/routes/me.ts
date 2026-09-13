@@ -29,12 +29,10 @@ router.get("/me", async (req, res) => {
     const identity = await authenticateRequest(req);
 
     if (!process.env.DATABASE_URL) {
-      return res.status(503).json({
-        error: "Database is not configured",
-      });
+      return res.status(503).json({ error: "Database is not configured" });
     }
 
-    const { db, usersTable, DEFAULT_DEMO_CREDITS } = await import("@workspace/db");
+    const { db, usersTable, legendsTable, DEFAULT_DEMO_CREDITS } = await import("@workspace/db");
 
     const existing = await db
       .select()
@@ -44,12 +42,15 @@ router.get("/me", async (req, res) => {
 
     if (existing[0]) {
       if ((existing[0].demoCredits ?? 0) <= 0) {
-        const topped = await db
-          .update(usersTable)
-          .set({ demoCredits: DEFAULT_DEMO_CREDITS, updatedAt: new Date() })
-          .where(eq(usersTable.privyUserId, identity.privyUserId))
-          .returning();
-        return res.json(toMeResponse(topped[0] ?? { ...existing[0], demoCredits: DEFAULT_DEMO_CREDITS }));
+        const cards = await db.select().from(legendsTable).where(eq(legendsTable.privyUserId, identity.privyUserId)).limit(1);
+        if (!cards[0]) {
+          const topped = await db
+            .update(usersTable)
+            .set({ demoCredits: DEFAULT_DEMO_CREDITS, updatedAt: new Date() })
+            .where(eq(usersTable.privyUserId, identity.privyUserId))
+            .returning();
+          return res.json(toMeResponse(topped[0] ?? { ...existing[0], demoCredits: DEFAULT_DEMO_CREDITS }));
+        }
       }
       return res.json(toMeResponse(existing[0]));
     }
@@ -72,10 +73,7 @@ router.get("/me", async (req, res) => {
         .from(usersTable)
         .where(eq(usersTable.privyUserId, identity.privyUserId))
         .limit(1);
-
-      if (raced[0]) {
-        return res.json(toMeResponse(raced[0]));
-      }
+      if (raced[0]) return res.json(toMeResponse(raced[0]));
       throw new Error("Failed to persist user");
     }
 
