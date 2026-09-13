@@ -3,5 +3,15 @@
   "framework": null,
   "installCommand": "pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm --filter @workspace/katika-bet run build",
-  "outputDirectory": "artifacts/katika-bet/dist/public"
+  "outputDirectory": "artifacts/katika-bet/dist/public",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://katika-w8bs.onrender.com/api/:path*"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ]
 }
