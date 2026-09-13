@@ -13,6 +13,7 @@ import { RoulettePage } from '@/components/roulette-page';
 import { PlayPage } from '@/components/play-page';
 import { LegendPage } from '@/components/legend-page';
 import { HomeLegendHero, LegendCard, useLegend } from '@/components/legend-card';
+import { AuthGate } from '@/components/auth-gate';
 import { DemoNotice, LayoutShell, MenuRow } from '@/components/layout-shell';
 import { useServerSession } from '@/components/server-session';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
@@ -61,7 +62,7 @@ function Games() {
   return (
     <div className="px-3 pt-3">
       <h1 className="text-2xl font-semibold">Casino</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Tables settle in playable KCHIP.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Tables settle in $KTK.</p>
       <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
     </div>
   );
@@ -71,7 +72,7 @@ function Wallet() {
   return (
     <div className="px-3 pt-3">
       <h1 className="text-2xl font-semibold">Wallet</h1>
-      <p className="mt-1 text-sm text-muted-foreground">On-chain KCHIP vs playable stack after the card.</p>
+      <p className="mt-1 text-sm text-muted-foreground">$KTK is the house ledger for cards and tables.</p>
       <div className="mt-4"><ConnectedWalletStatus /></div>
       <h2 className="mt-6 text-sm font-semibold uppercase tracking-[.16em] text-secondary">Bet history</h2>
       <BetHistory />
@@ -81,7 +82,7 @@ function Wallet() {
 
 function DemoAction({ label }: { label: string }) {
   const { toast } = useToast();
-  return <button type="button" onClick={() => toast({ title: `Use Wallet to ${label.toLowerCase()} KCHIP` })} className="rounded-xl border border-border bg-card px-3 py-3 text-sm font-semibold">{label}</button>;
+  return <button type="button" onClick={() => toast({ title: `Use Wallet to ${label.toLowerCase()} $KTK` })} className="rounded-xl border border-border bg-card px-3 py-3 text-sm font-semibold">{label}</button>;
 }
 
 function Profile() {
@@ -95,7 +96,7 @@ function Profile() {
       <LegendCard legend={legend} playable={serverUser?.demoCredits} variant={legend?.profileComplete ? 'full' : 'ghost'} />
       <div className="mt-4 rounded-2xl border border-border bg-card p-4">
         <p className="text-sm text-muted-foreground">{authenticated ? name : 'Not signed in'}</p>
-        <p className="mt-2 font-mono-custom text-2xl">{loading && !serverUser ? '...' : (serverUser?.demoCredits ?? 0)} PLAYABLE</p>
+        <p className="mt-2 font-mono-custom text-2xl">{loading && !serverUser ? '...' : (serverUser?.demoCredits ?? 0)} $KTK</p>
         <div className="mt-4 grid grid-cols-2 gap-2">
           <Link href="/wallet" className="rounded-xl bg-primary py-3 text-center text-sm font-semibold text-primary-foreground">Wallet</Link>
           <DemoAction label="Withdraw" />
@@ -110,7 +111,7 @@ function MenuPage() {
   return (
     <div className="px-3 pt-3">
       <h1 className="text-2xl font-semibold">Kit</h1>
-      <DemoNotice>Sepolia testnet. KCHIP has no cash value.</DemoNotice>
+      <DemoNotice>$KTK is off-chain test credit.</DemoNotice>
       <MenuRow href="/legend" icon={Shield} label="My legend" />
       <MenuRow href="/play" icon={Play} label="Play floor" />
       <MenuRow href="/games" icon={Grid2X2} label="Casino" />
@@ -163,7 +164,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <LayoutShell><Router /></LayoutShell>
+          <LayoutShell>
+            <AuthGate>
+              <Router />
+            </AuthGate>
+          </LayoutShell>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>
