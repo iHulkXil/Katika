@@ -29,7 +29,6 @@ export function WalletAuthButton({
 }: WalletAuthButtonProps) {
   const { ready, authenticated, user, login } = usePrivy();
   const { logout } = useLogout();
-  const { serverUser } = useServerSession();
 
   if (!ready) {
     return (
@@ -43,13 +42,7 @@ export function WalletAuthButton({
   if (authenticated) {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
-        {typeof serverUser?.demoCredits === 'number' ? (
-          <span className={`rounded-lg border border-secondary/40 bg-card px-3 py-2 font-mono-custom text-xs ${compact ? 'hidden sm:inline' : ''}`}>
-            {serverUser.demoCredits} KCHIP
-          </span>
-        ) : null}
         <span className={`inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-accent px-3 py-2 font-mono-custom text-xs ${compact ? 'hidden sm:inline-flex' : ''}`}>
-          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
           {accountLabel(user)}
         </span>
         <button type="button" onClick={() => void logout()} className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold">
@@ -73,6 +66,7 @@ export function ConnectedWalletStatus() {
   const { serverUser, loading } = useServerSession();
   const address = user?.wallet?.address;
   const email = user?.email?.address ?? user?.google?.email;
+  const ktk = serverUser?.ktk ?? serverUser?.demoCredits ?? 0;
 
   if (!ready) return <p className="font-mono-custom text-sm text-muted-foreground">Loading account status...</p>;
 
@@ -82,20 +76,22 @@ export function ConnectedWalletStatus() {
         <div className="rounded-xl border border-primary/30 bg-accent/50 p-4">
           <p className="text-xs uppercase tracking-[.18em] text-primary">Signed in</p>
           {email ? <p className="mt-2 text-sm">{email}</p> : null}
-          <p className="mt-2 break-all font-mono-custom text-sm">{address ?? 'Allocating embedded wallet...'}</p>
-          <p className="mt-3 font-mono-custom text-sm">
-            {loading && !serverUser ? 'Loading table...' : `Table KCHIP: ${serverUser?.demoCredits ?? 0}`}
+          <p className="mt-2 break-all font-mono-custom text-sm">{address ?? 'Embedded wallet ready'}</p>
+          <p className="mt-3 font-mono-custom text-lg text-primary">
+            {loading && !serverUser ? '...' : `${ktk.toLocaleString()} KTK`}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">Wallet KCHIP is on-chain. Table KCHIP is what the games use after you deposit.</p>
         </div>
-        <TestnetWallets />
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs text-[#8FA39A]">Chain tools</summary>
+          <TestnetWallets />
+        </details>
       </div>
     );
   }
 
   return (
     <div className="rounded-xl border border-dashed border-border bg-background/30 p-4">
-      <p className="text-sm text-muted-foreground">Sign in. Default network is Sepolia.</p>
+      <p className="text-sm text-muted-foreground">Sign in to get 1000 KTK.</p>
       <WalletAuthButton className="mt-4" />
     </div>
   );
