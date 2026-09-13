@@ -5,7 +5,6 @@ import {
   AuthError,
   authenticateRequest,
 } from "../lib/privy-auth";
-import { allocated as allocatedSum } from "../lib/playable";
 import { syncPlayable } from "../lib/playable";
 
 const router: IRouter = Router();
@@ -82,7 +81,7 @@ router.put("/legends/me", async (req, res) => {
         const { readKchipBalance } = await import("../lib/kchip");
         onChain = await readKchipBalance(address);
       } catch {
-        /* keep stored on-chain */
+        /* keep stored */
       }
     }
     if (needed > onChain) {
