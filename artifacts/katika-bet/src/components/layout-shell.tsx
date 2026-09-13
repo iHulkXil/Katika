@@ -42,8 +42,9 @@ const bottom = [
 
 export function LayoutShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
-  const { serverUser } = useServerSession();
+  const { serverUser, loading, error } = useServerSession();
   const credits = serverUser?.demoCredits;
+  const label = loading ? '...' : typeof credits === 'number' ? `${credits.toLocaleString()} $KTK` : error ? 'API' : '— $KTK';
 
   return (
     <div className="min-h-[100dvh] bg-[#07110E] text-[#E8F2EC]">
@@ -52,7 +53,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
           <Brand />
           <div className="flex items-center gap-2">
             <span className="rounded-full border border-[#35D399]/40 bg-[#0E1A16] px-2.5 py-1 font-mono-custom text-[11px] text-[#35D399]">
-              {typeof credits === 'number' ? credits.toLocaleString() : '—'} $KTK
+              {label}
             </span>
             <WalletAuthButton compact className="hidden sm:flex" />
           </div>
@@ -61,7 +62,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
           {chips.map((chip) => {
             const active = chip.href === '/' ? location === '/' : location === chip.href || location.startsWith(`${chip.href}/`);
             return (
-              <Link key={chip.href + chip.label} href={chip.href} className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs ${active ? 'bg-[#122019] text-[#35D399] ring-1 ring-[#1C3A2E]' : 'text-[#8FA39A]'}`}>
+              <Link key={chip.href + chip.label} href={chip.href} className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs ${active ? 'bg-[#122019] text-[#35D399] ring-1 ring-[#1C3A2E]' : 'text-[#8FA39A]'`}>
                 {chip.label}
               </Link>
             );
@@ -77,12 +78,12 @@ export function LayoutShell({ children }: { children: ReactNode }) {
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#1C3A2E] bg-[#07110E] pb-[max(8px,env(safe-area-inset-bottom))] pt-2">
         <div className="mx-auto flex max-w-md items-center justify-around">
-          {bottom.map(({ href, label, icon: Icon }) => {
+          {bottom.map(({ href, label: tab, icon: Icon }) => {
             const active = href === '/' ? location === '/' : location === href || location.startsWith(`${href}/`);
             return (
               <Link key={href} href={href} className={`flex min-w-[56px] flex-col items-center gap-1 rounded-lg py-1 text-[10px] ${active ? 'text-[#35D399]' : 'text-[#5C7368]'}`}>
                 <Icon size={18} />
-                {label}
+                {tab}
               </Link>
             );
           })}
