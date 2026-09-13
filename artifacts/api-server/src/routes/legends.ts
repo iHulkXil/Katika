@@ -5,6 +5,7 @@ import {
   AuthError,
   authenticateRequest,
 } from "../lib/privy-auth";
+import { allocated as allocatedSum } from "../lib/playable";
 import { syncPlayable } from "../lib/playable";
 
 const router: IRouter = Router();
@@ -71,7 +72,26 @@ router.put("/legends/me", async (req, res) => {
       defending: clamp(Number(body.defending)),
       physical: clamp(Number(body.physical)),
     };
+    const needed = allocated(stats);
     const { db, legendsTable, usersTable } = await import("@workspace/db");
+    const users = await db.select().from(usersTable).where(eq(usersTable.privyUserId, identity.privyUserId)).limit(1);
+    let onChain = users[0]?.onChainKchip ?? 0;
+    const address = users[0]?.walletAddress;
+    if (address) {
+      try {
+        const { readKchipBalance } = await import("../lib/kchip");
+        onChain = await readKchipBalance(address);
+      } catch {
+        /* keep stored on-chain */
+      }
+    }
+    if (needed > onChain) {
+      return res.status(400).json({
+        error: `Need ${needed} KCHIP on-chain to lock this card. You have ${onChain}. Claim, then Play → Read KCHIP.`,
+        onChainKchip: onChain,
+        allocatedKchip: needed,
+      });
+    }
     const values = {
       privyUserId: identity.privyUserId,
       name,
@@ -86,11 +106,9 @@ router.put("/legends/me", async (req, res) => {
     } else {
       await db.insert(legendsTable).values(values);
     }
-    const users = await db.select().from(usersTable).where(eq(usersTable.privyUserId, identity.privyUserId)).limit(1);
-    const onChain = users[0]?.onChainKchip ?? 0;
     const synced = await syncPlayable(identity.privyUserId, onChain);
     const rows = await db.select().from(legendsTable).where(eq(legendsTable.privyUserId, identity.privyUserId)).limit(1);
-    return res.json({ ...toLegend(rows[0]), playableKchip: synced.playable });
+    return res.json({ ...toLegend(rows[0]), playableKchip: synced.playable, onChainKchip: onChain });
   } catch (error) {
     if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
     if (error instanceof AuthError) return res.status(401).json({ error: error.message });
