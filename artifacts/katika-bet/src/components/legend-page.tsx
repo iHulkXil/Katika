@@ -62,7 +62,7 @@ export function LegendPage() {
       const body = await response.json();
       if (!response.ok) throw new Error((body as { error?: string }).error ?? 'Save failed');
       setLegend(body as Legend);
-      setStatus('Card saved');
+      setStatus('Card saved. $KTK locked on the card.');
     } catch (err) {
       setStatus(err instanceof Error ? err.message : 'Save failed');
     }
@@ -78,8 +78,11 @@ export function LegendPage() {
     );
   }
 
-  const allocated = STATS.reduce((sum, key) => sum + Number(legend[key] || 0), 0);
+  const nextAlloc = STATS.reduce((sum, key) => sum + Number(legend[key] || 0), 0);
   const playable = serverUser?.demoCredits ?? 0;
+  const oldAlloc = legend.allocatedKchip ?? 0;
+  const bank = playable + (legend.profileComplete ? oldAlloc : 0);
+  const estPlayable = Math.max(0, bank - nextAlloc);
 
   return (
     <div className="px-3 pt-2 pb-8">
@@ -106,8 +109,8 @@ export function LegendPage() {
       </div>
 
       <div className="mt-6 flex items-end justify-between">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Attributes · 1 pt = 1 KCHIP</p>
-        <p className="font-mono-custom text-xs text-[#35D399]">{allocated} alloc</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Attributes · 1 pt = 1 $KTK</p>
+        <p className="font-mono-custom text-xs text-[#35D399]">{nextAlloc} alloc</p>
       </div>
 
       <div className="mt-3 space-y-4">
@@ -130,11 +133,11 @@ export function LegendPage() {
       <div className="mt-6 flex items-end justify-between border-t border-[#1C3A2E] pt-4">
         <div>
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#8FA39A]">Allocated</p>
-          <p className="mt-1 font-mono-custom text-2xl">{allocated}</p>
+          <p className="mt-1 font-mono-custom text-2xl">{nextAlloc}</p>
         </div>
         <div className="text-right">
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#8FA39A]">Est. playable</p>
-          <p className="mt-1 font-mono-custom text-2xl text-[#35D399]">{playable.toLocaleString()}</p>
+          <p className="mt-1 font-mono-custom text-2xl text-[#35D399]">{estPlayable.toLocaleString()}</p>
         </div>
       </div>
 
