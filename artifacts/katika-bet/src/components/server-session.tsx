@@ -13,6 +13,13 @@ export type ServerUser = {
   id: number;
   privyUserId: string;
   demoCredits: number;
+  ktk?: number;
+  allocated?: number;
+  wagered?: number;
+  rolloverNeed?: number;
+  rolloverLeft?: number;
+  unlocked?: boolean;
+  profileComplete?: boolean;
 };
 
 type ServerSessionValue = {
@@ -87,7 +94,6 @@ export function ServerSessionSync({ children }: { children?: ReactNode }) {
       setError(null);
       return;
     }
-
     let cancelled = false;
     setLoading(true);
     void refresh().finally(() => {
