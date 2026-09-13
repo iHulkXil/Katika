@@ -5,6 +5,7 @@ import { useServerSession } from '@/components/server-session';
 
 const POSITIONS = ['ST', 'CF', 'LW', 'RW', 'CAM', 'CM', 'CDM', 'LB', 'RB', 'CB', 'GK'];
 const STATS = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical'] as const;
+const FIRST_CAP = 333;
 
 type Legend = {
   name: string;
@@ -25,14 +26,14 @@ export function LegendPage() {
   const [legend, setLegend] = useState<Legend>({
     name: 'K. Ronaldo',
     position: 'ST',
-    pace: 52,
+    pace: 55,
     shooting: 55,
-    passing: 48,
+    passing: 55,
     dribbling: 55,
-    defending: 42,
-    physical: 60,
+    defending: 55,
+    physical: 55,
     profileComplete: false,
-    allocatedKchip: 312,
+    allocatedKchip: 330,
   });
   const [status, setStatus] = useState<string | null>(null);
 
@@ -62,7 +63,7 @@ export function LegendPage() {
       const body = await response.json();
       if (!response.ok) throw new Error((body as { error?: string }).error ?? 'Save failed');
       setLegend(body as Legend);
-      setStatus('Card saved. $KTK locked on the card.');
+      setStatus('Card saved. KTK locked on the card.');
     } catch (err) {
       setStatus(err instanceof Error ? err.message : 'Save failed');
     }
@@ -86,6 +87,7 @@ export function LegendPage() {
 
   return (
     <div className="px-3 pt-2 pb-8">
+      <p className="mb-4 text-xs text-[#8FA39A]">1000 KTK grant. First card max {FIRST_CAP} (33%). Rest needs a 3x game rollover before you can add more to the card.</p>
       <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Name
         <input
           className="mt-2 w-full rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] px-4 py-3.5 text-sm text-[#E8F2EC] outline-none focus:border-[#35D399]/50"
@@ -109,8 +111,8 @@ export function LegendPage() {
       </div>
 
       <div className="mt-6 flex items-end justify-between">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Attributes · 1 pt = 1 $KTK</p>
-        <p className="font-mono-custom text-xs text-[#35D399]">{nextAlloc} alloc</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Attributes · 1 pt = 1 KTK</p>
+        <p className={`font-mono-custom text-xs ${nextAlloc > FIRST_CAP ? 'text-red-400' : 'text-[#35D399]'}`}>{nextAlloc} / {FIRST_CAP}</p>
       </div>
 
       <div className="mt-3 space-y-4">
@@ -136,7 +138,7 @@ export function LegendPage() {
           <p className="mt-1 font-mono-custom text-2xl">{nextAlloc}</p>
         </div>
         <div className="text-right">
-          <p className="text-[10px] uppercase tracking-[0.14em] text-[#8FA39A]">Est. playable</p>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[#8FA39A]">Playable KTK</p>
           <p className="mt-1 font-mono-custom text-2xl text-[#35D399]">{estPlayable.toLocaleString()}</p>
         </div>
       </div>
