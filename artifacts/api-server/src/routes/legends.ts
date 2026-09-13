@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   AuthConfigError,
   AuthError,
@@ -8,6 +8,9 @@ import {
 
 const router: IRouter = Router();
 const POSITIONS = ["ST", "CF", "LW", "RW", "CAM", "CM", "CDM", "LB", "RB", "CB", "GK"];
+const GRANT = 1000;
+const FIRST_CAP = 333;
+const ROLLOVER_X = 3;
 
 function clamp(value: number) {
   if (!Number.isFinite(value)) return 50;
@@ -71,7 +74,7 @@ router.put("/legends/me", async (req, res) => {
       physical: clamp(Number(body.physical)),
     };
     const needed = allocated(stats);
-    const { db, legendsTable, usersTable, DEFAULT_DEMO_CREDITS } = await import("@workspace/db");
+    const { db, legendsTable, usersTable, gameBetsTable, DEFAULT_DEMO_CREDITS } = await import("@workspace/db");
     const users = await db.select().from(usersTable).where(eq(usersTable.privyUserId, identity.privyUserId)).limit(1);
     const existing = await db.select().from(legendsTable).where(eq(legendsTable.privyUserId, identity.privyUserId)).limit(1);
     const oldAlloc = existing[0] ? allocated(existing[0]) : 0;
@@ -79,16 +82,32 @@ router.put("/legends/me", async (req, res) => {
     if (!users[0]) {
       await db.insert(usersTable).values({
         privyUserId: identity.privyUserId,
-        demoCredits: DEFAULT_DEMO_CREDITS,
+        demoCredits: GRANT,
       });
-      playable = DEFAULT_DEMO_CREDITS;
+      playable = GRANT;
+    } else if (playable <= 0 && !existing[0]?.profileComplete) {
+      await db.update(usersTable).set({ demoCredits: GRANT, updatedAt: new Date() }).where(eq(usersTable.privyUserId, identity.privyUserId));
+      playable = GRANT;
     }
     const bank = playable + oldAlloc;
-    if (needed > bank) {
+    const volumeRows = await db.select({
+      volume: sql<number>`coalesce(sum(${gameBetsTable.wager}), 0)`,
+    }).from(gameBetsTable).where(eq(gameBetsTable.privyUserId, identity.privyUserId));
+    const wagered = Number(volumeRows[0]?.volume ?? 0);
+    const rolloverNeed = (GRANT - FIRST_CAP) * ROLLOVER_X;
+    const unlocked = wagered >= rolloverNeed;
+    const cap = unlocked ? bank : Math.min(bank, FIRST_CAP);
+    if (needed > cap) {
+      const left = Math.max(0, rolloverNeed - wagered);
       return res.status(400).json({
-        error: `Need ${needed} $KTK to lock this card. Bank is ${bank}.`,
+        error: unlocked
+          ? `Need ${needed} KTK. Bank is ${bank}.`
+          : `First card can lock ${FIRST_CAP} KTK (33% of 1000). Wager ${left} more KTK (3x rollover) to reallocate the rest.`,
         playableKchip: playable,
         allocatedKchip: needed,
+        cap,
+        wagered,
+        rolloverNeed,
       });
     }
     const nextPlayable = bank - needed;
