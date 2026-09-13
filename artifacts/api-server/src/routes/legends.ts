@@ -5,7 +5,6 @@ import {
   AuthError,
   authenticateRequest,
 } from "../lib/privy-auth";
-import { syncPlayable } from "../lib/playable";
 
 const router: IRouter = Router();
 const POSITIONS = ["ST", "CF", "LW", "RW", "CAM", "CM", "CDM", "LB", "RB", "CB", "GK"];
@@ -72,25 +71,27 @@ router.put("/legends/me", async (req, res) => {
       physical: clamp(Number(body.physical)),
     };
     const needed = allocated(stats);
-    const { db, legendsTable, usersTable } = await import("@workspace/db");
+    const { db, legendsTable, usersTable, DEFAULT_DEMO_CREDITS } = await import("@workspace/db");
     const users = await db.select().from(usersTable).where(eq(usersTable.privyUserId, identity.privyUserId)).limit(1);
-    let onChain = users[0]?.onChainKchip ?? 0;
-    const address = users[0]?.walletAddress;
-    if (address) {
-      try {
-        const { readKchipBalance } = await import("../lib/kchip");
-        onChain = await readKchipBalance(address);
-      } catch {
-        /* keep stored */
-      }
+    const existing = await db.select().from(legendsTable).where(eq(legendsTable.privyUserId, identity.privyUserId)).limit(1);
+    const oldAlloc = existing[0] ? allocated(existing[0]) : 0;
+    let playable = users[0]?.demoCredits ?? DEFAULT_DEMO_CREDITS;
+    if (!users[0]) {
+      await db.insert(usersTable).values({
+        privyUserId: identity.privyUserId,
+        demoCredits: DEFAULT_DEMO_CREDITS,
+      });
+      playable = DEFAULT_DEMO_CREDITS;
     }
-    if (needed > onChain) {
+    const bank = playable + oldAlloc;
+    if (needed > bank) {
       return res.status(400).json({
-        error: `Need ${needed} KCHIP on-chain to lock this card. You have ${onChain}. Claim, then Play → Read KCHIP.`,
-        onChainKchip: onChain,
+        error: `Need ${needed} $KTK to lock this card. Bank is ${bank}.`,
+        playableKchip: playable,
         allocatedKchip: needed,
       });
     }
+    const nextPlayable = bank - needed;
     const values = {
       privyUserId: identity.privyUserId,
       name,
@@ -99,15 +100,17 @@ router.put("/legends/me", async (req, res) => {
       profileComplete: true,
       updatedAt: new Date(),
     };
-    const existing = await db.select().from(legendsTable).where(eq(legendsTable.privyUserId, identity.privyUserId)).limit(1);
     if (existing[0]) {
       await db.update(legendsTable).set(values).where(eq(legendsTable.privyUserId, identity.privyUserId));
     } else {
       await db.insert(legendsTable).values(values);
     }
-    const synced = await syncPlayable(identity.privyUserId, onChain);
+    await db.update(usersTable).set({
+      demoCredits: nextPlayable,
+      updatedAt: new Date(),
+    }).where(eq(usersTable.privyUserId, identity.privyUserId));
     const rows = await db.select().from(legendsTable).where(eq(legendsTable.privyUserId, identity.privyUserId)).limit(1);
-    return res.json({ ...toLegend(rows[0]), playableKchip: synced.playable, onChainKchip: onChain });
+    return res.json({ ...toLegend(rows[0]), playableKchip: nextPlayable });
   } catch (error) {
     if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
     if (error instanceof AuthError) return res.status(401).json({ error: error.message });
