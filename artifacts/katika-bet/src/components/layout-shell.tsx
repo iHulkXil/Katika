@@ -55,14 +55,14 @@ function tabClass(active: boolean) {
 export function LayoutShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { serverUser, loading, error } = useServerSession();
-  const credits = serverUser?.demoCredits;
+  const credits = serverUser?.ktk ?? serverUser?.demoCredits;
   const label = loading
     ? '...'
     : typeof credits === 'number'
-      ? credits.toLocaleString() + ' KCHIP'
+      ? credits.toLocaleString() + ' KTK'
       : error
         ? 'API'
-        : '- KCHIP';
+        : 'KTK';
 
   return (
     <div className="min-h-[100dvh] bg-[#07110E] text-[#E8F2EC]">
@@ -91,7 +91,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
       <main className="mx-auto max-w-[520px] pb-24">{children}</main>
 
       <footer className="mx-auto max-w-[520px] px-4 pb-28 text-center text-[11px] text-[#5C7368]">
-        18+ Sepolia testnet. KCHIP has no cash value.
+        18+ KTK is house credit. No cash value.
       </footer>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#1C3A2E] bg-[#07110E] pb-[max(8px,env(safe-area-inset-bottom))] pt-2">
