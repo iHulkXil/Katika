@@ -2,12 +2,13 @@ import { useRef, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
+import { RolloverStrip } from '@/components/rollover-strip';
 
 type FlipResult = { result: 'heads' | 'tails'; side: 'heads' | 'tails'; wager: number; won: boolean; payout: number; demoCredits: number };
 
 export function CoinFlipPage() {
   const { authenticated, getAccessToken } = usePrivy();
-  const { serverUser, loading, refresh } = useServerSession();
+  const { refresh } = useServerSession();
   const [wager, setWager] = useState(50);
   const [side, setSide] = useState<'heads' | 'tails'>('heads');
   const [busy, setBusy] = useState(false);
@@ -51,7 +52,7 @@ export function CoinFlipPage() {
       for (let i = 0; i < Math.min(30, autoCount); i += 1) {
         if (stopRef.current) break;
         const last = await playOnce();
-        if (last.demoCredits < wager) break;
+        if ((last.demoCredits ?? 0) < wager) break;
         await new Promise((r) => setTimeout(r, 500));
       }
     } catch (err) { setError(err instanceof Error ? err.message : 'Auto failed'); }
@@ -62,12 +63,12 @@ export function CoinFlipPage() {
     <div className="px-3 pt-4">
       <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">COIN FLIP</p>
       <h1 className="mt-2 text-3xl font-semibold">Heads or tails.</h1>
+      <RolloverStrip />
       <div className={`fx-stage mt-5 ${result?.won ? 'fx-win' : ''}`}>
         <span className="fx-glow" />
         <div className={`fx-coin ${busy ? 'spin' : ''}`}>{result ? (result.result === 'heads' ? 'H' : 'T') : '?'}</div>
       </div>
-      {result ? <p className={`mt-3 text-center text-sm ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.result} · {result.payout}</p> : null}
-      <p className="mt-2 text-center font-mono-custom text-xs text-muted-foreground">Demo credits: {loading && !serverUser ? '—' : (serverUser?.demoCredits ?? '—')}</p>
+      {result ? <p className={`mt-3 text-center text-sm ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.result} · {result.payout} KTK</p> : null}
       {!authenticated ? <div className="mt-6"><WalletAuthButton /></div> : (
         <div className="mt-4 space-y-3">
           <div className="flex gap-2">
