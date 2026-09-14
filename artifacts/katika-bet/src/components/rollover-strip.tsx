@@ -12,7 +12,9 @@ export function RolloverStrip() {
     <div className="mt-3 rounded-xl border border-[#1C3A2E] bg-[#0E1A16] px-3 py-3">
       <div className="flex items-end justify-between">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.16em] text-[#8FA39A]">Unlocked KTK</p>
+          <p className="text-[10px] uppercase tracking-[0.16em] text-[#8FA39A]">
+            {done ? 'Unlocked KTK' : 'Locked KTK'}
+          </p>
           <p className="font-mono-custom text-lg text-[#35D399]">{loading && !serverUser ? '...' : ktk.toLocaleString()}</p>
         </div>
         <p className="text-right text-xs text-[#8FA39A]">
