@@ -5,12 +5,10 @@ import {
   AuthError,
   authenticateRequest,
 } from "../lib/privy-auth";
+import { KTK_FIRST_CAP, KTK_GRANT, ktkRolloverNeed } from "../lib/ktk-economy";
 
 const router: IRouter = Router();
 const POSITIONS = ["ST", "CF", "LW", "RW", "CAM", "CM", "CDM", "LB", "RB", "CB", "GK"];
-const GRANT = 1000;
-const FIRST_CAP = 333;
-const ROLLOVER_X = 3;
 
 function clamp(value: number) {
   if (!Number.isFinite(value)) return 50;
@@ -82,27 +80,27 @@ router.put("/legends/me", async (req, res) => {
     if (!users[0]) {
       await db.insert(usersTable).values({
         privyUserId: identity.privyUserId,
-        demoCredits: GRANT,
+        demoCredits: KTK_GRANT,
       });
-      playable = GRANT;
+      playable = KTK_GRANT;
     } else if (playable <= 0 && !existing[0]?.profileComplete) {
-      await db.update(usersTable).set({ demoCredits: GRANT, updatedAt: new Date() }).where(eq(usersTable.privyUserId, identity.privyUserId));
-      playable = GRANT;
+      await db.update(usersTable).set({ demoCredits: KTK_GRANT, updatedAt: new Date() }).where(eq(usersTable.privyUserId, identity.privyUserId));
+      playable = KTK_GRANT;
     }
     const bank = playable + oldAlloc;
     const volumeRows = await db.select({
       volume: sql<number>`coalesce(sum(${gameBetsTable.wager}), 0)`,
     }).from(gameBetsTable).where(eq(gameBetsTable.privyUserId, identity.privyUserId));
     const wagered = Number(volumeRows[0]?.volume ?? 0);
-    const rolloverNeed = (GRANT - FIRST_CAP) * ROLLOVER_X;
+    const rolloverNeed = ktkRolloverNeed();
     const unlocked = wagered >= rolloverNeed;
-    const cap = unlocked ? bank : Math.min(bank, FIRST_CAP);
+    const cap = unlocked ? bank : Math.min(bank, KTK_FIRST_CAP);
     if (needed > cap) {
       const left = Math.max(0, rolloverNeed - wagered);
       return res.status(400).json({
         error: unlocked
           ? `Need ${needed} KTK. Bank is ${bank}.`
-          : `First card can lock ${FIRST_CAP} KTK (33% of 1000). Wager ${left} more KTK (3x rollover) to reallocate the rest.`,
+          : `First card can lock ${KTK_FIRST_CAP} KTK of the 600 grant. Wager ${left} more KTK (10x on the rest) to reallocate.`,
         playableKchip: playable,
         allocatedKchip: needed,
         cap,
