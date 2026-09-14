@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
+import { RolloverStrip } from '@/components/rollover-strip';
 
 type Bet = 'red' | 'black' | 'odd' | 'even' | 'number';
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 
 export function RoulettePage() {
   const { authenticated, getAccessToken } = usePrivy();
-  const { serverUser, loading, refresh } = useServerSession();
+  const { refresh } = useServerSession();
   const [wager, setWager] = useState(50);
   const [bet, setBet] = useState<Bet>('red');
   const [number, setNumber] = useState(7);
@@ -43,6 +44,7 @@ export function RoulettePage() {
     <div className="px-3 pt-4">
       <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">ROULETTE</p>
       <h1 className="mt-2 text-3xl font-semibold">European wheel.</h1>
+      <RolloverStrip />
       <div className="mt-3 flex gap-1 overflow-x-auto pb-2">
         {ribbon.map((n, i) => (
           <span key={`${n}-${i}`} className={`min-w-8 rounded px-2 py-1 text-center font-mono-custom text-xs ${
@@ -55,8 +57,7 @@ export function RoulettePage() {
         <div className={`fx-wheel ${busy ? 'spin' : ''}`} />
         <div className="fx-wheel-center">{result ? result.roll : '•'}</div>
       </div>
-      {result ? <p className={`mt-3 text-center text-sm ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.color} · {result.payout}</p> : null}
-      <p className="mt-2 text-center font-mono-custom text-xs text-muted-foreground">Demo credits: {loading && !serverUser ? '—' : (serverUser?.demoCredits ?? '—')}</p>
+      {result ? <p className={`mt-3 text-center text-sm ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.color} · {result.payout} KTK</p> : null}
       <div className="mt-4 grid grid-cols-6 gap-1">
         {Array.from({ length: 37 }, (_, n) => (
           <button key={n} type="button" onClick={() => { setBet('number'); setNumber(n); }} className={`rounded py-2 font-mono-custom text-[11px] ${
