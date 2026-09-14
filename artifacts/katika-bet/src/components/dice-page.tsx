@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
+import { RolloverStrip } from '@/components/rollover-strip';
 
 type DiceResult = {
   roll: number; target: number; prediction: 'over' | 'under'; wager: number;
@@ -16,13 +17,13 @@ function previewStats(target: number, prediction: 'over' | 'under') {
 }
 async function readApiJson(response: Response) {
   const text = await response.text();
-  if (!text) throw new Error('Empty API response. Restart API on 5000.');
+  if (!text) throw new Error('Empty API response');
   return JSON.parse(text) as DiceResult & { error?: string };
 }
 
 export function DicePage() {
   const { authenticated, getAccessToken } = usePrivy();
-  const { serverUser, loading, refresh } = useServerSession();
+  const { serverUser, refresh } = useServerSession();
   const [wager, setWager] = useState(50);
   const [target, setTarget] = useState(50);
   const [prediction, setPrediction] = useState<'over' | 'under'>('over');
@@ -33,7 +34,6 @@ export function DicePage() {
   const [stopLoss, setStopLoss] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DiceResult | null>(null);
-  const [history, setHistory] = useState<DiceResult[]>([]);
   const [display, setDisplay] = useState<number | null>(null);
   const stopRef = useRef(false);
   const stats = useMemo(() => previewStats(target, prediction), [target, prediction]);
@@ -50,7 +50,6 @@ export function DicePage() {
     if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
     setResult(body);
     setDisplay(body.roll);
-    setHistory((prev) => [body, ...prev].slice(0, 20));
     await refresh();
     return body;
   };
@@ -73,7 +72,7 @@ export function DicePage() {
         if (stopRef.current) break;
         const last = await playOnce();
         const profit = last.demoCredits - startBal;
-        if (last.demoCredits < wager) break;
+        if ((last.demoCredits ?? 0) < wager) break;
         if (stopProfit > 0 && profit >= stopProfit) break;
         if (stopLoss > 0 && profit <= -stopLoss) break;
         await new Promise((r) => setTimeout(r, 280));
@@ -88,12 +87,12 @@ export function DicePage() {
     <div className="px-3 pt-4">
       <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">DICE / 1–100</p>
       <h1 className="mt-2 text-3xl font-semibold">Roll the line.</h1>
+      <RolloverStrip />
       <div className={`fx-stage mt-5 ${result?.won ? 'fx-win' : ''}`}>
         <span className="fx-glow" />
         <div className={`fx-dice ${busy ? 'spin' : ''}`}>{display ?? '—'}</div>
       </div>
-      {result ? <p className={`mt-3 text-center text-sm ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.won ? 'Win' : 'Lose'} {result.payout > 0 ? '+' : ''}{result.payout}</p> : null}
-      <p className="mt-2 text-center font-mono-custom text-xs text-muted-foreground">Demo credits: {loading && !serverUser ? '—' : (serverUser?.demoCredits ?? '—')}</p>
+      {result ? <p className={`mt-3 text-center text-sm ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.won ? 'Win' : 'Lose'} {result.payout > 0 ? '+' : ''}{result.payout} KTK</p> : null}
       {!authenticated ? <div className="mt-6"><WalletAuthButton /></div> : (
         <div className="mt-4 space-y-3">
           <div className="flex gap-2">
@@ -110,10 +109,8 @@ export function DicePage() {
           <button type="button" disabled={busy} onClick={() => void play()} className="w-full rounded-lg bg-secondary py-3 text-sm font-semibold text-secondary-foreground">Roll</button>
           <div className="grid grid-cols-3 gap-2 text-xs">
             <label>Rolls<input className="mt-1 w-full rounded border border-border bg-card px-2 py-1" value={autoCount} onChange={(e) => setAutoCount(Number(e.target.value))} /></label>
-            <label>Stop +
-<input className="mt-1 w-full rounded border border-border bg-card px-2 py-1" value={stopProfit} onChange={(e) => setStopProfit(Number(e.target.value))} /></label>
-            <label>Stop -
-<input className="mt-1 w-full rounded border border-border bg-card px-2 py-1" value={stopLoss} onChange={(e) => setStopLoss(Number(e.target.value))} /></label>
+            <label>Stop +<input className="mt-1 w-full rounded border border-border bg-card px-2 py-1" value={stopProfit} onChange={(e) => setStopProfit(Number(e.target.value))} /></label>
+            <label>Stop -<input className="mt-1 w-full rounded border border-border bg-card px-2 py-1" value={stopLoss} onChange={(e) => setStopLoss(Number(e.target.value))} /></label>
           </div>
           {autoPlaying ? <button type="button" className="w-full rounded-lg border py-2 text-sm" onClick={() => { stopRef.current = true; }}>Stop</button> : <button type="button" disabled={busy} className="w-full rounded-lg border border-primary/40 py-2 text-sm" onClick={() => void startAuto()}>Auto</button>}
         </div>
