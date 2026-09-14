@@ -30,8 +30,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       </h1>
       <p className="mt-2 text-center text-sm text-[#8FA39A]">
         {mode === 'signin'
-          ? 'Google or email. 1000 KTK on first session.'
-          : 'New account gets 1000 KTK. Lock up to 333 on the card.'}
+          ? 'Google or email. 600 KTK on first session.'
+          : 'New account gets 600 KTK. Lock up to 333 on the card. Rest needs 10x rollover.'}
       </p>
       <button
         type="button"
