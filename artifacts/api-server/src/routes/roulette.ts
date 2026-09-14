@@ -7,6 +7,7 @@ import {
   authenticateRequest,
 } from "../lib/privy-auth";
 import { recordBet } from "../lib/record-bet";
+import { getKtkEconomy } from "../lib/ktk-economy";
 
 const router: IRouter = Router();
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
@@ -47,7 +48,7 @@ router.post("/games/roulette", async (req, res) => {
       demoCredits: sql`${usersTable.demoCredits} + ${delta}`,
       updatedAt: new Date(),
     }).where(and(eq(usersTable.id, user.id), gte(usersTable.demoCredits, wager))).returning();
-    if (!updated[0]) return res.status(400).json({ error: "Not enough demo credits" });
+    if (!updated[0]) return res.status(400).json({ error: "Not enough KTK" });
     await recordBet({
       userId: user.id,
       privyUserId: identity.privyUserId,
@@ -57,9 +58,10 @@ router.post("/games/roulette", async (req, res) => {
       won,
       detail: { roll, color, bet, number: bet === "number" ? number : null },
     });
+    const economy = await getKtkEconomy(identity.privyUserId, updated[0].demoCredits);
     return res.json({
       roll, color, bet, number: bet === "number" ? number : null, wager, won, multiplier, payout: delta,
-      demoCredits: updated[0].demoCredits,
+      ...economy,
     });
   } catch (error) {
     if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
