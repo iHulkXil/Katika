@@ -4,6 +4,7 @@ import { Gem } from 'lucide-react';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { playTableTone } from '@/lib/table-sound';
+import { RolloverStrip } from '@/components/rollover-strip';
 
 const TILES = 25;
 async function api(path: string, token: string, body?: object, method = 'POST') {
@@ -13,7 +14,7 @@ async function api(path: string, token: string, body?: object, method = 'POST') 
     body: method === 'GET' ? undefined : JSON.stringify(body ?? {}),
   });
   const text = await response.text();
-  if (!text) throw new Error('Empty API response. Restart API on 5000.');
+  if (!text) throw new Error('Empty API response');
   const json = JSON.parse(text);
   if (!response.ok) throw new Error(json.error ?? `HTTP ${response.status}`);
   return json;
@@ -21,7 +22,7 @@ async function api(path: string, token: string, body?: object, method = 'POST') 
 
 export function MinesPage() {
   const { authenticated, getAccessToken } = usePrivy();
-  const { serverUser, loading, refresh } = useServerSession();
+  const { refresh } = useServerSession();
   const [wager, setWager] = useState(50);
   const [mines, setMines] = useState(3);
   const [active, setActive] = useState(false);
@@ -111,7 +112,8 @@ export function MinesPage() {
     <div className="px-3 pt-4">
       <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">MINES</p>
       <h1 className="mt-2 text-3xl font-semibold">Open gems. Cash out.</h1>
-      <p className="mt-2 font-mono-custom text-sm">Demo credits: {loading && !serverUser ? '—' : (serverUser?.demoCredits ?? '—')} · {booting ? 'loading' : (mult ? `${mult.toFixed(2)}x` : 'idle')}</p>
+      <RolloverStrip />
+      <p className="mt-2 font-mono-custom text-sm">{booting ? 'loading' : (mult ? `${mult.toFixed(2)}x` : 'idle')}</p>
       <div className="mt-4 grid grid-cols-5 gap-2">
         {Array.from({ length: TILES }, (_, i) => {
           const open = revealed.includes(i);
