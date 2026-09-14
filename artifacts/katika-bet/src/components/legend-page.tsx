@@ -87,7 +87,7 @@ export function LegendPage() {
 
   return (
     <div className="px-3 pt-2 pb-8">
-      <p className="mb-4 text-xs text-[#8FA39A]">1000 KTK grant. First card max {FIRST_CAP} (33%). Rest needs a 3x game rollover before you can add more to the card.</p>
+      <p className="mb-4 text-xs text-[#8FA39A]">600 KTK grant. First card max {FIRST_CAP}. The other 267 needs a 10x table rollover (2670 wagered) before you can add more to the card.</p>
       <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Name
         <input
           className="mt-2 w-full rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] px-4 py-3.5 text-sm text-[#E8F2EC] outline-none focus:border-[#35D399]/50"
