@@ -49,22 +49,35 @@ export function WebglStage({
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
-    const gl = canvas.getContext('webgl', { alpha: true, antialias: true, premultipliedAlpha: false });
+    let gl: WebGLRenderingContext | null = null;
+    try {
+      gl = canvas.getContext('webgl', { alpha: true, antialias: true, premultipliedAlpha: false });
+    } catch {
+      return;
+    }
     if (!gl) return;
 
     const compile = (type: number, src: string) => {
-      const s = gl.createShader(type)!;
-      gl.shaderSource(s, src);
-      gl.compileShader(s);
+      const s = gl!.createShader(type);
+      if (!s) return null;
+      gl!.shaderSource(s, src);
+      gl!.compileShader(s);
       return s;
     };
-    const program = gl.createProgram()!;
-    gl.attachShader(program, compile(gl.VERTEX_SHADER, VERT));
-    gl.attachShader(program, compile(gl.FRAGMENT_SHADER, FRAG));
+    const vertShader = compile(gl.VERTEX_SHADER, VERT);
+    const fragShader = compile(gl.FRAGMENT_SHADER, FRAG);
+    if (!vertShader || !fragShader) return;
+
+    const program = gl.createProgram();
+    if (!program) return;
+    gl.attachShader(program, vertShader);
+    gl.attachShader(program, fragShader);
     gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return;
     gl.useProgram(program);
 
     const buf = gl.createBuffer();
+    if (!buf) return;
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(program, 'a');
@@ -80,23 +93,30 @@ export function WebglStage({
     let frame = 0;
     const start = performance.now();
     const draw = (now: number) => {
-      const parent = canvas.parentElement;
-      const w = parent?.clientWidth ?? 320;
-      const h = parent?.clientHeight ?? 220;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
-        canvas.width = Math.floor(w * dpr);
-        canvas.height = Math.floor(h * dpr);
-        canvas.style.width = `${w}px`;
-        canvas.style.height = `${h}px`;
+      try {
+        const parent = canvas.parentElement;
+        const rect = parent?.getBoundingClientRect();
+        const w = rect && rect.width > 0 ? rect.width : (parent?.clientWidth ?? 320);
+        const h = rect && rect.height > 0 ? rect.height : (parent?.clientHeight ?? 220);
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const targetW = Math.max(1, Math.floor(w * dpr));
+        const targetH = Math.max(1, Math.floor(h * dpr));
+
+        if (canvas.width !== targetW || canvas.height !== targetH) {
+          canvas.width = targetW;
+          canvas.height = targetH;
+        }
+
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.uniform2f(uRes, canvas.width, canvas.height);
+        gl.uniform1f(uTime, (now - start) / 1000);
+        gl.uniform3f(uA, cA[0], cA[1], cA[2]);
+        gl.uniform3f(uB, cB[0], cB[1], cB[2]);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        frame = requestAnimationFrame(draw);
+      } catch {
+        // Suppress any WebGL context loss errors
       }
-      gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.uniform1f(uTime, (now - start) / 1000);
-      gl.uniform3f(uA, cA[0], cA[1], cA[2]);
-      gl.uniform3f(uB, cB[0], cB[1], cB[2]);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
-      frame = requestAnimationFrame(draw);
     };
     frame = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frame);
@@ -105,7 +125,8 @@ export function WebglStage({
   return (
     <canvas
       ref={ref}
-      className={`pointer-events-none absolute inset-0 h-full w-full ${className}`}
+      className={`fx-stage-canvas pointer-events-none absolute inset-0 h-full w-full opacity-60 ${className}`}
+      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
       aria-hidden
     />
   );

@@ -88,7 +88,7 @@ export function DicePage() {
     <div className="px-3 pt-4">
       <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">DICE / 1–100</p>
       <h1 className="mt-2 text-3xl font-semibold">Roll the line.</h1>
-      <RolloverStrip />
+      <RolloverStrip gameType="dice" />
       <div className={`fx-stage mt-5 ${result?.won ? 'fx-win' : ''}`}>
         <WebglStage mode="felt" />
         <span className="fx-glow" />

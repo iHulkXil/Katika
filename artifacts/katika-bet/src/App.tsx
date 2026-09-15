@@ -12,6 +12,7 @@ import { MinesPage } from '@/components/mines-page';
 import { RoulettePage } from '@/components/roulette-page';
 import { PlayPage } from '@/components/play-page';
 import { LegendPage } from '@/components/legend-page';
+import { LeaderboardPage } from '@/components/leaderboard-page';
 import { HomeLegendHero, LegendCard, useLegend } from '@/components/legend-card';
 import { AuthGate } from '@/components/auth-gate';
 import { DemoNotice, LayoutShell, MenuRow } from '@/components/layout-shell';
@@ -19,7 +20,7 @@ import { useServerSession } from '@/components/server-session';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import { useLogout, usePrivy } from '@privy-io/react-auth';
 import {
-  Bomb, CircleDollarSign, Dices, Gem, Grid2X2, Play, Shield, Ticket, UserRound, WalletCards,
+  Bomb, CircleDollarSign, Dices, Gem, Grid2X2, Play, Shield, Ticket, Trophy, UserRound, WalletCards,
 } from 'lucide-react';
 
 const queryClient = new QueryClient();
@@ -113,6 +114,7 @@ function MenuPage() {
       <h1 className="text-2xl font-semibold">Kit</h1>
       <DemoNotice>$KTK is off-chain test credit.</DemoNotice>
       <MenuRow href="/legend" icon={Shield} label="My legend" />
+      <MenuRow href="/leaderboard" icon={Trophy} label="Leaderboard (OVR)" />
       <MenuRow href="/play" icon={Play} label="Play floor" />
       <MenuRow href="/games" icon={Grid2X2} label="Casino" />
       <MenuRow href="/games/dice" icon={Dices} label="Dice" />
@@ -137,6 +139,7 @@ function Router() {
         <Route path="/dashboard" component={Home} />
         <Route path="/play" component={PlayPage} />
         <Route path="/legend" component={LegendPage} />
+        <Route path="/leaderboard" component={LeaderboardPage} />
         <Route path="/menu" component={MenuPage} />
         <Route path="/kit" component={MenuPage} />
         <Route path="/games/dice" component={DicePage} />
@@ -146,7 +149,6 @@ function Router() {
         <Route path="/games" component={Games} />
         <Route path="/wallet" component={Wallet} />
         <Route path="/rewards" component={() => <Placeholder title="Rewards" />} />
-        <Route path="/leaderboard" component={() => <Placeholder title="Leaderboard" />} />
         <Route path="/profile" component={Profile} />
         <Route component={() => <div className="px-3 pt-16 text-center"><Link href="/">Home</Link></div>} />
       </Switch>

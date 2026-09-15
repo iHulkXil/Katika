@@ -50,20 +50,33 @@ function FaceCanvas({ seed, skin }: { seed: number; skin: [number, number, numbe
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
-    const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false });
+    let gl: WebGLRenderingContext | null = null;
+    try {
+      gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false });
+    } catch {
+      return;
+    }
     if (!gl) return;
     const compile = (type: number, src: string) => {
-      const s = gl.createShader(type)!;
-      gl.shaderSource(s, src);
-      gl.compileShader(s);
+      const s = gl!.createShader(type);
+      if (!s) return null;
+      gl!.shaderSource(s, src);
+      gl!.compileShader(s);
       return s;
     };
-    const program = gl.createProgram()!;
-    gl.attachShader(program, compile(gl.VERTEX_SHADER, VERT));
-    gl.attachShader(program, compile(gl.FRAGMENT_SHADER, FRAG));
+    const vertShader = compile(gl.VERTEX_SHADER, VERT);
+    const fragShader = compile(gl.FRAGMENT_SHADER, FRAG);
+    if (!vertShader || !fragShader) return;
+
+    const program = gl.createProgram();
+    if (!program) return;
+    gl.attachShader(program, vertShader);
+    gl.attachShader(program, fragShader);
     gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return;
     gl.useProgram(program);
     const buf = gl.createBuffer();
+    if (!buf) return;
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(program, 'a');
@@ -77,18 +90,22 @@ function FaceCanvas({ seed, skin }: { seed: number; skin: [number, number, numbe
     const uSeed = gl.getUniformLocation(program, 'u_seed');
     let frame = 0;
     const start = performance.now();
+    canvas.width = 160;
+    canvas.height = 160;
+    gl.viewport(0, 0, 160, 160);
     const draw = (now: number) => {
-      canvas.width = 160;
-      canvas.height = 160;
-      gl.viewport(0, 0, 160, 160);
-      gl.uniform2f(uRes, 160, 160);
-      gl.uniform1f(uTime, (now - start) / 1000);
-      gl.uniform3f(uSkin, skin[0], skin[1], skin[2]);
-      gl.uniform1f(uSeed, seed % 97);
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
-      frame = requestAnimationFrame(draw);
+      try {
+        gl.uniform2f(uRes, 160, 160);
+        gl.uniform1f(uTime, (now - start) / 1000);
+        gl.uniform3f(uSkin, skin[0], skin[1], skin[2]);
+        gl.uniform1f(uSeed, seed % 97);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        frame = requestAnimationFrame(draw);
+      } catch {
+        // Suppress any context lost or transient render errors
+      }
     };
     frame = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frame);

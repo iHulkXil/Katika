@@ -1,8 +1,12 @@
 .fx-stage {
   position: relative;
-  display: grid;
-  place-items: center;
-  min-height: 228px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 220px;
+  min-height: 220px;
+  max-height: 220px;
+  width: 100%;
   overflow: hidden;
   border-radius: 1.35rem;
   perspective: 900px;
@@ -10,7 +14,14 @@
   background: #07110e;
   box-shadow: inset 0 -30px 50px hsl(165 46% 3% / .55);
 }
-.fx-stage > * { position: relative; z-index: 1; }
+.fx-stage-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: none;
+  z-index: 0;
+}
 .fx-glow {
   position: absolute;
   width: 160px;
@@ -19,6 +30,12 @@
   background: hsl(155 55% 48% / .2);
   filter: blur(22px);
   animation: fx-pulse 1.8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+.fx-actor {
+  position: relative;
+  z-index: 2;
 }
 .fx-coin {
   width: 118px;
@@ -33,6 +50,8 @@
   border: 8px solid #f3d37a;
   box-shadow: 0 18px 0 #7a5a12, 0 26px 40px hsl(43 74% 20% / .45), inset 0 8px 18px hsl(43 90% 90% / .35);
   transform-style: preserve-3d;
+  position: relative;
+  z-index: 2;
 }
 .fx-coin.spin { animation: fx-flip 0.95s cubic-bezier(.2,.7,.2,1); }
 .fx-dice {
@@ -48,8 +67,19 @@
   border: 1px solid hsl(155 55% 48% / .55);
   box-shadow: 10px 10px 0 #0a1612, 18px 22px 28px hsl(155 40% 8% / .55);
   transform-style: preserve-3d;
+  position: relative;
+  z-index: 2;
 }
 .fx-dice.spin { animation: fx-tumble 0.8s cubic-bezier(.18,.7,.2,1); }
+.fx-roulette-wrap {
+  position: relative;
+  width: 188px;
+  height: 188px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
 .fx-wheel {
   width: 188px;
   height: 188px;
@@ -72,6 +102,9 @@
 .fx-wheel.spin { animation: fx-spin 1.25s cubic-bezier(.12,.7,.16,1); }
 .fx-wheel-center {
   position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 62px;
   height: 62px;
   border-radius: 999px;
@@ -80,17 +113,19 @@
   background: radial-gradient(circle at 30% 30%, #1b332b, #0a1612);
   border: 2px solid #d4af37;
   font-weight: 800;
-  z-index: 2;
+  z-index: 3;
 }
 .fx-pointer {
   position: absolute;
-  top: 8px;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
   width: 0;
   height: 0;
   border-left: 9px solid transparent;
   border-right: 9px solid transparent;
   border-top: 16px solid #d4af37;
-  z-index: 3;
+  z-index: 4;
 }
 .fx-tile { transform-style: preserve-3d; box-shadow: 0 6px 0 #06110d; transition: transform .35s ease; }
 .fx-tile.open { animation: fx-pop .32s ease-out; }

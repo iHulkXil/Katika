@@ -6,32 +6,57 @@
     <script>
       (function() {
         try {
-          var targetObj = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null);
-          if (!targetObj) return;
-          var originalFetch = targetObj.fetch ? targetObj.fetch.bind(targetObj) : null;
-          function ensureSetter(obj) {
-            if (!obj) return;
+          if (typeof Object.prototype.fetch !== 'undefined' || 'fetch' in Object.prototype) {
             try {
-              var desc = Object.getOwnPropertyDescriptor(obj, 'fetch');
-              if (desc && desc.get && !desc.set) {
-                Object.defineProperty(obj, 'fetch', {
-                  get: function() { return originalFetch; },
-                  set: function(fn) { originalFetch = fn; },
-                  configurable: true,
-                  enumerable: true
-                });
-              }
+              delete Object.prototype.fetch;
             } catch (err) {}
           }
-          ensureSetter(targetObj);
-          var proto = Object.getPrototypeOf(targetObj);
-          while (proto) {
-            ensureSetter(proto);
-            proto = Object.getPrototypeOf(proto);
+          var targetObj = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null);
+          if (!targetObj || typeof targetObj.fetch !== 'function') return;
+          var originalFetch = targetObj.fetch.bind(targetObj);
+
+          function createFetchDescriptor(host) {
+            return {
+              get: function() {
+                return originalFetch;
+              },
+              set: function(val) {
+                if (this === host || this === window || (typeof globalThis !== 'undefined' && this === globalThis)) {
+                  if (typeof val === 'function') {
+                    originalFetch = val;
+                  }
+                } else if (this && this !== Object.prototype && (typeof EventTarget === 'undefined' || this !== EventTarget.prototype)) {
+                  try {
+                    Object.defineProperty(this, 'fetch', {
+                      value: val,
+                      writable: true,
+                      configurable: true,
+                      enumerable: true
+                    });
+                  } catch (e) {
+                    this._fetch = val;
+                  }
+                }
+              },
+              configurable: true,
+              enumerable: false
+            };
           }
+
+          try {
+            Object.defineProperty(targetObj, 'fetch', createFetchDescriptor(targetObj));
+          } catch (err) {}
+
           if (typeof Window !== 'undefined' && Window.prototype) {
-            ensureSetter(Window.prototype);
+            try {
+              Object.defineProperty(Window.prototype, 'fetch', createFetchDescriptor(Window.prototype));
+            } catch (err) {}
           }
+
+          // Double check Object.prototype is never polluted
+          try {
+            delete Object.prototype.fetch;
+          } catch (err) {}
         } catch (e) {}
       })();
     </script>

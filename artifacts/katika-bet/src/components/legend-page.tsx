@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
+import { SepoliaMintModal, type MintRecord } from '@/components/sepolia-mint-modal';
+import { Sparkles, ShieldCheck, Trophy, ArrowRight } from 'lucide-react';
 
 const POSITIONS = ['ST', 'CF', 'LW', 'RW', 'CAM', 'CM', 'CDM', 'LB', 'RB', 'CB', 'GK'];
 const STATS = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical'] as const;
@@ -18,6 +20,9 @@ type Legend = {
   physical: number;
   profileComplete: boolean;
   allocatedKchip: number;
+  allocatedKtk?: number;
+  overall?: number;
+  mint?: MintRecord | null;
 };
 
 export function LegendPage() {
@@ -36,6 +41,7 @@ export function LegendPage() {
     allocatedKchip: 330,
   });
   const [status, setStatus] = useState<string | null>(null);
+  const [mintModalOpen, setMintModalOpen] = useState(false);
 
   const load = async () => {
     const token = await getAccessToken();
@@ -63,7 +69,7 @@ export function LegendPage() {
       const body = await response.json();
       if (!response.ok) throw new Error((body as { error?: string }).error ?? 'Save failed');
       setLegend(body as Legend);
-      setStatus('Card saved. KTK locked on the card.');
+      setStatus('Card saved! KTK locked into attributes.');
     } catch (err) {
       setStatus(err instanceof Error ? err.message : 'Save failed');
     }
@@ -80,21 +86,68 @@ export function LegendPage() {
   }
 
   const nextAlloc = STATS.reduce((sum, key) => sum + Number(legend[key] || 0), 0);
+  const overall = Math.round(nextAlloc / 6);
   const playable = serverUser?.demoCredits ?? 0;
   const oldAlloc = legend.allocatedKchip ?? 0;
   const bank = playable + (legend.profileComplete ? oldAlloc : 0);
   const estPlayable = Math.max(0, bank - nextAlloc);
 
+  const isMinted = Boolean(legend.mint);
+
   return (
-    <div className="px-3 pt-2 pb-8">
-      <p className="mb-4 text-xs text-[#8FA39A]">600 KTK grant. First card max {FIRST_CAP}. The other 267 needs a 10x table rollover (2670 wagered) before you can add more to the card.</p>
-      <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Name
-        <input
-          className="mt-2 w-full rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] px-4 py-3.5 text-sm text-[#E8F2EC] outline-none focus:border-[#35D399]/50"
-          value={legend.name}
-          onChange={(event) => setLegend({ ...legend, name: event.target.value })}
-        />
-      </label>
+    <div className="px-3 pt-2 pb-12">
+      {/* Positioning Callout Banner */}
+      <div className="mb-4 rounded-2xl border border-[#1C3A2E] bg-gradient-to-r from-[#0E1A16] to-[#07110e] px-4 py-3">
+        <p className="text-center font-mono-custom text-[11px] font-medium leading-relaxed text-[#c7d9d0]">
+          &ldquo;Build a legend. Lock KTK into the card. Play to unlock more. Mint when the card is yours.&rdquo;
+        </p>
+      </div>
+
+      {/* Mint Portal Banner */}
+      <div className="mb-5 flex items-center justify-between rounded-2xl border border-[#d4af37]/40 bg-gradient-to-r from-[#172e25] via-[#0E1A16] to-[#08120e] p-3.5 shadow-md">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-mono-custom text-[10px] font-bold uppercase tracking-wider text-[#f3d37a]">
+              Sepolia Living Card
+            </span>
+            {isMinted && (
+              <span className="inline-flex items-center gap-1 rounded bg-[#35D399]/20 px-1.5 py-0.5 font-mono-custom text-[9px] text-[#35D399]">
+                <ShieldCheck size={10} /> Verified #{legend.mint?.tokenId}
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 text-xs text-[#8FA39A]">
+            {isMinted
+              ? 'Your on-chain living passport. Rollovers evolve this token.'
+              : 'Mint creates your on-chain card snapshot on Ethereum Sepolia.'}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setMintModalOpen(true)}
+          className="ml-3 shrink-0 rounded-xl border border-[#d4af37]/60 bg-gradient-to-r from-[#d4af37] to-[#e2b422] px-3 py-2 text-xs font-bold text-black shadow hover:opacity-95"
+        >
+          {isMinted ? 'Passport' : 'Mint Card'}
+        </button>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <label className="block flex-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">
+          Legend Name
+          <input
+            className="mt-2 w-full rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] px-4 py-3.5 text-sm text-[#E8F2EC] outline-none focus:border-[#35D399]/50"
+            value={legend.name}
+            onChange={(event) => setLegend({ ...legend, name: event.target.value })}
+          />
+        </label>
+        <div className="ml-4 text-center">
+          <span className="font-mono-custom text-[10px] uppercase text-[#8FA39A]">OVR</span>
+          <div className="grid h-12 w-12 place-items-center rounded-xl border border-[#d4af37]/50 bg-gradient-to-br from-[#f3d37a] to-[#8a6410] font-mono-custom text-xl font-bold text-black">
+            {overall}
+          </div>
+        </div>
+      </div>
 
       <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Position</p>
       <div className="mt-2 flex flex-wrap gap-2">
@@ -103,7 +156,11 @@ export function LegendPage() {
             key={position}
             type="button"
             onClick={() => setLegend({ ...legend, position })}
-            className={`rounded-full px-3 py-1.5 text-xs ${legend.position === position ? 'bg-[#35D399] font-semibold text-[#062018]' : 'bg-[#0E1A16] text-[#8FA39A] ring-1 ring-[#1C3A2E]'}`}
+            className={`rounded-full px-3 py-1.5 text-xs transition-all ${
+              legend.position === position
+                ? 'bg-[#35D399] font-semibold text-[#062018]'
+                : 'bg-[#0E1A16] text-[#8FA39A] ring-1 ring-[#1C3A2E] hover:text-white'
+            }`}
           >
             {position}
           </button>
@@ -111,8 +168,12 @@ export function LegendPage() {
       </div>
 
       <div className="mt-6 flex items-end justify-between">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Attributes · 1 pt = 1 KTK</p>
-        <p className={`font-mono-custom text-xs ${nextAlloc > FIRST_CAP ? 'text-red-400' : 'text-[#35D399]'}`}>{nextAlloc} / {FIRST_CAP}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">
+          Attributes · 1 pt = 1 KTK (Immune to table losses)
+        </p>
+        <p className={`font-mono-custom text-xs ${nextAlloc > FIRST_CAP ? 'text-red-400' : 'text-[#35D399]'}`}>
+          {nextAlloc} / {FIRST_CAP}
+        </p>
       </div>
 
       <div className="mt-3 space-y-4">
@@ -134,24 +195,39 @@ export function LegendPage() {
 
       <div className="mt-6 flex items-end justify-between border-t border-[#1C3A2E] pt-4">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.14em] text-[#8FA39A]">Allocated</p>
-          <p className="mt-1 font-mono-custom text-2xl">{nextAlloc}</p>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[#8FA39A]">Card Points (Locked)</p>
+          <p className="mt-1 font-mono-custom text-2xl text-[#f3d37a]">{nextAlloc} KTK</p>
         </div>
         <div className="text-right">
-          <p className="text-[10px] uppercase tracking-[0.14em] text-[#8FA39A]">Playable KTK</p>
-          <p className="mt-1 font-mono-custom text-2xl text-[#35D399]">{estPlayable.toLocaleString()}</p>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[#8FA39A]">Floor Stack (Playable)</p>
+          <p className="mt-1 font-mono-custom text-2xl text-[#35D399]">{estPlayable.toLocaleString()} KTK</p>
         </div>
       </div>
 
       <button
         type="button"
         onClick={() => void save()}
-        className="mt-6 w-full rounded-full bg-[#35D399] py-3.5 text-sm font-semibold text-[#062018] shadow-[0_0_28px_rgba(53,211,153,.35)]"
+        className="mt-6 w-full rounded-full bg-[#35D399] py-3.5 text-sm font-semibold text-[#062018] shadow-[0_0_28px_rgba(53,211,153,.35)] hover:opacity-95"
       >
         Save card
       </button>
       {status ? <p className="mt-2 text-center text-xs text-[#8FA39A]">{status}</p> : null}
-      <Link href="/play" className="mt-4 block text-center text-sm text-[#8FA39A]">To the floor →</Link>
+
+      <div className="mt-6 flex items-center justify-between border-t border-[#1C3A2E]/60 pt-4 text-xs text-[#8FA39A]">
+        <Link href="/leaderboard" className="inline-flex items-center gap-1 text-[#f3d37a] hover:underline">
+          <Trophy size={14} /> Check OVR Leaderboard
+        </Link>
+        <Link href="/play" className="inline-flex items-center gap-1 text-[#35D399] hover:underline">
+          To the floor <ArrowRight size={14} />
+        </Link>
+      </div>
+
+      <SepoliaMintModal
+        isOpen={mintModalOpen}
+        onClose={() => setMintModalOpen(false)}
+        legend={legend}
+        onMintSuccess={() => void load()}
+      />
     </div>
   );
 }

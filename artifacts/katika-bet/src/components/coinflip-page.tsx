@@ -64,7 +64,7 @@ export function CoinFlipPage() {
     <div className="px-3 pt-4">
       <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">COIN FLIP</p>
       <h1 className="mt-2 text-3xl font-semibold">Heads or tails.</h1>
-      <RolloverStrip />
+      <RolloverStrip gameType="coinflip" />
       <div className={`fx-stage mt-5 ${result?.won ? 'fx-win' : ''}`}>
         <WebglStage mode="gold" />
         <span className="fx-glow" />

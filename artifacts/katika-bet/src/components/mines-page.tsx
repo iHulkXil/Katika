@@ -113,19 +113,19 @@ export function MinesPage() {
     <div className="px-3 pt-4">
       <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">MINES</p>
       <h1 className="mt-2 text-3xl font-semibold">Open gems. Cash out.</h1>
-      <RolloverStrip />
+      <RolloverStrip gameType="mines" />
       <p className="mt-2 font-mono-custom text-sm">{booting ? 'loading' : (mult ? `${mult.toFixed(2)}x` : 'idle')}</p>
-      <div className="fx-stage mt-4 p-3">
+      <div className="fx-stage mt-4 !h-[250px] !min-h-[250px] !max-h-[250px] p-3">
         <WebglStage mode="ice" />
-        <div className="relative z-[1] grid grid-cols-5 gap-2">
+        <div className="relative z-[2] grid w-full max-w-[240px] grid-cols-5 gap-1.5 mx-auto">
           {Array.from({ length: TILES }, (_, i) => {
             const open = revealed.includes(i);
             const boom = mineTiles.includes(i);
             return (
-              <button key={i} type="button" disabled={!active || busy} onClick={() => void reveal(i)} className={`fx-tile aspect-square rounded-xl border ${
+              <button key={i} type="button" disabled={!active || busy} onClick={() => void reveal(i)} className={`fx-tile aspect-square rounded-xl border flex items-center justify-center ${
                 boom ? 'boom border-destructive bg-destructive/40' : open ? 'open border-primary bg-accent text-primary' : 'border-border bg-card/80'
               }`}>
-                {boom ? <span className="text-lg">*</span> : open ? <Gem size={16} className="mx-auto" /> : ''}
+                {boom ? <span className="text-lg font-bold">*</span> : open ? <Gem size={16} className="mx-auto" /> : ''}
               </button>
             );
           })}

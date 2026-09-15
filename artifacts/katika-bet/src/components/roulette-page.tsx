@@ -45,7 +45,7 @@ export function RoulettePage() {
     <div className="px-3 pt-4">
       <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">ROULETTE</p>
       <h1 className="mt-2 text-3xl font-semibold">European wheel.</h1>
-      <RolloverStrip />
+      <RolloverStrip gameType="roulette" />
       <div className="mt-3 flex gap-1 overflow-x-auto pb-2">
         {ribbon.map((n, i) => (
           <span key={`${n}-${i}`} className={`min-w-8 rounded px-2 py-1 text-center font-mono-custom text-xs ${
@@ -55,9 +55,11 @@ export function RoulettePage() {
       </div>
       <div className={`fx-stage mt-2 ${result?.won ? 'fx-win' : ''}`}>
         <WebglStage mode="ember" />
-        <span className="fx-pointer" />
-        <div className={`fx-wheel ${busy ? 'spin' : ''}`} />
-        <div className="fx-wheel-center">{result ? result.roll : '•'}</div>
+        <div className="fx-roulette-wrap">
+          <span className="fx-pointer" />
+          <div className={`fx-wheel ${busy ? 'spin' : ''}`} />
+          <div className="fx-wheel-center">{result ? result.roll : '•'}</div>
+        </div>
       </div>
       {result ? <p className={`mt-3 text-center text-sm ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.color} · {result.payout} KTK</p> : null}
       <div className="mt-4 grid grid-cols-6 gap-1">
