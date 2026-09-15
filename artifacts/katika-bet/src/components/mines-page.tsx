@@ -5,6 +5,7 @@ import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { playTableTone } from '@/lib/table-sound';
 import { RolloverStrip } from '@/components/rollover-strip';
+import { WebglStage } from '@/components/webgl-stage';
 
 const TILES = 25;
 async function api(path: string, token: string, body?: object, method = 'POST') {
@@ -92,8 +93,8 @@ export function MinesPage() {
         if (body.won) playTableTone('win');
         await refresh();
       }
-    } catch (err) { setError(err instanceof Error ? err.message : 'Reveal failed'); }
-    finally { setBusy(false); }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Reveal failed');
+    } finally { setBusy(false); }
   };
 
   const cashout = async () => {
@@ -104,8 +105,8 @@ export function MinesPage() {
       setNote(`Cashed ${body.cashoutValue}`);
       playTableTone('win');
       await refresh();
-    } catch (err) { setError(err instanceof Error ? err.message : 'Cashout failed'); }
-    finally { setBusy(false); }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Cashout failed');
+    } finally { setBusy(false); }
   };
 
   return (
@@ -114,18 +115,21 @@ export function MinesPage() {
       <h1 className="mt-2 text-3xl font-semibold">Open gems. Cash out.</h1>
       <RolloverStrip />
       <p className="mt-2 font-mono-custom text-sm">{booting ? 'loading' : (mult ? `${mult.toFixed(2)}x` : 'idle')}</p>
-      <div className="mt-4 grid grid-cols-5 gap-2">
-        {Array.from({ length: TILES }, (_, i) => {
-          const open = revealed.includes(i);
-          const boom = mineTiles.includes(i);
-          return (
-            <button key={i} type="button" disabled={!active || busy} onClick={() => void reveal(i)} className={`fx-tile aspect-square rounded-xl border ${
-              boom ? 'boom border-destructive bg-destructive/40' : open ? 'open border-primary bg-accent text-primary' : 'border-border bg-card'
-            }`}>
-              {boom ? <span className="text-lg">*</span> : open ? <Gem size={16} className="mx-auto" /> : ''}
-            </button>
-          );
-        })}
+      <div className="fx-stage mt-4 p-3">
+        <WebglStage mode="ice" />
+        <div className="relative z-[1] grid grid-cols-5 gap-2">
+          {Array.from({ length: TILES }, (_, i) => {
+            const open = revealed.includes(i);
+            const boom = mineTiles.includes(i);
+            return (
+              <button key={i} type="button" disabled={!active || busy} onClick={() => void reveal(i)} className={`fx-tile aspect-square rounded-xl border ${
+                boom ? 'boom border-destructive bg-destructive/40' : open ? 'open border-primary bg-accent text-primary' : 'border-border bg-card/80'
+              }`}>
+                {boom ? <span className="text-lg">*</span> : open ? <Gem size={16} className="mx-auto" /> : ''}
+              </button>
+            );
+          })}
+        </div>
       </div>
       {!authenticated ? <div className="mt-4"><WalletAuthButton /></div> : !active ? (
         <div className="mt-4 space-y-2">
