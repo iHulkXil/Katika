@@ -3,6 +3,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { RolloverStrip } from '@/components/rollover-strip';
+import { WebglStage } from '@/components/webgl-stage';
 
 type DiceResult = {
   roll: number; target: number; prediction: 'over' | 'under'; wager: number;
@@ -89,6 +90,7 @@ export function DicePage() {
       <h1 className="mt-2 text-3xl font-semibold">Roll the line.</h1>
       <RolloverStrip />
       <div className={`fx-stage mt-5 ${result?.won ? 'fx-win' : ''}`}>
+        <WebglStage mode="felt" />
         <span className="fx-glow" />
         <div className={`fx-dice ${busy ? 'spin' : ''}`}>{display ?? '—'}</div>
       </div>
