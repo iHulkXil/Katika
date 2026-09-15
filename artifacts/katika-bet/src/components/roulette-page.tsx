@@ -3,6 +3,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { RolloverStrip } from '@/components/rollover-strip';
+import { WebglStage } from '@/components/webgl-stage';
 
 type Bet = 'red' | 'black' | 'odd' | 'even' | 'number';
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
@@ -53,6 +54,7 @@ export function RoulettePage() {
         ))}
       </div>
       <div className={`fx-stage mt-2 ${result?.won ? 'fx-win' : ''}`}>
+        <WebglStage mode="ember" />
         <span className="fx-pointer" />
         <div className={`fx-wheel ${busy ? 'spin' : ''}`} />
         <div className="fx-wheel-center">{result ? result.roll : '•'}</div>
