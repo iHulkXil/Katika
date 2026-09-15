@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
+import { LegendAvatar } from '@/components/legend-avatar';
 
 export type LegendCardData = {
   name: string;
@@ -69,16 +70,8 @@ export function LegendCard({
   if (!legend || !legend.profileComplete || variant === 'ghost') {
     return (
       <div className="rounded-[28px] border border-[#1C3A2E] bg-[#0E1A16] px-5 pb-7 pt-6 text-center">
-        <div className="flex items-start justify-between px-2">
-          <div className="grid h-16 w-14 place-items-center rounded-xl border border-dashed border-[#2A4A3C]">
-            <span className="font-mono-custom text-[10px] uppercase tracking-widest text-[#4A6B5C]">OVR</span>
-            <span className="-mt-1 text-lg text-[#4A6B5C]">—</span>
-          </div>
-          <div className="grid h-16 w-14 place-items-center rounded-xl border border-[#2A4A3C] bg-[#122019]">
-            <span className="text-lg font-semibold text-[#35D399]">K.</span>
-          </div>
-        </div>
-        <p className="mt-8 font-mono-custom text-[11px] tracking-[0.28em] text-[#8FA39A]">NO LEGEND</p>
+        <div className="mx-auto opacity-50"><LegendAvatar name="Ghost" position="ST" /></div>
+        <p className="mt-3 font-mono-custom text-[11px] tracking-[0.28em] text-[#8FA39A]">NO LEGEND</p>
         <p className="mx-auto mt-2 max-w-[220px] text-sm leading-5 text-[#8FA39A]">Set up your FIFA card<br />to unlock the floor.</p>
         <Link href="/legend" className="mt-6 inline-flex rounded-full bg-[#35D399] px-6 py-3 text-sm font-semibold text-[#062018] shadow-[0_0_24px_rgba(53,211,153,.35)]">
           Create your legend
@@ -94,6 +87,7 @@ export function LegendCard({
   if (variant === 'compact') {
     return (
       <Link href="/legend" className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-accent to-card p-3">
+        <LegendAvatar name={legend.name} position={legend.position} size="sm" />
         <span className="grid h-12 w-12 place-items-center rounded-xl bg-primary font-mono-custom text-lg font-bold text-primary-foreground">
           {overall}
         </span>
@@ -110,15 +104,16 @@ export function LegendCard({
 
   return (
     <div className="overflow-hidden rounded-3xl border border-primary/35 bg-gradient-to-br from-accent via-card to-background p-5">
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex items-start gap-4">
+        <LegendAvatar name={legend.name} position={legend.position} />
+        <div className="min-w-0 flex-1">
           <p className="font-mono-custom text-[10px] tracking-[.22em] text-primary">PLAYER CARD</p>
           <h2 className="mt-2 text-3xl font-semibold tracking-tight">{legend.name}</h2>
           <p className="mt-1 inline-block rounded-full border border-primary/30 px-2 py-0.5 text-[11px] text-primary">{legend.position}</p>
-        </div>
-        <div className="grid h-[4.5rem] w-[4.5rem] place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[0_0_24px_rgba(53,211,153,.35)]">
-          <span className="font-mono-custom text-[10px] uppercase">OVR</span>
-          <span className="-mt-1 font-mono-custom text-3xl font-bold leading-none">{overall}</span>
+          <div className="mt-4 grid h-[4.5rem] w-[4.5rem] place-items-center rounded-2xl bg-primary text-primary-foreground shadow-[0_0_24px_rgba(53,211,153,.35)]">
+            <span className="font-mono-custom text-[10px] uppercase">OVR</span>
+            <span className="-mt-1 font-mono-custom text-3xl font-bold leading-none">{overall}</span>
+          </div>
         </div>
       </div>
       <div className="mt-5 grid grid-cols-3 gap-2">
