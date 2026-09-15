@@ -3,6 +3,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { RolloverStrip } from '@/components/rollover-strip';
+import { WebglStage } from '@/components/webgl-stage';
 
 type FlipResult = { result: 'heads' | 'tails'; side: 'heads' | 'tails'; wager: number; won: boolean; payout: number; demoCredits: number };
 
@@ -65,6 +66,7 @@ export function CoinFlipPage() {
       <h1 className="mt-2 text-3xl font-semibold">Heads or tails.</h1>
       <RolloverStrip />
       <div className={`fx-stage mt-5 ${result?.won ? 'fx-win' : ''}`}>
+        <WebglStage mode="gold" />
         <span className="fx-glow" />
         <div className={`fx-coin ${busy ? 'spin' : ''}`}>{result ? (result.result === 'heads' ? 'H' : 'T') : '?'}</div>
       </div>
