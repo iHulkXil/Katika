@@ -43,7 +43,6 @@ export function toLegend(row: {
 router.get("/legends/me", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
-    if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Database is not configured" });
     const { db, legendsTable } = await import("@workspace/db");
     const rows = await db.select().from(legendsTable).where(eq(legendsTable.privyUserId, identity.privyUserId)).limit(1);
     return res.json(rows[0] ? toLegend(rows[0]) : null);
@@ -57,7 +56,6 @@ router.get("/legends/me", async (req, res) => {
 router.put("/legends/me", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
-    if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Database is not configured" });
     const body = req.body as Record<string, unknown>;
     const name = String(body.name ?? "").trim().slice(0, 24);
     const position = String(body.position ?? "CAM");

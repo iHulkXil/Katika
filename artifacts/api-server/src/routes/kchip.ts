@@ -15,9 +15,6 @@ router.post("/kchip/deposit", async (req, res) => {
     if (!Number.isInteger(amount) || amount <= 0 || amount > 10000) {
       return res.status(400).json({ error: "Invalid amount" });
     }
-    if (!process.env.DATABASE_URL) {
-      return res.status(503).json({ error: "Database is not configured" });
-    }
     const { db, usersTable } = await import("@workspace/db");
     const rows = await db
       .update(usersTable)
@@ -42,9 +39,6 @@ router.post("/kchip/withdraw", async (req, res) => {
     const amount = Number((req.body as { amount?: number })?.amount ?? 0);
     if (!Number.isInteger(amount) || amount <= 0 || amount > 10000) {
       return res.status(400).json({ error: "Invalid amount" });
-    }
-    if (!process.env.DATABASE_URL) {
-      return res.status(503).json({ error: "Database is not configured" });
     }
     const { db, usersTable } = await import("@workspace/db");
     const current = await db

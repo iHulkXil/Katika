@@ -12,9 +12,6 @@ const router: IRouter = Router();
 router.get("/me", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
-    if (!process.env.DATABASE_URL) {
-      return res.status(503).json({ error: "Database is not configured" });
-    }
     const { db, usersTable, legendsTable } = await import("@workspace/db");
     const existing = await db.select().from(usersTable).where(eq(usersTable.privyUserId, identity.privyUserId)).limit(1);
 

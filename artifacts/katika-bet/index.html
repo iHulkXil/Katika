@@ -3,15 +3,47 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <script>
+      (function() {
+        try {
+          var targetObj = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null);
+          if (!targetObj) return;
+          var originalFetch = targetObj.fetch ? targetObj.fetch.bind(targetObj) : null;
+          function ensureSetter(obj) {
+            if (!obj) return;
+            try {
+              var desc = Object.getOwnPropertyDescriptor(obj, 'fetch');
+              if (desc && desc.get && !desc.set) {
+                Object.defineProperty(obj, 'fetch', {
+                  get: function() { return originalFetch; },
+                  set: function(fn) { originalFetch = fn; },
+                  configurable: true,
+                  enumerable: true
+                });
+              }
+            } catch (err) {}
+          }
+          ensureSetter(targetObj);
+          var proto = Object.getPrototypeOf(targetObj);
+          while (proto) {
+            ensureSetter(proto);
+            proto = Object.getPrototypeOf(proto);
+          }
+          if (typeof Window !== 'undefined' && Window.prototype) {
+            ensureSetter(Window.prototype);
+          }
+        } catch (e) {}
+      })();
+    </script>
     <title>Katika.Bet</title>
-    <meta name="description" content="Katika.Bet — built on Replit. Update this description to reflect the app." />
+    <meta name="description" content="Katika.Bet crypto casino and football legends floor featuring Dice, Coin Flip, Mines, and Roulette settled in $KTK." />
     <meta name="robots" content="index, follow" />
     <meta property="og:title" content="Katika.Bet" />
-    <meta property="og:description" content="Katika.Bet — built on Replit. Update this description to reflect the app." />
+    <meta property="og:description" content="Katika.Bet crypto casino and football legends floor featuring Dice, Coin Flip, Mines, and Roulette settled in $KTK." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Katika.Bet" />
-    <meta name="twitter:description" content="Katika.Bet — built on Replit. Update this description to reflect the app." />
+    <meta name="twitter:description" content="Katika.Bet crypto casino and football legends floor featuring Dice, Coin Flip, Mines, and Roulette settled in $KTK." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

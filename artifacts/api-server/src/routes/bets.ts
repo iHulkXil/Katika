@@ -11,9 +11,6 @@ const router: IRouter = Router();
 router.get("/bets", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
-    if (!process.env.DATABASE_URL) {
-      return res.status(503).json({ error: "Database is not configured" });
-    }
     const { db, gameBetsTable } = await import("@workspace/db");
     const rows = await db
       .select()

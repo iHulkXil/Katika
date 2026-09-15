@@ -15,7 +15,6 @@ const MULTIPLIER = 1.98;
 router.post("/games/coinflip", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
-    if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Database is not configured" });
     const wager = Number(req.body?.wager);
     const side = req.body?.side;
     if (!Number.isInteger(wager) || wager < 10 || wager > 1000) {

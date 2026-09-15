@@ -19,56 +19,16 @@ const privyAppId =
 
 const apiProxyTarget = process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:5000';
 
-async function replitPlugins(): Promise<PluginOption[]> {
-  if (process.env.REPL_ID === undefined) {
-    return [];
-  }
-
-  const plugins: PluginOption[] = [];
-
-  try {
-    const runtimeErrorOverlay = await import(
-      '@replit/vite-plugin-runtime-error-modal'
-    );
-    plugins.push(runtimeErrorOverlay.default());
-  } catch {
-    // Optional off Replit.
-  }
-
-  if (process.env.NODE_ENV === 'production') {
-    return plugins;
-  }
-
-  try {
-    const cartographer = await import('@replit/vite-plugin-cartographer');
-    plugins.push(
-      cartographer.cartographer({
-        root: path.resolve(import.meta.dirname, '..'),
-      }),
-    );
-  } catch {
-    // Optional off Replit.
-  }
-
-  try {
-    const devBanner = await import('@replit/vite-plugin-dev-banner');
-    plugins.push(devBanner.devBanner());
-  } catch {
-    // Optional off Replit.
-  }
-
-  return plugins;
-}
-
 export default defineConfig({
   base: basePath,
   define: {
     'import.meta.env.VITE_PRIVY_APP_ID': JSON.stringify(privyAppId),
   },
-  plugins: [react(), tailwindcss(), ...(await replitPlugins())],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, 'src'),
+      'cross-fetch': path.resolve(import.meta.dirname, 'src/lib/cross-fetch.ts'),
       '@assets': path.resolve(
         import.meta.dirname,
         '..',

@@ -1,0 +1,6 @@
+{
+  "name": "Katika.Bet",
+  "description": "Katika.Bet crypto casino and football legends floor featuring Dice, Coin Flip, Mines, and Roulette settled in $KTK.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

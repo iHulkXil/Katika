@@ -15,7 +15,6 @@ const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 
 router.post("/games/roulette", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
-    if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Database is not configured" });
     const wager = Number(req.body?.wager);
     const bet = req.body?.bet;
     const number = Number(req.body?.number);

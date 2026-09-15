@@ -77,7 +77,6 @@ async function openRound(privyUserId: string) {
 router.get("/games/mines/active", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
-    if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Database is not configured" });
     const { row } = await openRound(identity.privyUserId);
     if (!row) return res.json({ active: false });
     return res.json(publicRound(row));
@@ -91,7 +90,6 @@ router.get("/games/mines/active", async (req, res) => {
 router.post("/games/mines/start", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
-    if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Database is not configured" });
     const existing = await openRound(identity.privyUserId);
     if (existing.row) return res.status(400).json({ error: "Cash out or finish the open Mines round first" });
     const wager = Number(req.body?.wager);

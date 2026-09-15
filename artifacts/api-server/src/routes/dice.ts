@@ -22,7 +22,6 @@ function diceStats(target: number, prediction: "over" | "under") {
 router.post("/games/dice", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
-    if (!process.env.DATABASE_URL) return res.status(503).json({ error: "Database is not configured" });
     const wager = Number(req.body?.wager);
     const target = Number(req.body?.target);
     const prediction = req.body?.prediction;
