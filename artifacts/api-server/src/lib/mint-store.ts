@@ -50,13 +50,7 @@ export function hydrateMint(privyUserId: string, row?: {
   return getMint(privyUserId);
 }
 
-export function setMint(privyUserId: string, record: MintRecord) {
-  mintStore.set(privyUserId, record);
-  return record;
-}
-
-export async function persistMint(privyUserId: string, record: MintRecord) {
-  setMint(privyUserId, record);
+async function writeNeon(privyUserId: string, record: MintRecord) {
   try {
     const { db, legendsTable } = await import("@workspace/db");
     await db.update(legendsTable).set({
@@ -67,8 +61,19 @@ export async function persistMint(privyUserId: string, record: MintRecord) {
       updatedAt: new Date(),
     }).where(eq(legendsTable.privyUserId, privyUserId));
   } catch {
-    /* columns missing until Neon ALTER */
+    /* run Neon ALTER first */
   }
+}
+
+export function setMint(privyUserId: string, record: MintRecord) {
+  mintStore.set(privyUserId, record);
+  void writeNeon(privyUserId, record);
+  return record;
+}
+
+export async function persistMint(privyUserId: string, record: MintRecord) {
+  setMint(privyUserId, record);
+  await writeNeon(privyUserId, record);
   return record;
 }
 
