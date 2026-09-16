@@ -3,11 +3,79 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { RolloverStrip } from '@/components/rollover-strip';
-import { Coin3D } from '@/components/3d/coin-3d';
 import { fireWinConfetti } from '@/lib/confetti';
+import { playTableTone } from '@/lib/table-sound';
 import { Sparkles, RefreshCw, SlidersHorizontal } from 'lucide-react';
 
 type FlipResult = { result: 'heads' | 'tails'; side: 'heads' | 'tails'; wager: number; won: boolean; payout: number; demoCredits: number };
+
+function CoinDisplay({
+  busy,
+  result,
+  side,
+}: {
+  busy: boolean;
+  result: 'heads' | 'tails' | null;
+  side: 'heads' | 'tails';
+}) {
+  const currentSide = result ?? side;
+  const rotation = currentSide === 'heads' ? 0 : 180;
+
+  return (
+    <div className="relative flex h-44 w-full items-center justify-center overflow-hidden rounded-2xl border border-[#1C3A2E] bg-gradient-to-b from-[#0B1E17] via-[#07140F] to-[#040C09] shadow-inner select-none">
+      {/* Ambient background glow */}
+      <div
+        className={`absolute h-36 w-36 rounded-full blur-2xl transition-all duration-700 pointer-events-none ${
+          result === 'heads'
+            ? 'bg-[#f3d37a]/25 scale-110'
+            : result === 'tails'
+            ? 'bg-[#35D399]/30 scale-110'
+            : 'bg-[#1C3A2E]/40'
+        }`}
+      />
+
+      {/* 3D Coin Rig */}
+      <div style={{ perspective: '800px' }} className="flex items-center justify-center">
+        <div
+          className={`relative h-28 w-28 transition-transform duration-700 ${
+            busy ? 'animate-[fx-flip_0.75s_infinite_linear]' : ''
+          }`}
+          style={{
+            transformStyle: 'preserve-3d',
+            transform: busy ? undefined : `rotateY(${rotation}deg)`,
+          }}
+        >
+          {/* Front Face: HEADS (Gold Sovereign) */}
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center rounded-full border-4 border-[#eab308] bg-gradient-to-br from-[#fef08a] via-[#eab308] to-[#854d0e] shadow-[0_8px_20px_rgba(234,179,8,0.35),inset_0_2px_4px_rgba(255,255,255,0.6)]"
+            style={{ backfaceVisibility: 'hidden' }}
+          >
+            <div className="flex h-[88%] w-[88%] flex-col items-center justify-center rounded-full border border-[#ca8a04]/70 bg-gradient-to-b from-[#fde047] via-[#eab308] to-[#a16207] p-1 text-[#422006]">
+              <span className="font-mono-custom text-[8px] font-black tracking-widest text-[#713f12]">KATIKA</span>
+              <span className="font-serif text-3xl font-black text-[#422006] leading-none my-0.5">K</span>
+              <span className="font-mono-custom text-[8px] font-black tracking-wider text-[#713f12]">HEADS</span>
+            </div>
+          </div>
+
+          {/* Back Face: TAILS (Emerald Sovereign) */}
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center rounded-full border-4 border-[#35D399] bg-gradient-to-br from-[#86efac] via-[#10b981] to-[#064e3b] shadow-[0_8px_20px_rgba(53,211,153,0.35),inset_0_2px_4px_rgba(255,255,255,0.6)]"
+            style={{
+              backfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)',
+            }}
+          >
+            <div className="flex h-[88%] w-[88%] flex-col items-center justify-center rounded-full border border-[#059669]/70 bg-gradient-to-b from-[#6ee7b7] via-[#10b981] to-[#047857] p-1 text-[#022c22]">
+              <span className="font-mono-custom text-[8px] font-black tracking-widest text-[#064e3b]">1.98×</span>
+              <span className="text-2xl leading-none my-0.5">⚽</span>
+              <span className="font-mono-custom text-[8px] font-black tracking-wider text-[#064e3b]">TAILS</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function CoinFlipPage() {
   const { authenticated, getAccessToken } = usePrivy();
@@ -28,6 +96,7 @@ export function CoinFlipPage() {
   const playOnce = async () => {
     const token = await getAccessToken();
     if (!token) throw new Error('Sign in first');
+    playTableTone('tick');
     const response = await fetch('/api/games/coinflip', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -39,6 +108,7 @@ export function CoinFlipPage() {
     if (!response.ok) throw new Error(body.error ?? 'Flip failed');
     setResult(body);
     setHistory((prev) => [body, ...prev].slice(0, 16));
+    playTableTone(body.won ? 'win' : 'lose');
     await refresh();
     return body as FlipResult;
   };
@@ -100,22 +170,20 @@ export function CoinFlipPage() {
       {/* Compact Rollover Strip */}
       <RolloverStrip gameType="coinflip" compact />
 
-      {/* 3D Coin Animation Display */}
+      {/* Coin Animation Display */}
       <div className="relative mt-3">
-        <div className={`fx-stage ${result?.won ? 'ring-1 ring-[#35D399]/40' : ''}`}>
-          <Coin3D busy={busy} result={result ? result.result : null} side={side} />
-          
-          {/* Live Outcome Overlay Badge */}
-          {result && (
-            <div className={`absolute bottom-2.5 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 font-mono-custom text-xs font-semibold backdrop-blur-md shadow-lg transition-all ${
-              result.won
-                ? 'border border-[#35D399]/60 bg-[#072418]/90 text-[#35D399]'
-                : 'border border-[#1C3A2E] bg-[#07110E]/90 text-[#8FA39A]'
-            }`}>
-              {result.result.toUpperCase()} · {result.won ? `+${result.payout} KTK` : '0 KTK'}
-            </div>
-          )}
-        </div>
+        <CoinDisplay busy={busy} result={result ? result.result : null} side={side} />
+        
+        {/* Live Outcome Overlay Badge */}
+        {result && (
+          <div className={`absolute bottom-2.5 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 font-mono-custom text-xs font-semibold backdrop-blur-md shadow-lg transition-all ${
+            result.won
+              ? 'border border-[#35D399]/60 bg-[#072418]/90 text-[#35D399]'
+              : 'border border-[#1C3A2E] bg-[#07110E]/90 text-[#8FA39A]'
+          }`}>
+            {result.result.toUpperCase()} · {result.won ? `+${result.payout} KTK` : '0 KTK'}
+          </div>
+        )}
       </div>
 
       {/* Recent Flips Ribbon */}

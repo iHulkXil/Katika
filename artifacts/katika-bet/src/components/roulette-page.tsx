@@ -3,12 +3,95 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { RolloverStrip } from '@/components/rollover-strip';
-import { Roulette3D } from '@/components/3d/roulette-3d';
 import { fireWinConfetti } from '@/lib/confetti';
+import { playTableTone } from '@/lib/table-sound';
 import { RefreshCw } from 'lucide-react';
 
 type Bet = 'red' | 'black' | 'odd' | 'even' | 'number';
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+
+function RouletteDisplay({
+  busy,
+  roll,
+  color,
+  won,
+}: {
+  busy: boolean;
+  roll: number | null;
+  color?: string;
+  won?: boolean;
+}) {
+  const isRed = roll !== null && RED.has(roll);
+  const isZero = roll === 0;
+
+  return (
+    <div className="relative flex h-52 w-full flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#1C3A2E] bg-gradient-to-b from-[#0B1E17] via-[#07140F] to-[#040C09] p-2 shadow-inner select-none">
+      {/* Ambient background glow */}
+      <div
+        className={`absolute h-40 w-40 rounded-full blur-2xl transition-all duration-700 pointer-events-none ${
+          won === true
+            ? 'bg-[#35D399]/25 scale-110'
+            : isRed
+            ? 'bg-red-500/20'
+            : 'bg-[#1C3A2E]/40'
+        }`}
+      />
+
+      {/* Roulette Wheel Wrap */}
+      <div className="relative flex items-center justify-center">
+        {/* Top Gold Pointer */}
+        <div className="absolute -top-3 left-1/2 z-20 -translate-x-1/2">
+          <div className="h-0 w-0 border-x-[8px] border-x-transparent border-t-[14px] border-t-[#d4af37] drop-shadow-md" />
+        </div>
+
+        {/* 3D Angled Rotating Wheel Disc */}
+        <div
+          className={`relative h-40 w-40 rounded-full border-4 border-[#d4af37] shadow-[0_10px_30px_rgba(0,0,0,0.8),inset_0_0_15px_rgba(0,0,0,0.6)] ${
+            busy ? 'animate-[fx-spin_1.2s_infinite_linear]' : 'transition-transform duration-700'
+          }`}
+          style={{
+            background:
+              'conic-gradient(#10b981 0deg 9.7deg, #b91c1c 9.7deg 19.4deg, #18181b 19.4deg 29.1deg, #b91c1c 29.1deg 38.8deg, #18181b 38.8deg 48.5deg, #b91c1c 48.5deg 58.2deg, #18181b 58.2deg 67.9deg, #b91c1c 67.9deg 77.6deg, #18181b 77.6deg 87.3deg, #b91c1c 87.3deg 97deg, #18181b 97deg 106.7deg, #b91c1c 106.7deg 116.4deg, #18181b 116.4deg 126.1deg, #b91c1c 126.1deg 135.8deg, #18181b 135.8deg 145.5deg, #b91c1c 145.5deg 155.2deg, #18181b 155.2deg 164.9deg, #b91c1c 164.9deg 174.6deg, #18181b 174.6deg 184.3deg, #b91c1c 184.3deg 194deg, #18181b 194deg 203.7deg, #b91c1c 203.7deg 213.4deg, #18181b 213.4deg 223.1deg, #b91c1c 223.1deg 232.8deg, #18181b 232.8deg 242.5deg, #b91c1c 242.5deg 252.2deg, #18181b 252.2deg 261.9deg, #b91c1c 261.9deg 271.6deg, #18181b 271.6deg 281.3deg, #b91c1c 281.3deg 291deg, #18181b 291deg 300.7deg, #b91c1c 300.7deg 310.4deg, #18181b 310.4deg 320.1deg, #b91c1c 320.1deg 329.8deg, #18181b 329.8deg 339.5deg, #b91c1c 339.5deg 349.2deg, #18181b 349.2deg 360deg)',
+          }}
+        >
+          {/* Outer track tick markers */}
+          <div className="absolute inset-1 rounded-full border border-[#f3d37a]/30 pointer-events-none" />
+        </div>
+
+        {/* Center Hub Display */}
+        <div className="absolute inset-0 m-auto flex h-20 w-20 flex-col items-center justify-center rounded-full border-2 border-[#d4af37] bg-gradient-to-b from-[#132c21] to-[#08130e] shadow-[0_4px_12px_rgba(0,0,0,0.6)] z-10">
+          {busy ? (
+            <span className="font-mono-custom text-xs font-bold text-[#f3d37a] animate-pulse">
+              SPINNING
+            </span>
+          ) : roll !== null ? (
+            <div className="flex flex-col items-center">
+              <span
+                className={`font-mono-custom text-2xl font-black leading-none ${
+                  isZero
+                    ? 'text-[#35D399]'
+                    : isRed
+                    ? 'text-red-400'
+                    : 'text-neutral-100'
+                }`}
+              >
+                {roll}
+              </span>
+              <span className="mt-0.5 font-mono-custom text-[8px] font-bold uppercase tracking-wider text-[#8FA39A]">
+                {isZero ? 'ZERO' : isRed ? 'RED' : 'BLACK'}
+              </span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center">
+              <span className="text-xl">🎰</span>
+              <span className="font-mono-custom text-[8px] font-bold text-[#35D399]">KATIKA</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function RoulettePage() {
   const { authenticated, getAccessToken } = usePrivy();
@@ -26,6 +109,7 @@ export function RoulettePage() {
   const play = async () => {
     setError(null);
     setBusy(true);
+    playTableTone('tick');
     try {
       await new Promise((r) => setTimeout(r, 1100));
       const token = await getAccessToken();
@@ -41,6 +125,7 @@ export function RoulettePage() {
       if (!response.ok) throw new Error(body.error ?? 'Spin failed');
       setResult(body);
       setRibbon((prev) => [body.roll, ...prev].slice(0, 12));
+      playTableTone(body.won ? 'win' : 'lose');
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed');
@@ -63,7 +148,7 @@ export function RoulettePage() {
           <span className="font-mono-custom text-[10px] uppercase tracking-[.18em] text-[#35D399]">
             European Single-Zero
           </span>
-          <h1 className="text-xl font-bold tracking-tight text-[#E8F2EC]">3D Roulette</h1>
+          <h1 className="text-xl font-bold tracking-tight text-[#E8F2EC]">European Roulette</h1>
         </div>
         <div className="flex items-center gap-1.5 rounded-full border border-[#1C3A2E] bg-[#0E1A16] px-2.5 py-1 text-[11px] font-mono-custom text-[#8FA39A]">
           <span>Payout</span>
@@ -74,22 +159,20 @@ export function RoulettePage() {
       {/* Compact Rollover Strip */}
       <RolloverStrip gameType="roulette" compact />
 
-      {/* 3D Roulette Stage */}
+      {/* Roulette Stage */}
       <div className="relative mt-3">
-        <div className={`fx-stage ${result?.won ? 'ring-1 ring-[#35D399]/40' : ''}`}>
-          <Roulette3D busy={busy} roll={result ? result.roll : null} />
+        <RouletteDisplay busy={busy} roll={result ? result.roll : null} color={result?.color} won={result?.won} />
 
-          {/* Live Outcome Overlay Badge */}
-          {result && (
-            <div className={`absolute bottom-2.5 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 font-mono-custom text-xs font-semibold backdrop-blur-md shadow-lg transition-all ${
-              result.won
-                ? 'border border-[#35D399]/60 bg-[#072418]/90 text-[#35D399]'
-                : 'border border-[#1C3A2E] bg-[#07110E]/90 text-[#8FA39A]'
-            }`}>
-              {result.color.toUpperCase()} {result.roll} · {result.won ? `+${result.payout} KTK` : '0 KTK'}
-            </div>
-          )}
-        </div>
+        {/* Live Outcome Overlay Badge */}
+        {result && (
+          <div className={`mt-2 flex items-center justify-center rounded-xl py-1.5 font-mono-custom text-xs font-semibold backdrop-blur-md transition-all ${
+            result.won
+              ? 'border border-[#35D399]/60 bg-[#072418]/90 text-[#35D399]'
+              : 'border border-[#1C3A2E] bg-[#07110E]/90 text-[#8FA39A]'
+          }`}>
+            {result.color.toUpperCase()} {result.roll} · {result.won ? `+${result.payout} KTK` : '0 KTK'}
+          </div>
+        )}
       </div>
 
       {/* Recent Rolls Ribbon */}

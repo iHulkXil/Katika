@@ -3,8 +3,8 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { RolloverStrip } from '@/components/rollover-strip';
-import { Dice3D } from '@/components/3d/dice-3d';
 import { fireWinConfetti } from '@/lib/confetti';
+import { playTableTone } from '@/lib/table-sound';
 import { RefreshCw, SlidersHorizontal, ArrowDown, ArrowUp } from 'lucide-react';
 
 type DiceResult = {
@@ -22,6 +22,144 @@ async function readApiJson(response: Response) {
   const text = await response.text();
   if (!text) throw new Error('Empty API response');
   return JSON.parse(text) as DiceResult & { error?: string };
+}
+
+function DiceDisplay({
+  busy,
+  roll,
+  target,
+  prediction,
+  won,
+}: {
+  busy: boolean;
+  roll: number | null;
+  target: number;
+  prediction: 'over' | 'under';
+  won?: boolean;
+}) {
+  const displayVal = roll ?? 50;
+  const rollPercent = Math.min(100, Math.max(1, displayVal));
+
+  return (
+    <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#1C3A2E] bg-gradient-to-b from-[#0B1E17] via-[#07140F] to-[#040C09] p-4 shadow-inner select-none">
+      {/* Ambient background glow */}
+      <div
+        className={`absolute inset-0 transition-opacity duration-500 pointer-events-none ${
+          won === true
+            ? 'bg-[#35D399]/10 opacity-100'
+            : won === false
+            ? 'bg-red-500/10 opacity-100'
+            : 'opacity-0'
+        }`}
+      />
+
+      {/* Main Dice Outcome & Digital Roll */}
+      <div className="relative z-10 flex items-center justify-between px-2 py-1">
+        {/* Animated Dice Cube Pair */}
+        <div className="flex items-center gap-2.5">
+          <div
+            className={`flex h-12 w-12 items-center justify-center rounded-xl border border-[#35D399]/50 bg-gradient-to-br from-[#1b3d30] to-[#0d1f18] text-lg font-bold text-[#35D399] shadow-md transition-transform ${
+              busy ? 'animate-[fx-tumble_0.6s_infinite_ease-in-out]' : ''
+            }`}
+          >
+            🎲
+          </div>
+          <div>
+            <span className="font-mono-custom text-[9px] uppercase tracking-wider text-[#8FA39A]">
+              Target: {prediction.toUpperCase()} {target}
+            </span>
+            <div className="flex items-center gap-1.5 font-mono-custom text-xs">
+              <span className={prediction === 'over' ? 'text-[#35D399]' : 'text-[#8FA39A]'}>
+                {prediction === 'over' ? '▲ OVER' : '▼ UNDER'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Large Glowing Roll Value */}
+        <div className="text-right">
+          <span className="font-mono-custom text-[9px] uppercase tracking-wider text-[#8FA39A]">
+            {busy ? 'Rolling...' : won !== undefined ? (won ? 'WINNER' : 'BUST') : 'Landed Roll'}
+          </span>
+          <div
+            className={`font-mono-custom text-3xl font-black tracking-tight transition-colors ${
+              busy
+                ? 'text-[#f3d37a] animate-pulse'
+                : won === true
+                ? 'text-[#35D399] drop-shadow-[0_0_12px_rgba(53,211,153,0.5)]'
+                : won === false
+                ? 'text-red-400'
+                : 'text-[#E8F2EC]'
+            }`}
+          >
+            {busy ? (Math.random() * 99 + 1).toFixed(1) : roll ? roll.toFixed(2) : '50.00'}
+          </div>
+        </div>
+      </div>
+
+      {/* Linear Roll Spectrum Track */}
+      <div className="relative z-10 mt-3 pt-2">
+        {/* Track Bar with Win/Loss colored zones */}
+        <div className="relative h-3 w-full overflow-hidden rounded-full bg-[#08130f] border border-[#1C3A2E]">
+          {/* Under Zone */}
+          <div
+            className="absolute left-0 top-0 bottom-0 transition-all duration-300"
+            style={{
+              width: `${target}%`,
+              backgroundColor: prediction === 'under' ? '#35D399' : '#ef4444',
+              opacity: 0.85,
+            }}
+          />
+          {/* Over Zone */}
+          <div
+            className="absolute right-0 top-0 bottom-0 transition-all duration-300"
+            style={{
+              left: `${target}%`,
+              backgroundColor: prediction === 'over' ? '#35D399' : '#ef4444',
+              opacity: 0.85,
+            }}
+          />
+        </div>
+
+        {/* Target Dividing Needle */}
+        <div
+          className="absolute top-0 bottom-0 w-0.5 bg-[#E8F2EC] z-20 pointer-events-none transition-all duration-200"
+          style={{ left: `${target}%` }}
+        >
+          <div className="absolute -top-1 left-1/2 -translate-x-1/2 rounded bg-[#E8F2EC] px-1 py-0.2 font-mono-custom text-[8px] font-bold text-[#07110E]">
+            {target}
+          </div>
+        </div>
+
+        {/* Landed Roll Pin */}
+        {roll !== null && !busy && (
+          <div
+            className="absolute -bottom-1 z-30 transition-all duration-500 ease-out -translate-x-1/2 pointer-events-none"
+            style={{ left: `${rollPercent}%` }}
+          >
+            <div
+              className={`rounded-full px-1.5 py-0.5 font-mono-custom text-[9px] font-black border shadow-lg ${
+                won
+                  ? 'border-[#35D399] bg-[#072418] text-[#35D399]'
+                  : 'border-red-500 bg-[#260a0a] text-red-400'
+              }`}
+            >
+              ▲ {roll.toFixed(1)}
+            </div>
+          </div>
+        )}
+
+        {/* Min/Max Labels */}
+        <div className="mt-2 flex items-center justify-between text-[10px] font-mono-custom text-[#5C7368]">
+          <span>1</span>
+          <span>25</span>
+          <span>50</span>
+          <span>75</span>
+          <span>100</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function DicePage() {
@@ -47,6 +185,7 @@ export function DicePage() {
   const playOnce = async () => {
     const token = await getAccessToken();
     if (!token) throw new Error('Sign in first');
+    playTableTone('tick');
     const response = await fetch('/api/games/dice', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -56,6 +195,7 @@ export function DicePage() {
     if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
     setResult(body);
     setDisplay(body.roll);
+    playTableTone(body.won ? 'win' : 'lose');
     await refresh();
     return body;
   };
@@ -125,22 +265,20 @@ export function DicePage() {
       {/* Compact Rollover Strip */}
       <RolloverStrip gameType="dice" compact />
 
-      {/* 3D Dice Stage */}
+      {/* Precision Dice Stage */}
       <div className="relative mt-3">
-        <div className={`fx-stage ${result?.won ? 'ring-1 ring-[#35D399]/40' : ''}`}>
-          <Dice3D busy={busy} roll={display} target={target} prediction={prediction} won={result?.won} />
+        <DiceDisplay busy={busy} roll={display} target={target} prediction={prediction} won={result?.won} />
 
-          {/* Outcome Overlay Badge */}
-          {result && (
-            <div className={`absolute bottom-2.5 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 font-mono-custom text-xs font-semibold backdrop-blur-md shadow-lg transition-all ${
-              result.won
-                ? 'border border-[#35D399]/60 bg-[#072418]/90 text-[#35D399]'
-                : 'border border-[#1C3A2E] bg-[#07110E]/90 text-[#8FA39A]'
-            }`}>
-              Roll {result.roll} · {result.won ? `+${result.payout} KTK` : '0 KTK'}
-            </div>
-          )}
-        </div>
+        {/* Outcome Overlay Badge */}
+        {result && (
+          <div className={`mt-2 flex items-center justify-center rounded-xl py-1.5 font-mono-custom text-xs font-semibold backdrop-blur-md transition-all ${
+            result.won
+              ? 'border border-[#35D399]/60 bg-[#072418]/90 text-[#35D399]'
+              : 'border border-[#1C3A2E] bg-[#07110E]/90 text-[#8FA39A]'
+          }`}>
+            Roll {result.roll} · {result.won ? `+${result.payout} KTK (${result.multiplier}×)` : '0 KTK'}
+          </div>
+        )}
       </div>
 
       {!authenticated ? (

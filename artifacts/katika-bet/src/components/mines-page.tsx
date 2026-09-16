@@ -156,9 +156,9 @@ export function MinesPage() {
       {/* Compact Rollover Strip */}
       <RolloverStrip gameType="mines" compact />
 
-      {/* Vault Grid Stage (Touch-friendly, no perspective trap) */}
-      <div className="relative mt-3 rounded-2xl border border-[#1C3A2E] bg-gradient-to-b from-[#0B1713] to-[#060E0B] p-3.5 shadow-md flex items-center justify-center">
-        <div className="grid w-full max-w-[240px] grid-cols-5 gap-2 select-none" style={{ touchAction: 'pan-y' }}>
+      {/* Vault Grid Stage */}
+      <div className="relative mt-3 rounded-2xl border border-[#1C3A2E] bg-gradient-to-b from-[#0B1E17] via-[#07140F] to-[#040C09] p-4 shadow-inner flex items-center justify-center">
+        <div className="grid w-full max-w-[280px] grid-cols-5 gap-2 select-none" style={{ touchAction: 'pan-y' }}>
           {Array.from({ length: TILES }, (_, i) => {
             const open = revealed.includes(i);
             const boom = mineTiles.includes(i);
@@ -170,23 +170,23 @@ export function MinesPage() {
                 onClick={() => void reveal(i)}
                 className={`aspect-square rounded-xl border flex items-center justify-center transition-all duration-200 select-none ${
                   boom
-                    ? 'border-red-500 bg-red-950/80 shadow-[0_0_12px_rgba(239,68,68,0.5)] scale-95'
+                    ? 'border-red-500 bg-red-950/90 shadow-[0_0_16px_rgba(239,68,68,0.6)] scale-95'
                     : open
-                    ? 'border-[#35D399] bg-gradient-to-br from-[#35D399]/30 to-[#0c2419] text-[#35D399] shadow-[0_0_14px_rgba(53,211,153,0.35)]'
+                    ? 'border-[#35D399] bg-gradient-to-br from-[#35D399]/35 to-[#082216] text-[#35D399] shadow-[0_0_16px_rgba(53,211,153,0.4)]'
                     : active
-                    ? 'border-[#1C3A2E] bg-gradient-to-b from-[#132c21] to-[#0A1812] hover:border-[#35D399]/60 active:scale-95'
-                    : 'border-[#1C3A2E]/60 bg-[#0A1612]/70 opacity-80'
+                    ? 'border-[#1C3A2E] bg-gradient-to-b from-[#132e22] to-[#0A1812] hover:border-[#35D399]/70 hover:scale-105 active:scale-95 shadow-sm'
+                    : 'border-[#1C3A2E]/50 bg-[#091510]/80 opacity-75'
                 }`}
               >
                 {boom ? (
-                  <Bomb size={18} className="text-red-400 animate-bounce" />
+                  <Bomb size={22} className="text-red-400 animate-bounce" />
                 ) : open ? (
                   <div className="relative flex items-center justify-center">
-                    <Gem size={18} className="text-[#35D399] drop-shadow-[0_0_8px_rgba(53,211,153,0.9)]" />
-                    <Sparkles size={8} className="absolute -top-1 -right-1 text-[#f3d37a]" />
+                    <Gem size={22} className="text-[#35D399] drop-shadow-[0_0_10px_rgba(53,211,153,0.9)] animate-[fx-pop_0.3s_ease-out]" />
+                    <Sparkles size={10} className="absolute -top-1.5 -right-1.5 text-[#f3d37a]" />
                   </div>
                 ) : (
-                  <div className="h-1.5 w-1.5 rounded-full bg-[#35D399]/30" />
+                  <div className="h-2 w-2 rounded-full bg-[#35D399]/30" />
                 )}
               </button>
             );
