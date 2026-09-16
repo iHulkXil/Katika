@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'wouter';
 import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { LegendAvatar } from '@/components/legend-avatar';
 import { SepoliaMintModal, type MintRecord } from '@/components/sepolia-mint-modal';
-import { ShieldCheck, Sparkles } from 'lucide-react';
+import { ShieldCheck, Sparkles, RotateCw, Layers } from 'lucide-react';
 
 export { type MintRecord };
 
@@ -96,10 +96,17 @@ export function LegendCard({
   }
 
   const overall = Math.round(
-    (legend.pace + legend.shooting + legend.passing + legend.dribbling + legend.defending + legend.physical) / 6,
+    ((legend.pace ?? 50) +
+      (legend.shooting ?? 50) +
+      (legend.passing ?? 50) +
+      (legend.dribbling ?? 50) +
+      (legend.defending ?? 50) +
+      (legend.physical ?? 50)) /
+      6,
   );
 
   const isMinted = Boolean(legend.mint);
+  const cardAlloc = Number(legend.allocatedKchip ?? legend.allocatedKtk ?? 330);
 
   if (variant === 'compact') {
     return (
@@ -113,7 +120,7 @@ export function LegendCard({
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold text-[#E8F2EC]">{legend.name}</span>
               <span className="font-mono-custom text-[11px] text-muted-foreground">
-                {legend.position} · {legend.allocatedKchip} alloc
+                {legend.position} · {cardAlloc} alloc
               </span>
             </span>
           </Link>
@@ -145,70 +152,267 @@ export function LegendCard({
     );
   }
 
+  const [isFlipped, setIsFlipped] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [rot, setRot] = useState({ x: 0, y: 0, glareX: 50, glareY: 50 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width;
+    const py = (e.clientY - rect.top) / rect.height;
+    // Max tilt 14 degrees
+    const rx = (py - 0.5) * -24;
+    const ry = (px - 0.5) * 24;
+    setRot({
+      x: rx,
+      y: ry,
+      glareX: px * 100,
+      glareY: py * 100,
+    });
+  };
+
+  const handlePointerLeave = () => {
+    setIsHovered(false);
+    setRot({ x: 0, y: 0, glareX: 50, glareY: 50 });
+  };
+
   return (
     <>
-      <div className="relative overflow-hidden rounded-3xl border border-[#d4af37]/40 bg-gradient-to-br from-[#122820] via-card to-background p-5 shadow-[0_0_30px_rgba(28,58,46,0.5)]">
-        {/* Holographic Header Strip */}
-        <div className="flex items-center justify-between border-b border-[#1C3A2E] pb-3">
-          <p className="font-mono-custom text-[10px] tracking-[.22em] text-[#35D399]">LIVING PLAYER CARD</p>
-          {isMinted ? (
-            <button
-              type="button"
-              onClick={() => setMintModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#d4af37]/60 bg-[#d4af37]/15 px-2.5 py-0.5 font-mono-custom text-[11px] font-bold text-[#f3d37a] shadow-[0_0_10px_rgba(212,175,55,0.25)]"
+      <div
+        className="group relative cursor-pointer select-none"
+        style={{ perspective: '1200px' }}
+        onPointerEnter={() => setIsHovered(true)}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
+      >
+        <div
+          ref={cardRef}
+          className="relative transition-transform duration-200 ease-out"
+          style={{
+            transformStyle: 'preserve-3d',
+            transform: isFlipped
+              ? `rotateY(180deg) rotateX(${rot.x * 0.4}deg)`
+              : `rotateX(${rot.x}deg) rotateY(${rot.y}deg) scale3d(${isHovered ? 1.02 : 1}, ${isHovered ? 1.02 : 1}, 1)`,
+            transition: isHovered ? 'transform 0.08s ease-out' : 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)',
+          }}
+        >
+          {/* FRONT FACE */}
+          <div
+            className="relative overflow-hidden rounded-3xl border border-[#d4af37]/60 bg-gradient-to-br from-[#132c23] via-[#091712] to-[#040a08] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.6),0_0_30px_rgba(53,211,153,0.2)]"
+            style={{
+              backfaceVisibility: 'hidden',
+              transformStyle: 'preserve-3d',
+            }}
+          >
+            {/* Holographic Prismatic Foil Sheen Overlay */}
+            <div
+              className="pointer-events-none absolute inset-0 z-10 rounded-3xl transition-opacity duration-300"
+              style={{
+                opacity: isHovered ? 0.85 : 0.35,
+                background: `radial-gradient(circle at ${rot.glareX}% ${rot.glareY}%, rgba(255,255,255,0.45) 0%, rgba(53,211,153,0.25) 30%, rgba(212,175,55,0.3) 60%, transparent 80%)`,
+                mixBlendMode: 'color-dodge',
+              }}
+            />
+            {/* Shimmer Rainbow Sweep */}
+            <div
+              className="pointer-events-none absolute inset-0 z-10 rounded-3xl opacity-25"
+              style={{
+                background: `linear-gradient(${115 + rot.y * 2}deg, transparent 20%, rgba(255,0,128,0.25) 35%, rgba(0,255,200,0.35) 50%, rgba(255,215,0,0.3) 65%, transparent 80%)`,
+                mixBlendMode: 'screen',
+              }}
+            />
+
+            {/* 3D Floating Header Strip (Z: 25px) */}
+            <div
+              className="relative z-20 flex items-center justify-between border-b border-[#1C3A2E] pb-3"
+              style={{ transform: 'translateZ(25px)' }}
             >
-              <ShieldCheck size={13} className="text-[#35D399]" />
-              <span>Sepolia #{legend.mint?.tokenId}</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setMintModalOpen(true)}
-              className="inline-flex items-center gap-1 rounded-full border border-[#d4af37]/60 bg-gradient-to-r from-[#d4af37]/25 to-[#8a6410]/25 px-2.5 py-0.5 font-mono-custom text-[11px] font-bold text-[#f3d37a] shadow-[0_0_15px_rgba(212,175,55,0.25)] hover:border-[#d4af37]"
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#35D399] shadow-[0_0_8px_#35d399]" />
+                <p className="font-mono-custom text-[10px] font-bold tracking-[.25em] text-[#35D399]">
+                  3D LIVING CARD
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsFlipped(true);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 font-mono-custom text-[10px] text-primary transition-colors hover:bg-primary/20"
+                  title="Flip to passport back"
+                >
+                  <RotateCw size={11} />
+                  <span>3D Flip</span>
+                </button>
+                {isMinted ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMintModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#d4af37]/60 bg-[#d4af37]/15 px-2.5 py-0.5 font-mono-custom text-[11px] font-bold text-[#f3d37a] shadow-[0_0_10px_rgba(212,175,55,0.25)]"
+                  >
+                    <ShieldCheck size={13} className="text-[#35D399]" />
+                    <span>#{legend.mint?.tokenId}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMintModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full border border-[#d4af37]/60 bg-gradient-to-r from-[#d4af37]/25 to-[#8a6410]/25 px-2.5 py-0.5 font-mono-custom text-[11px] font-bold text-[#f3d37a] shadow-[0_0_15px_rgba(212,175,55,0.25)] hover:border-[#d4af37]"
+                  >
+                    <Sparkles size={12} />
+                    <span>Mint</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 3D Floating Player Hero Profile (Z: 42px) */}
+            <div
+              className="relative z-20 mt-4 flex items-start gap-4"
+              style={{ transform: 'translateZ(42px)' }}
             >
-              <Sparkles size={12} />
-              <span>Mint on Sepolia</span>
-            </button>
-          )}
-        </div>
+              <div className="relative drop-shadow-[0_14px_22px_rgba(0,0,0,0.7)]">
+                <LegendAvatar name={legend.name} position={legend.position} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="mt-1 truncate text-2xl font-black tracking-tight text-[#E8F2EC] drop-shadow-md">
+                  {legend.name}
+                </h2>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="inline-block rounded-full border border-[#35D399]/40 bg-[#35D399]/15 px-2.5 py-0.5 font-mono-custom text-[11px] font-bold text-[#35D399] shadow-[0_0_8px_rgba(53,211,153,0.3)]">
+                    {legend.position}
+                  </span>
+                  <span className="text-xs text-[#8FA39A] font-mono-custom">Verifiable Identity</span>
+                </div>
+              </div>
+              {/* 3D Golden OVR Crest (Z: 50px) */}
+              <div
+                className="grid h-16 w-16 place-items-center rounded-2xl border-2 border-[#fef08a] bg-gradient-to-br from-[#fef08a] via-[#eab308] to-[#854d0e] text-black shadow-[0_10px_25px_rgba(234,179,8,0.45),inset_0_2px_4px_rgba(255,255,255,0.8)]"
+                style={{ transform: 'translateZ(50px)' }}
+              >
+                <span className="font-mono-custom text-[10px] font-black uppercase tracking-wider text-[#422006] leading-none">
+                  OVR
+                </span>
+                <span className="-mt-1 font-mono-custom text-3xl font-black leading-none text-[#1a0f02]">
+                  {overall}
+                </span>
+              </div>
+            </div>
 
-        <div className="mt-4 flex items-start gap-4">
-          <LegendAvatar name={legend.name} position={legend.position} />
-          <div className="min-w-0 flex-1">
-            <h2 className="mt-1 truncate text-2xl font-bold tracking-tight text-[#E8F2EC]">{legend.name}</h2>
-            <div className="mt-1 flex items-center gap-2">
-              <span className="inline-block rounded-full border border-primary/30 px-2 py-0.5 font-mono-custom text-[11px] text-primary">
-                {legend.position}
-              </span>
-              <span className="text-xs text-[#8FA39A]">Floor Identity</span>
+            {/* 3D Floating Stat Grid (Z: 30px) */}
+            <div
+              className="relative z-20 mt-5 grid grid-cols-3 gap-2"
+              style={{ transform: 'translateZ(30px)' }}
+            >
+              {STATS.map(({ key, label }) => (
+                <div
+                  key={label}
+                  className="rounded-xl border border-[#35D399]/20 bg-gradient-to-b from-[#122820]/90 to-[#081510]/90 px-2 py-2 text-center shadow-[0_4px_12px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.08)]"
+                >
+                  <p className="font-mono-custom text-[9px] font-bold text-[#8FA39A]">{label}</p>
+                  <p className="font-mono-custom text-lg font-black text-[#E8F2EC]">{legend[key]}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* 3D Floating Footer (Z: 22px) */}
+            <div
+              className="relative z-20 mt-4 flex items-center justify-between border-t border-[#1C3A2E] pt-3 font-mono-custom text-[11px]"
+              style={{ transform: 'translateZ(22px)' }}
+            >
+              <div>
+                <span className="text-[10px] text-[#8FA39A]">LOCKED IN CARD: </span>
+                <span className="font-bold text-[#f3d37a]">{cardAlloc} KTK</span>
+              </div>
+              {typeof playable === 'number' && !Number.isNaN(playable) ? (
+                <div>
+                  <span className="text-[10px] text-[#8FA39A]">PLAYABLE STACK: </span>
+                  <span className="font-bold text-[#35D399]">{playable.toLocaleString()} KTK</span>
+                </div>
+              ) : null}
             </div>
           </div>
-          <div className="grid h-16 w-16 place-items-center rounded-2xl border border-[#d4af37]/50 bg-gradient-to-br from-[#f3d37a] to-[#8a6410] text-black shadow-[0_0_20px_rgba(212,175,55,0.3)]">
-            <span className="font-mono-custom text-[10px] font-extrabold uppercase leading-none">OVR</span>
-            <span className="-mt-1 font-mono-custom text-3xl font-black leading-none">{overall}</span>
-          </div>
-        </div>
 
-        <div className="mt-5 grid grid-cols-3 gap-2">
-          {STATS.map(({ key, label }) => (
-            <div key={label} className="rounded-xl border border-border/80 bg-background/50 px-2 py-2 text-center">
-              <p className="font-mono-custom text-[9px] text-muted-foreground">{label}</p>
-              <p className="font-mono-custom text-lg font-bold text-[#E8F2EC]">{legend[key]}</p>
+          {/* BACK FACE (REVERSE 3D VIEW) */}
+          <div
+            className="absolute inset-0 overflow-hidden rounded-3xl border border-[#d4af37]/60 bg-gradient-to-br from-[#0c1f18] via-[#081410] to-[#040a08] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.6)]"
+            style={{
+              backfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)',
+              transformStyle: 'preserve-3d',
+            }}
+          >
+            <div className="flex items-center justify-between border-b border-[#1C3A2E] pb-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={14} className="text-[#35D399]" />
+                <p className="font-mono-custom text-[10px] font-bold tracking-[.25em] text-[#35D399]">
+                  SEPOLIA CREDENTIAL
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsFlipped(false);
+                }}
+                className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 font-mono-custom text-[10px] text-primary transition-colors hover:bg-primary/20"
+              >
+                <RotateCw size={11} />
+                <span>Front</span>
+              </button>
             </div>
-          ))}
-        </div>
 
-        <div className="mt-4 flex items-center justify-between border-t border-[#1C3A2E] pt-3 font-mono-custom text-[11px]">
-          <div>
-            <span className="text-[10px] text-[#8FA39A]">LOCKED IN CARD: </span>
-            <span className="font-bold text-[#f3d37a]">{legend.allocatedKchip} KTK</span>
-          </div>
-          {typeof playable === 'number' ? (
-            <div>
-              <span className="text-[10px] text-[#8FA39A]">PLAYABLE STACK: </span>
-              <span className="font-bold text-[#35D399]">{playable.toLocaleString()} KTK</span>
+            <div className="mt-4 space-y-3 font-mono-custom text-xs">
+              <div className="rounded-xl border border-border/60 bg-black/40 p-3">
+                <p className="text-[10px] text-muted-foreground uppercase">Token Identity</p>
+                <p className="text-sm font-bold text-[#E8F2EC]">{legend.name} ({legend.position})</p>
+                <p className="text-[11px] text-[#35D399] mt-0.5">Rating: {overall} OVR · Tier 1 Living NFT</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-xl border border-border/60 bg-black/40 p-2.5">
+                  <p className="text-[9px] text-muted-foreground uppercase">Contract</p>
+                  <p className="truncate text-xs font-semibold text-[#f3d37a]">0x600f...3e9B</p>
+                  <p className="text-[9px] text-muted-foreground">Sepolia ERC-721</p>
+                </div>
+                <div className="rounded-xl border border-border/60 bg-black/40 p-2.5">
+                  <p className="text-[9px] text-muted-foreground uppercase">Token ID</p>
+                  <p className="text-xs font-semibold text-[#35D399]">{legend.mint ? `#${legend.mint.tokenId}` : 'Unminted (Ready)'}</p>
+                  <p className="text-[9px] text-muted-foreground">Dynamic Metadata</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border/60 bg-black/40 p-3">
+                <p className="text-[10px] text-muted-foreground uppercase">Rollover Mechanics</p>
+                <p className="text-[11px] text-[#c7d9d0] mt-1 leading-relaxed">
+                  Games play increases rollover volume. Mint locks permanent provenance on Ethereum Sepolia testnet.
+                </p>
+              </div>
+
+              <div className="pt-2 text-center">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsFlipped(false);
+                  }}
+                  className="rounded-full bg-primary/20 border border-primary px-4 py-1.5 text-[11px] font-semibold text-primary"
+                >
+                  Return to Card Front
+                </button>
+              </div>
             </div>
-          ) : null}
+          </div>
         </div>
       </div>
 

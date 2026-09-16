@@ -1,9 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { RolloverStrip } from '@/components/rollover-strip';
 import { WebglStage } from '@/components/webgl-stage';
+import { Coin3D } from '@/components/3d/coin-3d';
+import { fireWinConfetti } from '@/lib/confetti';
 
 type FlipResult = { result: 'heads' | 'tails'; side: 'heads' | 'tails'; wager: number; won: boolean; payout: number; demoCredits: number };
 
@@ -60,17 +62,23 @@ export function CoinFlipPage() {
     finally { setAutoPlaying(false); setBusy(false); }
   };
 
+  useEffect(() => {
+    if (result?.won) {
+      fireWinConfetti();
+    }
+  }, [result]);
+
   return (
     <div className="px-3 pt-4">
-      <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">COIN FLIP</p>
+      <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">COIN FLIP / 3D SOVEREIGN</p>
       <h1 className="mt-2 text-3xl font-semibold">Heads or tails.</h1>
       <RolloverStrip gameType="coinflip" />
       <div className={`fx-stage mt-5 ${result?.won ? 'fx-win' : ''}`}>
         <WebglStage mode="gold" />
         <span className="fx-glow" />
-        <div className={`fx-coin ${busy ? 'spin' : ''}`}>{result ? (result.result === 'heads' ? 'H' : 'T') : '?'}</div>
+        <Coin3D busy={busy} result={result ? result.result : null} side={side} />
       </div>
-      {result ? <p className={`mt-3 text-center text-sm ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.result} · {result.payout} KTK</p> : null}
+      {result ? <p className={`mt-3 text-center text-sm font-semibold ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.result.toUpperCase()} · {result.won ? `+${result.payout}` : '0'} KTK</p> : null}
       {!authenticated ? <div className="mt-6"><WalletAuthButton /></div> : (
         <div className="mt-4 space-y-3">
           <div className="flex gap-2">

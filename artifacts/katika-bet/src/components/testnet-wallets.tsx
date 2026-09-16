@@ -30,11 +30,11 @@ async function rpc(url: string, method: string, params: unknown[]) {
 export function TestnetWallets() {
   const { ready, authenticated, user, getAccessToken } = usePrivy();
   const { refresh } = useServerSession();
-  const { wallets } = useWallets();
+  const { wallets = [] } = useWallets() ?? {};
   const [evm, setEvm] = useState('...');
   const [chip, setChip] = useState('...');
   const [status, setStatus] = useState<string | null>(null);
-  const wallet = wallets[0];
+  const wallet = wallets?.[0];
   const evmAddress = wallet?.address ?? user?.wallet?.address;
   const rpcUrl = evmTestnets[0].rpcUrls.default.http[0];
 
@@ -57,7 +57,13 @@ export function TestnetWallets() {
 
   const send = async (to: string, data: string) => {
     if (!wallet) throw new Error('No EVM wallet');
-    await wallet.switchChain(SEPOLIA_ID);
+    if (typeof wallet.switchChain === 'function') {
+      try {
+        await wallet.switchChain(SEPOLIA_ID);
+      } catch {
+        // Chain switch optional if already on Sepolia
+      }
+    }
     const provider = await wallet.getEthereumProvider();
     return provider.request({
       method: 'eth_sendTransaction',

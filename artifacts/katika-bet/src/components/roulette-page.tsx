@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { RolloverStrip } from '@/components/rollover-strip';
 import { WebglStage } from '@/components/webgl-stage';
+import { Roulette3D } from '@/components/3d/roulette-3d';
+import { fireWinConfetti } from '@/lib/confetti';
 
 type Bet = 'red' | 'black' | 'odd' | 'even' | 'number';
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
@@ -41,9 +43,15 @@ export function RoulettePage() {
     finally { setBusy(false); }
   };
 
+  useEffect(() => {
+    if (result?.won) {
+      fireWinConfetti();
+    }
+  }, [result]);
+
   return (
     <div className="px-3 pt-4">
-      <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">ROULETTE</p>
+      <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">ROULETTE / 3D WHEEL</p>
       <h1 className="mt-2 text-3xl font-semibold">European wheel.</h1>
       <RolloverStrip gameType="roulette" />
       <div className="mt-3 flex gap-1 overflow-x-auto pb-2">
@@ -55,13 +63,9 @@ export function RoulettePage() {
       </div>
       <div className={`fx-stage mt-2 ${result?.won ? 'fx-win' : ''}`}>
         <WebglStage mode="ember" />
-        <div className="fx-roulette-wrap">
-          <span className="fx-pointer" />
-          <div className={`fx-wheel ${busy ? 'spin' : ''}`} />
-          <div className="fx-wheel-center">{result ? result.roll : '•'}</div>
-        </div>
+        <Roulette3D busy={busy} roll={result ? result.roll : null} />
       </div>
-      {result ? <p className={`mt-3 text-center text-sm ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.color} · {result.payout} KTK</p> : null}
+      {result ? <p className={`mt-3 text-center text-sm font-semibold ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.color.toUpperCase()} {result.roll} · {result.won ? `+${result.payout}` : '0'} KTK</p> : null}
       <div className="mt-4 grid grid-cols-6 gap-1">
         {Array.from({ length: 37 }, (_, n) => (
           <button key={n} type="button" onClick={() => { setBet('number'); setNumber(n); }} className={`rounded py-2 font-mono-custom text-[11px] ${

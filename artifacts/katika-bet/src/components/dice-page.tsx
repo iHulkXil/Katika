@@ -4,6 +4,8 @@ import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { RolloverStrip } from '@/components/rollover-strip';
 import { WebglStage } from '@/components/webgl-stage';
+import { Dice3D } from '@/components/3d/dice-3d';
+import { fireWinConfetti } from '@/lib/confetti';
 
 type DiceResult = {
   roll: number; target: number; prediction: 'over' | 'under'; wager: number;
@@ -84,17 +86,23 @@ export function DicePage() {
 
   useEffect(() => () => { stopRef.current = true; }, []);
 
+  useEffect(() => {
+    if (result?.won) {
+      fireWinConfetti();
+    }
+  }, [result]);
+
   return (
     <div className="px-3 pt-4">
-      <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">DICE / 1–100</p>
+      <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">DICE / 3D ROLLER</p>
       <h1 className="mt-2 text-3xl font-semibold">Roll the line.</h1>
       <RolloverStrip gameType="dice" />
       <div className={`fx-stage mt-5 ${result?.won ? 'fx-win' : ''}`}>
         <WebglStage mode="felt" />
         <span className="fx-glow" />
-        <div className={`fx-dice ${busy ? 'spin' : ''}`}>{display ?? '—'}</div>
+        <Dice3D busy={busy} roll={display} target={target} prediction={prediction} won={result?.won} />
       </div>
-      {result ? <p className={`mt-3 text-center text-sm ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.won ? 'Win' : 'Lose'} {result.payout > 0 ? '+' : ''}{result.payout} KTK</p> : null}
+      {result ? <p className={`mt-3 text-center text-sm font-semibold ${result.won ? 'text-primary' : 'text-muted-foreground'}`}>{result.won ? 'Win' : 'Lose'} {result.payout > 0 ? '+' : ''}{result.payout} KTK · Roll: {result.roll}</p> : null}
       {!authenticated ? <div className="mt-6"><WalletAuthButton /></div> : (
         <div className="mt-4 space-y-3">
           <div className="flex gap-2">

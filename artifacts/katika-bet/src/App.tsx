@@ -131,6 +131,21 @@ function Placeholder({ title }: { title: string }) {
   return <div className="px-3 pt-6"><h1 className="text-2xl font-semibold">{title}</h1></div>;
 }
 
+function RewardsPage() {
+  return <Placeholder title="Rewards" />;
+}
+
+function NotFoundPage() {
+  return (
+    <div className="px-3 pt-16 text-center">
+      <p className="text-sm text-[#8FA39A]">Page not found</p>
+      <Link href="/" className="mt-2 inline-block text-sm text-[#35D399] underline">
+        Return Home
+      </Link>
+    </div>
+  );
+}
+
 function Router() {
   return (
     <ErrorRouted>
@@ -148,9 +163,9 @@ function Router() {
         <Route path="/games/roulette" component={RoulettePage} />
         <Route path="/games" component={Games} />
         <Route path="/wallet" component={Wallet} />
-        <Route path="/rewards" component={() => <Placeholder title="Rewards" />} />
+        <Route path="/rewards" component={RewardsPage} />
         <Route path="/profile" component={Profile} />
-        <Route component={() => <div className="px-3 pt-16 text-center"><Link href="/">Home</Link></div>} />
+        <Route component={NotFoundPage} />
       </Switch>
     </ErrorRouted>
   );

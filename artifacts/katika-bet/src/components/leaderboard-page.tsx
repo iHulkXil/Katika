@@ -46,10 +46,14 @@ export function LeaderboardPage() {
   }, []);
 
   const sorted = [...entries].sort((a, b) => {
+    const aOvr = Number(a?.overall ?? 0);
+    const bOvr = Number(b?.overall ?? 0);
+    const aVol = Number(a?.volume ?? 0);
+    const bVol = Number(b?.volume ?? 0);
     if (sortBy === 'ovr') {
-      return b.overall - a.overall || b.volume - a.volume;
+      return bOvr - aOvr || bVol - aVol;
     }
-    return b.volume - a.volume || b.overall - a.overall;
+    return bVol - aVol || bOvr - aOvr;
   });
 
   return (
@@ -115,11 +119,19 @@ export function LeaderboardPage() {
           sorted.map((item, index) => {
             const rank = index + 1;
             const isTop3 = rank <= 3;
-            const isUser = legend?.name && legend.name.toLowerCase() === item.name.toLowerCase();
+            const isUser = Boolean(
+              legend?.name &&
+              item?.name &&
+              legend.name.toLowerCase().trim() === item.name.toLowerCase().trim(),
+            );
+            const itemName = item?.name ?? 'Player';
+            const itemPosition = item?.position ?? 'ST';
+            const itemVol = Number(item?.volume ?? 0);
+            const itemForm = Array.isArray(item?.form) ? item.form : [];
 
             return (
               <div
-                key={item.id}
+                key={item?.id ?? index}
                 className={`relative flex items-center gap-3 rounded-2xl border p-3 transition-all ${
                   isUser
                     ? 'border-[#35D399] bg-[#0e241c] shadow-[0_0_20px_rgba(53,211,153,0.2)]'
@@ -144,28 +156,28 @@ export function LeaderboardPage() {
                 </div>
 
                 {/* Avatar */}
-                <LegendAvatar name={item.name} position={item.position} size="sm" />
+                <LegendAvatar name={itemName} position={itemPosition} size="sm" />
 
                 {/* Identity & Stats */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <span className="truncate text-xs font-bold text-[#E8F2EC]">
-                      {item.name}
+                      {itemName}
                     </span>
                     <span className="rounded bg-[#35D399]/20 px-1 py-0.2 font-mono-custom text-[9px] font-bold text-[#35D399]">
-                      {item.position}
+                      {itemPosition}
                     </span>
-                    {item.isMinted && (
+                    {item?.isMinted && (
                       <span className="inline-flex items-center gap-0.5 font-mono-custom text-[9px] text-[#f3d37a]">
                         <ShieldCheck size={10} /> #{item.mintedTokenId}
                       </span>
                     )}
                   </div>
                   <div className="mt-0.5 flex items-center gap-2 font-mono-custom text-[10px] text-[#8FA39A]">
-                    <span>{item.volume.toLocaleString()} KTK Volume</span>
+                    <span>{itemVol.toLocaleString()} KTK Volume</span>
                     <span>·</span>
                     <div className="flex items-center gap-0.5">
-                      {item.form.map((res, idx) => (
+                      {itemForm.map((res, idx) => (
                         <span
                           key={idx}
                           className={`inline-block h-3 w-3 rounded-full text-center text-[7px] font-bold leading-3 ${
@@ -187,7 +199,7 @@ export function LeaderboardPage() {
                 <div className="text-right">
                   <div className="grid h-11 w-11 place-items-center rounded-xl border border-[#d4af37]/50 bg-gradient-to-br from-[#f3d37a]/20 to-[#8a6410]/20 text-[#f3d37a]">
                     <span className="font-mono-custom text-[8px] font-bold uppercase leading-none">OVR</span>
-                    <span className="-mt-0.5 font-mono-custom text-lg font-black leading-none">{item.overall}</span>
+                    <span className="-mt-0.5 font-mono-custom text-lg font-black leading-none">{item?.overall ?? 50}</span>
                   </div>
                 </div>
               </div>

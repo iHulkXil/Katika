@@ -16,9 +16,9 @@ export function RolloverStrip({
   const [mintModalOpen, setMintModalOpen] = useState(false);
 
   // Table stack (Floor stack)
-  const floorStack = serverUser?.ktk ?? serverUser?.demoCredits ?? 0;
+  const floorStack = Number(serverUser?.ktk ?? serverUser?.demoCredits ?? 0);
   // Card points (Allocated KTK locked on card)
-  const cardPoints = legend?.allocatedKchip ?? 330;
+  const cardPoints = Number(legend?.allocatedKchip ?? legend?.allocatedKtk ?? 330);
 
   const left = serverUser?.rolloverLeft ?? 0;
   const need = serverUser?.rolloverNeed ?? 2670;
@@ -28,12 +28,12 @@ export function RolloverStrip({
 
   const overall = legend
     ? Math.round(
-        (legend.pace +
-          legend.shooting +
-          legend.passing +
-          legend.dribbling +
-          legend.defending +
-          legend.physical) /
+        ((legend.pace ?? 50) +
+          (legend.shooting ?? 50) +
+          (legend.passing ?? 50) +
+          (legend.dribbling ?? 50) +
+          (legend.defending ?? 50) +
+          (legend.physical ?? 50)) /
           6,
       )
     : 55;

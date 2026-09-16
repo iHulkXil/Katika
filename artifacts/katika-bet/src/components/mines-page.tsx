@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
-import { Gem } from 'lucide-react';
+import { Gem, Sparkles } from 'lucide-react';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { playTableTone } from '@/lib/table-sound';
 import { RolloverStrip } from '@/components/rollover-strip';
 import { WebglStage } from '@/components/webgl-stage';
+import { fireWinConfetti } from '@/lib/confetti';
 
 const TILES = 25;
 async function api(path: string, token: string, body?: object, method = 'POST') {
@@ -90,7 +91,10 @@ export function MinesPage() {
       if (body.active === false) {
         setActive(false); setMineTiles(body.mines ?? []);
         setNote(body.won ? `Cleared +${body.payout}` : 'Hit a mine');
-        if (body.won) playTableTone('win');
+        if (body.won) {
+          playTableTone('win');
+          fireWinConfetti();
+        }
         await refresh();
       }
     } catch (err) { setError(err instanceof Error ? err.message : 'Reveal failed');
@@ -102,8 +106,9 @@ export function MinesPage() {
     try {
       const body = await api('/api/games/mines/cashout', await token(), {});
       setActive(false); setMineTiles(body.mines ?? []);
-      setNote(`Cashed ${body.cashoutValue}`);
+      setNote(`Cashed ${body.cashoutValue} KTK`);
       playTableTone('win');
+      fireWinConfetti();
       await refresh();
     } catch (err) { setError(err instanceof Error ? err.message : 'Cashout failed');
     } finally { setBusy(false); }
@@ -111,21 +116,56 @@ export function MinesPage() {
 
   return (
     <div className="px-3 pt-4">
-      <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">MINES</p>
+      <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">MINES / 3D VAULT</p>
       <h1 className="mt-2 text-3xl font-semibold">Open gems. Cash out.</h1>
       <RolloverStrip gameType="mines" />
-      <p className="mt-2 font-mono-custom text-sm">{booting ? 'loading' : (mult ? `${mult.toFixed(2)}x` : 'idle')}</p>
-      <div className="fx-stage mt-4 !h-[250px] !min-h-[250px] !max-h-[250px] p-3">
+      <div className="mt-2 flex items-center justify-between">
+        <p className="font-mono-custom text-sm text-[#35D399] font-bold">
+          {booting ? 'INITIALIZING...' : active ? `${mult.toFixed(2)}x MULTIPLIER` : 'IDLE VAULT'}
+        </p>
+        {active && cashoutValue > 0 ? (
+          <span className="font-mono-custom text-xs text-[#f3d37a] font-semibold">
+            Current: {cashoutValue} KTK
+          </span>
+        ) : null}
+      </div>
+      <div className="fx-stage mt-4 !h-[260px] !min-h-[260px] !max-h-[260px] p-3 perspective-[1000px]">
         <WebglStage mode="ice" />
-        <div className="relative z-[2] grid w-full max-w-[240px] grid-cols-5 gap-1.5 mx-auto">
+        <div className="relative z-[2] grid w-full max-w-[250px] grid-cols-5 gap-2 mx-auto" style={{ transformStyle: 'preserve-3d', transform: 'rotateX(8deg)' }}>
           {Array.from({ length: TILES }, (_, i) => {
             const open = revealed.includes(i);
             const boom = mineTiles.includes(i);
             return (
-              <button key={i} type="button" disabled={!active || busy} onClick={() => void reveal(i)} className={`fx-tile aspect-square rounded-xl border flex items-center justify-center ${
-                boom ? 'boom border-destructive bg-destructive/40' : open ? 'open border-primary bg-accent text-primary' : 'border-border bg-card/80'
-              }`}>
-                {boom ? <span className="text-lg font-bold">*</span> : open ? <Gem size={16} className="mx-auto" /> : ''}
+              <button
+                key={i}
+                type="button"
+                disabled={!active || busy}
+                onClick={() => void reveal(i)}
+                className={`fx-tile aspect-square rounded-xl border flex items-center justify-center transition-all duration-300 select-none ${
+                  boom
+                    ? 'boom border-destructive bg-destructive/40 shadow-[0_0_15px_rgba(239,68,68,0.5)] scale-95'
+                    : open
+                    ? 'open border-primary bg-gradient-to-br from-primary/30 to-emerald-950/80 text-primary shadow-[0_0_18px_rgba(53,211,153,0.45)] scale-105'
+                    : 'border-border/80 bg-gradient-to-b from-[#1a382e] to-[#0c1c16] hover:border-primary/60 hover:-translate-y-0.5 active:translate-y-0.5'
+                }`}
+                style={{
+                  boxShadow: boom
+                    ? '0 0 20px rgba(239,68,68,0.6), inset 0 2px 4px rgba(255,255,255,0.2)'
+                    : open
+                    ? '0 6px 0 #062018, 0 10px 16px rgba(0,0,0,0.5), inset 0 2px 6px rgba(53,211,153,0.5)'
+                    : '0 5px 0 #06120d, 0 8px 12px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.15)',
+                }}
+              >
+                {boom ? (
+                  <span className="text-xl font-black text-rose-300 drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]">💥</span>
+                ) : open ? (
+                  <div className="relative flex items-center justify-center animate-bounce">
+                    <Gem size={20} className="text-[#35D399] drop-shadow-[0_0_10px_rgba(53,211,153,0.9)]" />
+                    <Sparkles size={10} className="absolute -top-1 -right-1 text-amber-300 animate-spin" />
+                  </div>
+                ) : (
+                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/30" />
+                )}
               </button>
             );
           })}

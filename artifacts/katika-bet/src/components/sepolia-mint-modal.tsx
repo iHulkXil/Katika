@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useEffect, useState } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
 import { LegendCardData } from '@/components/legend-card';
 import { LegendAvatar } from '@/components/legend-avatar';
 import { CheckCircle2, ExternalLink, ShieldCheck, Sparkles, X } from 'lucide-react';
@@ -42,31 +42,38 @@ export function SepoliaMintModal({
   onMintSuccess?: (mint: MintRecord) => void;
 }) {
   const { getAccessToken, user, authenticated } = usePrivy();
-  const { wallets } = useWallets();
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState<'idle' | 'packaging' | 'signing' | 'confirming' | 'done'>('idle');
   const [mintResult, setMintResult] = useState<MintRecord | null>(legend?.mint ?? null);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (legend?.mint) {
+      setMintResult(legend.mint);
+    }
+  }, [legend?.mint]);
+
   if (!isOpen) return null;
 
   const overall = legend
     ? Math.round(
-        (legend.pace +
-          legend.shooting +
-          legend.passing +
-          legend.dribbling +
-          legend.defending +
-          legend.physical) /
+        ((legend.pace ?? 50) +
+          (legend.shooting ?? 50) +
+          (legend.passing ?? 50) +
+          (legend.dribbling ?? 50) +
+          (legend.defending ?? 50) +
+          (legend.physical ?? 50)) /
           6,
       )
     : 75;
 
-  const hasWallet = Boolean(user?.wallet?.address || wallets?.[0]?.address);
+  const hasWallet = Boolean(user?.wallet?.address);
   const isProfileComplete = Boolean(legend?.profileComplete);
   const isEligible = authenticated && isProfileComplete && (legend?.allocatedKchip ?? 0) > 0;
 
-  const activeMint = mintResult ?? legend?.mint;
+  const activeMint = mintResult ?? legend?.mint ?? null;
+  const txHash = activeMint?.txHash ?? '';
+  const txShort = txHash.length > 16 ? `${txHash.slice(0, 10)}...${txHash.slice(-6)}` : txHash || 'Confirmed';
 
   const handleMint = async () => {
     if (!isEligible) return;
@@ -214,15 +221,17 @@ export function SepoliaMintModal({
               This ERC-721 token is your living player identity. As you achieve 10× table rollovers, you can evolve these exact on-chain stats.
             </p>
             <div className="mt-3 flex items-center justify-between border-t border-[#1C3A2E] pt-2 font-mono-custom text-[11px]">
-              <span className="text-[#8FA39A]">Tx: {activeMint.txHash.slice(0, 10)}...{activeMint.txHash.slice(-6)}</span>
-              <a
-                href={`https://sepolia.etherscan.io/tx/${activeMint.txHash}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-[#35D399] hover:underline"
-              >
-                Explorer <ExternalLink size={12} />
-              </a>
+              <span className="text-[#8FA39A]">Tx: {txShort}</span>
+              {activeMint.txHash ? (
+                <a
+                  href={`https://sepolia.etherscan.io/tx/${activeMint.txHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-[#35D399] hover:underline"
+                >
+                  Explorer <ExternalLink size={12} />
+                </a>
+              ) : null}
             </div>
           </div>
         )}
