@@ -20,6 +20,11 @@ export type ServerUser = {
   rolloverLeft?: number;
   unlocked?: boolean;
   profileComplete?: boolean;
+  perkId?: string | null;
+  perkLabel?: string;
+  ruleset?: number;
+  maxWager?: number;
+  tokenId?: number | null;
 };
 
 type ServerSessionValue = {
