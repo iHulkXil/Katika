@@ -56,14 +56,50 @@ function DiceDisplay({
       {/* Main Dice Outcome & Digital Roll */}
       <div className="relative z-10 flex items-center justify-between px-2 py-1">
         {/* Animated Dice Cube Pair */}
-        <div className="flex items-center gap-2.5">
-          <div
-            className={`flex h-12 w-12 items-center justify-center rounded-xl border border-[#35D399]/50 bg-gradient-to-br from-[#1b3d30] to-[#0d1f18] text-lg font-bold text-[#35D399] shadow-md transition-transform ${
-              busy ? 'animate-[fx-tumble_0.6s_infinite_ease-in-out]' : ''
-            }`}
-          >
-            🎲
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            {/* Die 1 */}
+            <div
+              className={`flex h-11 w-11 items-center justify-center rounded-xl border border-[#35D399]/60 bg-gradient-to-br from-[#1b3d30] via-[#0e241c] to-[#081510] text-sm font-bold text-[#35D399] shadow-[0_4px_12px_rgba(0,0,0,0.5)] ${
+                busy ? 'fx-dice-tumbling' : 'transition-transform duration-300 hover:scale-105'
+              }`}
+            >
+              {busy ? (
+                <span className="text-xl">🎲</span>
+              ) : (
+                <div className="grid grid-cols-2 gap-1.5 p-1.5">
+                  <div className="h-1.5 w-1.5 rounded-full bg-[#35D399] shadow-[0_0_4px_#35D399]" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-[#35D399] shadow-[0_0_4px_#35D399]" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-[#35D399] shadow-[0_0_4px_#35D399]" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-[#35D399] shadow-[0_0_4px_#35D399]" />
+                </div>
+              )}
+            </div>
+
+            {/* Die 2 */}
+            <div
+              className={`flex h-11 w-11 items-center justify-center rounded-xl border border-[#f3d37a]/50 bg-gradient-to-br from-[#2a2614] via-[#1a170a] to-[#0c0a04] text-sm font-bold text-[#f3d37a] shadow-[0_4px_12px_rgba(0,0,0,0.5)] ${
+                busy ? 'fx-dice-tumbling-alt' : 'transition-transform duration-300 hover:scale-105'
+              }`}
+            >
+              {busy ? (
+                <span className="text-xl">🎲</span>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-1 p-1">
+                  <div className="flex gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-[#f3d37a] shadow-[0_0_4px_#f3d37a]" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-[#f3d37a] shadow-[0_0_4px_#f3d37a]" />
+                  </div>
+                  <div className="h-1.5 w-1.5 rounded-full bg-[#f3d37a] shadow-[0_0_4px_#f3d37a]" />
+                  <div className="flex gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-[#f3d37a] shadow-[0_0_4px_#f3d37a]" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-[#f3d37a] shadow-[0_0_4px_#f3d37a]" />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
+
           <div>
             <span className="font-mono-custom text-[9px] uppercase tracking-wider text-[#8FA39A]">
               Target: {prediction.toUpperCase()} {target}

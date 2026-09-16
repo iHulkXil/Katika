@@ -170,9 +170,9 @@ export function MinesPage() {
                 onClick={() => void reveal(i)}
                 className={`aspect-square rounded-xl border flex items-center justify-center transition-all duration-200 select-none ${
                   boom
-                    ? 'border-red-500 bg-red-950/90 shadow-[0_0_16px_rgba(239,68,68,0.6)] scale-95'
+                    ? 'fx-tile-boom border-red-500 bg-red-950/90 shadow-[0_0_16px_rgba(239,68,68,0.6)] scale-95'
                     : open
-                    ? 'border-[#35D399] bg-gradient-to-br from-[#35D399]/35 to-[#082216] text-[#35D399] shadow-[0_0_16px_rgba(53,211,153,0.4)]'
+                    ? 'fx-tile-pop border-[#35D399] bg-gradient-to-br from-[#35D399]/35 to-[#082216] text-[#35D399] shadow-[0_0_16px_rgba(53,211,153,0.4)]'
                     : active
                     ? 'border-[#1C3A2E] bg-gradient-to-b from-[#132e22] to-[#0A1812] hover:border-[#35D399]/70 hover:scale-105 active:scale-95 shadow-sm'
                     : 'border-[#1C3A2E]/50 bg-[#091510]/80 opacity-75'
@@ -182,7 +182,7 @@ export function MinesPage() {
                   <Bomb size={22} className="text-red-400 animate-bounce" />
                 ) : open ? (
                   <div className="relative flex items-center justify-center">
-                    <Gem size={22} className="text-[#35D399] drop-shadow-[0_0_10px_rgba(53,211,153,0.9)] animate-[fx-pop_0.3s_ease-out]" />
+                    <Gem size={22} className="text-[#35D399] drop-shadow-[0_0_10px_rgba(53,211,153,0.9)]" />
                     <Sparkles size={10} className="absolute -top-1.5 -right-1.5 text-[#f3d37a]" />
                   </div>
                 ) : (

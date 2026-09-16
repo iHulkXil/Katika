@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import apiApp from "./artifacts/api-server/src/app";
@@ -8,6 +9,22 @@ const currentDir =
   typeof __dirname !== "undefined"
     ? __dirname
     : path.dirname(fileURLToPath(import.meta.url));
+
+function resolveDistPath(): string {
+  const candidates = [
+    path.resolve(process.cwd(), "artifacts/katika-bet/dist/public"),
+    path.resolve(currentDir, "../artifacts/katika-bet/dist/public"),
+    path.resolve(currentDir, "artifacts/katika-bet/dist/public"),
+    path.resolve(currentDir, "public"),
+    path.resolve(process.cwd(), "dist/public"),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate) && fs.existsSync(path.join(candidate, "index.html"))) {
+      return candidate;
+    }
+  }
+  return path.resolve(process.cwd(), "artifacts/katika-bet/dist/public");
+}
 
 async function startServer() {
   const app = express();
@@ -25,7 +42,8 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.resolve(currentDir, "artifacts/katika-bet/dist/public");
+    const distPath = resolveDistPath();
+    console.log(`Serving static files from ${distPath}`);
     app.use(express.static(distPath));
     app.get("*all", (_req, res) => {
       res.sendFile(path.resolve(distPath, "index.html"));

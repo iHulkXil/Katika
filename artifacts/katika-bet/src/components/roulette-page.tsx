@@ -46,8 +46,8 @@ function RouletteDisplay({
 
         {/* 3D Angled Rotating Wheel Disc */}
         <div
-          className={`relative h-40 w-40 rounded-full border-4 border-[#d4af37] shadow-[0_10px_30px_rgba(0,0,0,0.8),inset_0_0_15px_rgba(0,0,0,0.6)] ${
-            busy ? 'animate-[fx-spin_1.2s_infinite_linear]' : 'transition-transform duration-700'
+          className={`relative h-44 w-44 rounded-full border-4 border-[#d4af37] shadow-[0_10px_30px_rgba(0,0,0,0.8),inset_0_0_15px_rgba(0,0,0,0.6)] ${
+            busy ? 'fx-wheel-spinning' : 'transition-transform duration-700'
           }`}
           style={{
             background:
@@ -55,7 +55,16 @@ function RouletteDisplay({
           }}
         >
           {/* Outer track tick markers */}
-          <div className="absolute inset-1 rounded-full border border-[#f3d37a]/30 pointer-events-none" />
+          <div className="absolute inset-1.5 rounded-full border border-[#f3d37a]/30 pointer-events-none" />
+
+          {/* Reverse Orbiting Ivory Roulette Ball during Spin */}
+          {busy && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="fx-ball-orbiting">
+                <div className="h-3 w-3 rounded-full bg-neutral-100 shadow-[0_0_8px_#ffffff,inset_0_-1px_2px_rgba(0,0,0,0.5)] border border-neutral-300" />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Center Hub Display */}

@@ -37,18 +37,21 @@ function CoinDisplay({
       {/* 3D Coin Rig */}
       <div style={{ perspective: '800px' }} className="flex items-center justify-center">
         <div
-          className={`relative h-28 w-28 transition-transform duration-700 ${
-            busy ? 'animate-[fx-flip_0.75s_infinite_linear]' : ''
-          }`}
+          className={`relative h-28 w-28 ${busy ? 'fx-coin-spinning' : ''}`}
           style={{
             transformStyle: 'preserve-3d',
+            WebkitTransformStyle: 'preserve-3d',
             transform: busy ? undefined : `rotateY(${rotation}deg)`,
+            transition: busy ? 'none' : 'transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1)',
           }}
         >
           {/* Front Face: HEADS (Gold Sovereign) */}
           <div
             className="absolute inset-0 flex flex-col items-center justify-center rounded-full border-4 border-[#eab308] bg-gradient-to-br from-[#fef08a] via-[#eab308] to-[#854d0e] shadow-[0_8px_20px_rgba(234,179,8,0.35),inset_0_2px_4px_rgba(255,255,255,0.6)]"
-            style={{ backfaceVisibility: 'hidden' }}
+            style={{
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+            }}
           >
             <div className="flex h-[88%] w-[88%] flex-col items-center justify-center rounded-full border border-[#ca8a04]/70 bg-gradient-to-b from-[#fde047] via-[#eab308] to-[#a16207] p-1 text-[#422006]">
               <span className="font-mono-custom text-[8px] font-black tracking-widest text-[#713f12]">KATIKA</span>
@@ -62,6 +65,7 @@ function CoinDisplay({
             className="absolute inset-0 flex flex-col items-center justify-center rounded-full border-4 border-[#35D399] bg-gradient-to-br from-[#86efac] via-[#10b981] to-[#064e3b] shadow-[0_8px_20px_rgba(53,211,153,0.35),inset_0_2px_4px_rgba(255,255,255,0.6)]"
             style={{
               backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
             }}
           >
