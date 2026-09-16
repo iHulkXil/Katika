@@ -36,6 +36,10 @@ export const legendsTable = pgTable("legends", {
   defending: integer("defending").notNull().default(50),
   physical: integer("physical").notNull().default(50),
   profileComplete: boolean("profile_complete").notNull().default(false),
+  perkId: text("perk_id"),
+  ruleset: integer("ruleset").notNull().default(1),
+  tokenId: integer("token_id"),
+  mint: jsonb("mint"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
