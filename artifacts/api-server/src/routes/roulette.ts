@@ -8,6 +8,8 @@ import {
 } from "../lib/privy-auth";
 import { recordBet } from "../lib/record-bet";
 import { getKtkEconomy } from "../lib/ktk-economy";
+import { getMint } from "../lib/mint-store";
+import { maxWagerForPerk } from "../lib/perks";
 
 const router: IRouter = Router();
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
@@ -18,8 +20,9 @@ router.post("/games/roulette", async (req, res) => {
     const wager = Number(req.body?.wager);
     const bet = req.body?.bet;
     const number = Number(req.body?.number);
-    if (!Number.isInteger(wager) || wager < 10 || wager > 1000) {
-      return res.status(400).json({ error: "Wager must be an integer from 10 to 1000" });
+    const cap = maxWagerForPerk(getMint(identity.privyUserId)?.perkId);
+    if (!Number.isInteger(wager) || wager < 10 || wager > cap) {
+      return res.status(400).json({ error: `Wager must be an integer from 10 to ${cap}` });
     }
     const allowed = ["red", "black", "odd", "even", "number"];
     if (!allowed.includes(bet)) {
