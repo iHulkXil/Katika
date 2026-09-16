@@ -8,6 +8,8 @@ import {
 } from "../lib/privy-auth";
 import { recordBet } from "../lib/record-bet";
 import { getKtkEconomy } from "../lib/ktk-economy";
+import { getMint } from "../lib/mint-store";
+import { maxWagerForPerk } from "../lib/perks";
 
 const router: IRouter = Router();
 const MULTIPLIER = 1.98;
@@ -17,8 +19,9 @@ router.post("/games/coinflip", async (req, res) => {
     const identity = await authenticateRequest(req);
     const wager = Number(req.body?.wager);
     const side = req.body?.side;
-    if (!Number.isInteger(wager) || wager < 10 || wager > 1000) {
-      return res.status(400).json({ error: "Wager must be an integer from 10 to 1000" });
+    const cap = maxWagerForPerk(getMint(identity.privyUserId)?.perkId);
+    if (!Number.isInteger(wager) || wager < 10 || wager > cap) {
+      return res.status(400).json({ error: `Wager must be an integer from 10 to ${cap}` });
     }
     if (side !== "heads" && side !== "tails") {
       return res.status(400).json({ error: "Side must be heads or tails" });
