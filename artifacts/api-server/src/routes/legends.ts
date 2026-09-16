@@ -6,9 +6,14 @@ import {
   authenticateRequest,
 } from "../lib/privy-auth";
 import { KTK_FIRST_CAP, KTK_GRANT, ktkRolloverNeed } from "../lib/ktk-economy";
+import { getMint, mintStore, setMint, type MintRecord } from "../lib/mint-store";
+import { isPerkId, perkLabel, RULESET, type PerkId } from "../lib/perks";
+
+export type { MintRecord };
 
 const router: IRouter = Router();
 const POSITIONS = ["ST", "CF", "LW", "RW", "CAM", "CM", "CDM", "LB", "RB", "CB", "GK"];
+const SEPOLIA_LEGEND_CONTRACT = "0x613C6Acf04944b150937a07F431269F54a9d7B41";
 
 function clamp(value: number) {
   if (!Number.isFinite(value)) return 50;
@@ -22,42 +27,12 @@ function allocated(row: {
   return row.pace + row.shooting + row.passing + row.dribbling + row.defending + row.physical;
 }
 
-const SEPOLIA_LEGEND_CONTRACT = "0x613C6Acf04944b150937a07F431269F54a9d7B41";
-
-export type MintRecord = {
-  tokenId: number;
-  contractAddress: string;
-  txHash: string;
-  blockNumber: number;
-  mintedAt: string;
-  chain: string;
-  chainId: number;
-  tokenUri: string;
-  snapshot: {
-    name: string;
-    position: string;
-    overall: number;
-    stats: {
-      pace: number;
-      shooting: number;
-      passing: number;
-      dribbling: number;
-      defending: number;
-      physical: number;
-    };
-    allocatedKtk: number;
-    avatarSeed: string;
-  };
-};
-
-const mintStore = new Map<string, MintRecord>();
-
 export function toLegend(row: {
   name: string; position: string; pace: number; shooting: number; passing: number;
   dribbling: number; defending: number; physical: number; profileComplete: boolean;
 }, privyUserId?: string) {
   const ovr = Math.round((row.pace + row.shooting + row.passing + row.dribbling + row.defending + row.physical) / 6);
-  const mint = privyUserId ? mintStore.get(privyUserId) ?? null : null;
+  const mint = privyUserId ? getMint(privyUserId) : null;
   return {
     name: row.name,
     position: row.position,
@@ -72,7 +47,18 @@ export function toLegend(row: {
     allocatedKchip: allocated(row),
     allocatedKtk: allocated(row),
     mint,
+    perkId: mint?.perkId ?? null,
+    ruleset: mint?.ruleset ?? RULESET,
   };
+}
+
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return hash;
 }
 
 router.get("/legends/me", async (req, res) => {
@@ -91,6 +77,11 @@ router.get("/legends/me", async (req, res) => {
 router.post("/legends/mint", async (req, res) => {
   try {
     const identity = await authenticateRequest(req);
+    const perkRaw = (req.body as { perkId?: string })?.perkId;
+    if (!isPerkId(perkRaw)) {
+      return res.status(400).json({ error: "Pick a perk: kit_prime, table_skin, or stake_plus." });
+    }
+    const perkId: PerkId = perkRaw;
     const { db, legendsTable, gameBetsTable } = await import("@workspace/db");
     const rows = await db.select().from(legendsTable).where(eq(legendsTable.privyUserId, identity.privyUserId)).limit(1);
     const legend = rows[0];
@@ -102,16 +93,18 @@ router.post("/legends/mint", async (req, res) => {
       volume: sql<number>`coalesce(sum(${gameBetsTable.wager}), 0)`,
     }).from(gameBetsTable).where(eq(gameBetsTable.privyUserId, identity.privyUserId));
     const wagered = Number(volumeRows[0]?.volume ?? 0);
+    const rolloverNeed = ktkRolloverNeed();
+    const existingMint = getMint(identity.privyUserId);
+    if (existingMint && wagered < rolloverNeed) {
+      return res.status(400).json({
+        error: `Remint after you finish the 10× rollover. ${Math.max(0, rolloverNeed - wagered)} KTK left to wager.`,
+      });
+    }
 
     const ovr = Math.round((legend.pace + legend.shooting + legend.passing + legend.dribbling + legend.defending + legend.physical) / 6);
     const allocKtk = allocated(legend);
-    const existingMint = mintStore.get(identity.privyUserId);
-
-    // If already minted, evolution of stats
     const tokenId = existingMint?.tokenId ?? (1040 + Math.floor(Math.abs(hashString(identity.privyUserId)) % 8900));
     const seed = `${legend.name.toLowerCase().trim()}-${legend.position}-${allocKtk}`;
-    
-    // Deterministic synthetic transaction hash on Sepolia
     const hex = Math.abs(hashString(identity.privyUserId + Date.now().toString())).toString(16).padStart(12, "0");
     const txHash = `0x${hex}7c89f10423bb6e9012cd4a5587f13b${Math.floor(Math.random() * 899 + 100)}`;
 
@@ -124,6 +117,8 @@ router.post("/legends/mint", async (req, res) => {
       chain: "Ethereum Sepolia Testnet",
       chainId: 11155111,
       tokenUri: `/api/legends/token/${tokenId}`,
+      perkId,
+      ruleset: RULESET,
       snapshot: {
         name: legend.name,
         position: legend.position,
@@ -141,11 +136,10 @@ router.post("/legends/mint", async (req, res) => {
       },
     };
 
-    mintStore.set(identity.privyUserId, record);
-
+    setMint(identity.privyUserId, record);
     return res.json({
       success: true,
-      message: existingMint ? "Legend evolved on Sepolia!" : "Legend minted to Sepolia!",
+      message: existingMint ? `Legend reminted with ${perkLabel(perkId)}.` : `Legend minted with ${perkLabel(perkId)}.`,
       mint: record,
       legend: toLegend(legend, identity.privyUserId),
     });
@@ -158,7 +152,6 @@ router.post("/legends/mint", async (req, res) => {
 
 router.get("/legends/token/:id", (req, res) => {
   const id = Number(req.params.id);
-  // Find record in mintStore
   let found: MintRecord | undefined;
   for (const record of mintStore.values()) {
     if (record.tokenId === id) {
@@ -166,16 +159,14 @@ router.get("/legends/token/:id", (req, res) => {
       break;
     }
   }
-
   const name = found?.snapshot.name ?? `Legend #${id}`;
   const position = found?.snapshot.position ?? "CAM";
   const ovr = found?.snapshot.overall ?? 78;
   const stats = found?.snapshot.stats ?? { pace: 75, shooting: 78, passing: 80, dribbling: 82, defending: 65, physical: 72 };
   const alloc = found?.snapshot.allocatedKtk ?? 330;
-
   return res.json({
     name: `${name} (OVR ${ovr})`,
-    description: "Katika.Bet Living Player Identity Card on Ethereum Sepolia Testnet. Gates the casino floor and evolves with table rollover milestones.",
+    description: "Katika living player card. Six stats are identity. One perk is house-tuned.",
     image: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name + position)}`,
     external_url: "https://katika.bet",
     attributes: [
@@ -188,42 +179,30 @@ router.get("/legends/token/:id", (req, res) => {
       { trait_type: "Defending", value: stats.defending, max_value: 99 },
       { trait_type: "Physical", value: stats.physical, max_value: 99 },
       { trait_type: "Allocated KTK", value: alloc },
-      { trait_type: "Standard", value: "ERC-721" },
-      { trait_type: "Network", value: "Ethereum Sepolia" },
+      { trait_type: "Perk", value: perkLabel(found?.perkId) },
+      { trait_type: "Ruleset", value: found?.ruleset ?? RULESET },
     ],
   });
 });
-
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return hash;
-}
 
 router.get("/leaderboard", async (_req, res) => {
   try {
     const { db, legendsTable, gameBetsTable } = await import("@workspace/db");
     const legends = await db.select().from(legendsTable).where(eq(legendsTable.profileComplete, true)).limit(20);
-
     const volumeRows = await db.select({
       privyUserId: gameBetsTable.privyUserId,
       volume: sql<number>`coalesce(sum(${gameBetsTable.wager}), 0)`,
       betsCount: sql<number>`count(*)`,
     }).from(gameBetsTable).groupBy(gameBetsTable.privyUserId);
-
     const volumeMap = new Map<string, { volume: number; betsCount: number }>();
     for (const v of volumeRows) {
       volumeMap.set(v.privyUserId, { volume: Number(v.volume), betsCount: Number(v.betsCount) });
     }
-
     const leaderboardItems = legends.map((l) => {
       const vol = volumeMap.get(l.privyUserId)?.volume ?? 0;
       const count = volumeMap.get(l.privyUserId)?.betsCount ?? 0;
       const ovr = Math.round((l.pace + l.shooting + l.passing + l.dribbling + l.defending + l.physical) / 6);
-      const mint = mintStore.get(l.privyUserId);
+      const mint = getMint(l.privyUserId);
       return {
         id: l.id,
         name: l.name,
@@ -233,35 +212,16 @@ router.get("/leaderboard", async (_req, res) => {
         volume: vol,
         gamesPlayed: count,
         mintedTokenId: mint?.tokenId ?? null,
+        perkId: mint?.perkId ?? null,
         isMinted: Boolean(mint),
-        form: ["W", "W", "L", "W", "W"].slice(0, 5),
       };
     });
-
-    // Add baseline seeded legends if fewer than 5 exist to show a rich football / FIFA style board
-    const baseline = [
-      { id: 901, name: "K. Ronaldo", position: "ST", overall: 88, allocatedKtk: 333, volume: 14250, gamesPlayed: 124, mintedTokenId: 1001, isMinted: true, form: ["W", "W", "W", "L", "W"] },
-      { id: 902, name: "L. Messi", position: "RW", overall: 87, allocatedKtk: 330, volume: 11800, gamesPlayed: 98, mintedTokenId: 1002, isMinted: true, form: ["W", "L", "W", "W", "W"] },
-      { id: 903, name: "K. De Bruyne", position: "CAM", overall: 85, allocatedKtk: 325, volume: 8400, gamesPlayed: 76, mintedTokenId: 1008, isMinted: true, form: ["W", "W", "L", "D", "W"] },
-      { id: 904, name: "V. van Dijk", position: "CB", overall: 84, allocatedKtk: 320, volume: 6200, gamesPlayed: 54, mintedTokenId: null, isMinted: false, form: ["L", "W", "W", "W", "L"] },
-      { id: 905, name: "E. Haaland", position: "CF", overall: 83, allocatedKtk: 318, volume: 5100, gamesPlayed: 45, mintedTokenId: null, isMinted: false, form: ["W", "L", "W", "L", "W"] },
-    ];
-
-    const merged = [...leaderboardItems];
-    for (const b of baseline) {
-      if (!merged.some((m) => m.name === b.name)) {
-        merged.push(b);
-      }
-    }
-
-    // Sort primarily by Overall Rating (OVR), then by Table Volume
-    merged.sort((a, b) => b.overall - a.overall || b.volume - a.volume);
-
+    leaderboardItems.sort((a, b) => b.overall - a.overall || b.volume - a.volume);
     return res.json({
-      leaderboard: merged.map((item, idx) => ({ ...item, rank: idx + 1 })),
+      leaderboard: leaderboardItems.map((item, idx) => ({ ...item, rank: idx + 1 })),
       contractAddress: SEPOLIA_LEGEND_CONTRACT,
     });
-  } catch (error) {
+  } catch {
     return res.status(500).json({ error: "Failed to fetch leaderboard" });
   }
 });
@@ -289,10 +249,7 @@ router.put("/legends/me", async (req, res) => {
     const oldAlloc = existing[0] ? allocated(existing[0]) : 0;
     let playable = users[0]?.demoCredits ?? DEFAULT_DEMO_CREDITS;
     if (!users[0]) {
-      await db.insert(usersTable).values({
-        privyUserId: identity.privyUserId,
-        demoCredits: KTK_GRANT,
-      });
+      await db.insert(usersTable).values({ privyUserId: identity.privyUserId, demoCredits: KTK_GRANT });
       playable = KTK_GRANT;
     } else if (playable <= 0 && !existing[0]?.profileComplete) {
       await db.update(usersTable).set({ demoCredits: KTK_GRANT, updatedAt: new Date() }).where(eq(usersTable.privyUserId, identity.privyUserId));
@@ -320,25 +277,15 @@ router.put("/legends/me", async (req, res) => {
       });
     }
     const nextPlayable = bank - needed;
-    const values = {
-      privyUserId: identity.privyUserId,
-      name,
-      position,
-      ...stats,
-      profileComplete: true,
-      updatedAt: new Date(),
-    };
+    const values = { privyUserId: identity.privyUserId, name, position, ...stats, profileComplete: true, updatedAt: new Date() };
     if (existing[0]) {
       await db.update(legendsTable).set(values).where(eq(legendsTable.privyUserId, identity.privyUserId));
     } else {
       await db.insert(legendsTable).values(values);
     }
-    await db.update(usersTable).set({
-      demoCredits: nextPlayable,
-      updatedAt: new Date(),
-    }).where(eq(usersTable.privyUserId, identity.privyUserId));
+    await db.update(usersTable).set({ demoCredits: nextPlayable, updatedAt: new Date() }).where(eq(usersTable.privyUserId, identity.privyUserId));
     const rows = await db.select().from(legendsTable).where(eq(legendsTable.privyUserId, identity.privyUserId)).limit(1);
-    return res.json({ ...toLegend(rows[0]), playableKchip: nextPlayable });
+    return res.json({ ...toLegend(rows[0], identity.privyUserId), playableKchip: nextPlayable });
   } catch (error) {
     if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
     if (error instanceof AuthError) return res.status(401).json({ error: error.message });
