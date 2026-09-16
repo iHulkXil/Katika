@@ -1,5 +1,5 @@
 import { eq, sql } from "drizzle-orm";
-import { getMint } from "./mint-store";
+import { hydrateMint } from "./mint-store";
 import { maxWagerForPerk, perkLabel, RULESET } from "./perks";
 
 export const KTK_GRANT = 600;
@@ -23,7 +23,7 @@ export async function getKtkEconomy(privyUserId: string, demoCredits: number) {
   const wagered = Number(volumeRows[0]?.volume ?? 0);
   const rolloverNeed = ktkRolloverNeed();
   const rolloverLeft = Math.max(0, rolloverNeed - wagered);
-  const mint = getMint(privyUserId);
+  const mint = hydrateMint(privyUserId, card);
   return {
     ktk: demoCredits,
     demoCredits,
@@ -34,10 +34,10 @@ export async function getKtkEconomy(privyUserId: string, demoCredits: number) {
     unlocked: wagered >= rolloverNeed,
     profileComplete: Boolean(card?.profileComplete),
     token: "KTK",
-    perkId: mint?.perkId ?? null,
-    perkLabel: perkLabel(mint?.perkId),
-    ruleset: mint?.ruleset ?? RULESET,
-    maxWager: maxWagerForPerk(mint?.perkId),
-    tokenId: mint?.tokenId ?? null,
+    perkId: mint?.perkId ?? card?.perkId ?? null,
+    perkLabel: perkLabel(mint?.perkId ?? card?.perkId),
+    ruleset: mint?.ruleset ?? card?.ruleset ?? RULESET,
+    maxWager: maxWagerForPerk(mint?.perkId ?? card?.perkId),
+    tokenId: mint?.tokenId ?? card?.tokenId ?? null,
   };
 }
