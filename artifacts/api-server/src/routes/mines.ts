@@ -7,6 +7,8 @@ import {
   authenticateRequest,
 } from "../lib/privy-auth";
 import { recordBet } from "../lib/record-bet";
+import { getMint } from "../lib/mint-store";
+import { maxWagerForPerk } from "../lib/perks";
 
 const router: IRouter = Router();
 const TILES = 25;
@@ -32,11 +34,7 @@ function asNumbers(value: unknown) {
 }
 
 function publicRound(row: {
-  wager: number;
-  minesCount: number;
-  mines: unknown;
-  revealed: unknown;
-  settled: boolean;
+  wager: number; minesCount: number; mines: unknown; revealed: unknown; settled: boolean;
 }, extra: Record<string, unknown> = {}) {
   const revealed = asNumbers(row.revealed);
   const mines = asNumbers(row.mines);
@@ -94,8 +92,9 @@ router.post("/games/mines/start", async (req, res) => {
     if (existing.row) return res.status(400).json({ error: "Cash out or finish the open Mines round first" });
     const wager = Number(req.body?.wager);
     const minesCount = Number(req.body?.mines);
-    if (!Number.isInteger(wager) || wager < 10 || wager > 1000) {
-      return res.status(400).json({ error: "Wager must be an integer from 10 to 1000" });
+    const cap = maxWagerForPerk(getMint(identity.privyUserId)?.perkId);
+    if (!Number.isInteger(wager) || wager < 10 || wager > cap) {
+      return res.status(400).json({ error: `Wager must be an integer from 10 to ${cap}` });
     }
     if (!Number.isInteger(minesCount) || minesCount < 1 || minesCount > 10) {
       return res.status(400).json({ error: "Mines must be 1 to 10" });
@@ -138,12 +137,8 @@ router.post("/games/mines/reveal", async (req, res) => {
         revealed, settled: true, updatedAt: new Date(),
       }).where(eq(minesRoundsTable.id, row.id)).returning();
       await recordBet({
-        userId: row.userId,
-        privyUserId: identity.privyUserId,
-        game: "mines",
-        wager: row.wager,
-        payout: -row.wager,
-        won: false,
+        userId: row.userId, privyUserId: identity.privyUserId, game: "mines",
+        wager: row.wager, payout: -row.wager, won: false,
         detail: { hit: tile, minesCount: row.minesCount },
       });
       return res.json(publicRound(updated[0], { hit: tile, won: false, payout: -row.wager }));
@@ -156,12 +151,8 @@ router.post("/games/mines/reveal", async (req, res) => {
         revealed, settled: true, updatedAt: new Date(),
       }).where(eq(minesRoundsTable.id, row.id)).returning();
       await recordBet({
-        userId: row.userId,
-        privyUserId: identity.privyUserId,
-        game: "mines",
-        wager: row.wager,
-        payout: creditReturn - row.wager,
-        won: true,
+        userId: row.userId, privyUserId: identity.privyUserId, game: "mines",
+        wager: row.wager, payout: creditReturn - row.wager, won: true,
         detail: { cleared: true, minesCount: row.minesCount },
       });
       return res.json({
@@ -194,12 +185,8 @@ router.post("/games/mines/cashout", async (req, res) => {
       settled: true, updatedAt: new Date(),
     }).where(eq(minesRoundsTable.id, row.id)).returning();
     await recordBet({
-      userId: row.userId,
-      privyUserId: identity.privyUserId,
-      game: "mines",
-      wager: row.wager,
-      payout: creditReturn - row.wager,
-      won: true,
+      userId: row.userId, privyUserId: identity.privyUserId, game: "mines",
+      wager: row.wager, payout: creditReturn - row.wager, won: true,
       detail: { cashout: true, tiles: revealed.length, minesCount: row.minesCount },
     });
     return res.json({
