@@ -25,22 +25,37 @@ import {
 
 const queryClient = new QueryClient();
 
-type Game = { name: string; description: string; href: string; icon: ReactNode };
+type Game = {
+  name: string;
+  description: string;
+  badge: string;
+  payout: string;
+  href: string;
+  icon: ReactNode;
+};
 const games: Game[] = [
-  { name: 'Dice', description: '1-100', href: '/games/dice', icon: <Dices /> },
-  { name: 'Flip', description: '1.98x', href: '/games/coinflip', icon: <CircleDollarSign /> },
-  { name: 'Mines', description: 'Cash out', href: '/games/mines', icon: <Bomb /> },
-  { name: 'Roulette', description: '0-36', href: '/games/roulette', icon: <Ticket /> },
+  { name: 'Dice', description: '3D Precision Roller', badge: '1-100', payout: 'Up to 98×', href: '/games/dice', icon: <Dices /> },
+  { name: 'Coin Flip', description: '3D Katika Gold Coin', badge: '50/50', payout: '1.98× Fixed', href: '/games/coinflip', icon: <CircleDollarSign /> },
+  { name: 'Mines Vault', description: '5×5 Diamond Grid', badge: 'Custom', payout: 'Cash Out', href: '/games/mines', icon: <Bomb /> },
+  { name: 'Roulette', description: '3D European Wheel', badge: '0-36', payout: 'Up to 36×', href: '/games/roulette', icon: <Ticket /> },
 ];
 
 function GameTile({ game }: { game: Game }) {
   return (
-    <Link href={game.href} className="block">
-      <div className="relative min-h-[132px] rounded-[22px] border border-[#1C3A2E] bg-[#0E1A16] p-4">
-        <span className="absolute right-3 top-3 rounded-full bg-[#35D399] px-2 py-0.5 text-[9px] font-semibold tracking-wide text-[#062018]">PLAY</span>
-        <div className="mt-1 text-[#F2C14E] [&_svg]:h-7 [&_svg]:w-7">{game.icon}</div>
-        <h3 className="mt-4 text-lg font-semibold">{game.name}</h3>
-        <p className="text-[12px] text-[#8FA39A]">{game.description}</p>
+    <Link href={game.href} className="block group">
+      <div className="relative overflow-hidden rounded-2xl border border-[#1C3A2E] bg-gradient-to-br from-[#0E1A16] to-[#07110E] p-3.5 transition-all duration-200 hover:border-[#35D399]/50 hover:shadow-[0_4px_20px_rgba(53,211,153,0.12)] active:scale-[0.98]">
+        <div className="flex items-center justify-between">
+          <div className="text-[#f3d37a] [&_svg]:h-6 [&_svg]:w-6 transition-transform group-hover:scale-110">{game.icon}</div>
+          <span className="rounded-full border border-[#35D399]/40 bg-[#35D399]/15 px-2 py-0.5 font-mono-custom text-[9px] font-bold text-[#35D399]">
+            {game.badge}
+          </span>
+        </div>
+        <h3 className="mt-3 text-base font-bold text-[#E8F2EC]">{game.name}</h3>
+        <p className="text-[11px] text-[#8FA39A]">{game.description}</p>
+        <div className="mt-2.5 flex items-center justify-between border-t border-[#1C3A2E]/60 pt-2 font-mono-custom text-[10px]">
+          <span className="text-[#8FA39A]">{game.payout}</span>
+          <span className="text-[#35D399] font-semibold group-hover:translate-x-0.5 transition-transform">PLAY →</span>
+        </div>
       </div>
     </Link>
   );
@@ -51,20 +66,31 @@ function Home() {
     <div className="px-3 pt-3">
       <HomeLegendHero />
       <div className="mt-6 flex items-end justify-between px-0.5">
-        <h2 className="text-lg font-semibold">Floor</h2>
-        <Link href="/games" className="text-sm text-[#8FA39A]">View all →</Link>
+        <div>
+          <span className="font-mono-custom text-[10px] uppercase tracking-[.18em] text-[#35D399]">Live Tables</span>
+          <h2 className="text-lg font-bold text-[#E8F2EC]">Casino Floor</h2>
+        </div>
+        <Link href="/games" className="text-xs font-semibold text-[#8FA39A] hover:text-[#35D399]">View all →</Link>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
+      <div className="mt-3 grid grid-cols-2 gap-2.5">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
     </div>
   );
 }
 
 function Games() {
   return (
-    <div className="px-3 pt-3">
-      <h1 className="text-2xl font-semibold">Casino</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Tables settle in $KTK.</p>
-      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
+    <div className="px-3 pt-3 pb-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <span className="font-mono-custom text-[10px] uppercase tracking-[.18em] text-[#35D399]">Off-Chain Ledger</span>
+          <h1 className="text-xl font-bold tracking-tight text-[#E8F2EC]">Casino Floor</h1>
+        </div>
+        <span className="rounded-full border border-[#1C3A2E] bg-[#0E1A16] px-2.5 py-1 font-mono-custom text-[11px] text-[#8FA39A]">
+          4 Live Games
+        </span>
+      </div>
+      <p className="mt-1 text-xs text-[#8FA39A]">All tables settle instantly in $KTK off-chain credits with verified RNG.</p>
+      <div className="mt-3.5 grid grid-cols-2 gap-2.5 md:grid-cols-4">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
     </div>
   );
 }

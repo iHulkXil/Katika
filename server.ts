@@ -4,8 +4,10 @@ import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import apiApp from "./artifacts/api-server/src/app";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const currentDir =
+  typeof __dirname !== "undefined"
+    ? __dirname
+    : path.dirname(fileURLToPath(import.meta.url));
 
 async function startServer() {
   const app = express();
@@ -17,13 +19,13 @@ async function startServer() {
   // Vite integration
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      configFile: path.resolve(__dirname, "artifacts/katika-bet/vite.config.ts"),
+      configFile: path.resolve(currentDir, "artifacts/katika-bet/vite.config.ts"),
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.resolve(__dirname, "artifacts/katika-bet/dist/public");
+    const distPath = path.resolve(currentDir, "artifacts/katika-bet/dist/public");
     app.use(express.static(distPath));
     app.get("*all", (_req, res) => {
       res.sendFile(path.resolve(distPath, "index.html"));

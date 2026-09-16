@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
-import { Gem, Sparkles } from 'lucide-react';
+import { Gem, Sparkles, RefreshCw, Bomb } from 'lucide-react';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { playTableTone } from '@/lib/table-sound';
 import { RolloverStrip } from '@/components/rollover-strip';
-import { WebglStage } from '@/components/webgl-stage';
 import { fireWinConfetti } from '@/lib/confetti';
 
 const TILES = 25;
@@ -24,7 +23,7 @@ async function api(path: string, token: string, body?: object, method = 'POST') 
 
 export function MinesPage() {
   const { authenticated, getAccessToken } = usePrivy();
-  const { refresh } = useServerSession();
+  const { serverUser, refresh } = useServerSession();
   const [wager, setWager] = useState(50);
   const [mines, setMines] = useState(3);
   const [active, setActive] = useState(false);
@@ -36,6 +35,8 @@ export function MinesPage() {
   const [booting, setBooting] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+
+  const balance = Number(serverUser?.ktk ?? serverUser?.demoCredits ?? 0);
 
   const token = async () => {
     const value = await getAccessToken();
@@ -70,68 +71,94 @@ export function MinesPage() {
   }, [authenticated]);
 
   const start = async () => {
-    setError(null); setNote(null); setBusy(true);
+    setError(null);
+    setNote(null);
+    setBusy(true);
     try {
       const body = await api('/api/games/mines/start', await token(), { wager, mines });
-      setActive(true); setRevealed([]); setMineTiles([]);
-      setMult(body.multiplier); setCashoutValue(body.cashoutValue);
+      setActive(true);
+      setRevealed([]);
+      setMineTiles([]);
+      setMult(body.multiplier);
+      setCashoutValue(body.cashoutValue);
       playTableTone('tick');
       await refresh();
-    } catch (err) { setError(err instanceof Error ? err.message : 'Start failed'); }
-    finally { setBusy(false); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Start failed');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const reveal = async (tile: number) => {
     if (!active || busy || revealed.includes(tile)) return;
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
       const body = await api('/api/games/mines/reveal', await token(), { tile });
-      setRevealed(body.revealed ?? []); setMult(body.multiplier); setCashoutValue(body.cashoutValue);
+      setRevealed(body.revealed ?? []);
+      setMult(body.multiplier);
+      setCashoutValue(body.cashoutValue);
       playTableTone(body.active === false && !body.won ? 'lose' : 'tick');
       if (body.active === false) {
-        setActive(false); setMineTiles(body.mines ?? []);
-        setNote(body.won ? `Cleared +${body.payout}` : 'Hit a mine');
+        setActive(false);
+        setMineTiles(body.mines ?? []);
+        setNote(body.won ? `Cleared +${body.payout} KTK` : 'Hit a mine');
         if (body.won) {
           playTableTone('win');
           fireWinConfetti();
         }
         await refresh();
       }
-    } catch (err) { setError(err instanceof Error ? err.message : 'Reveal failed');
-    } finally { setBusy(false); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Reveal failed');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const cashout = async () => {
     setBusy(true);
     try {
       const body = await api('/api/games/mines/cashout', await token(), {});
-      setActive(false); setMineTiles(body.mines ?? []);
-      setNote(`Cashed ${body.cashoutValue} KTK`);
+      setActive(false);
+      setMineTiles(body.mines ?? []);
+      setNote(`Cashed out ${body.cashoutValue} KTK`);
       playTableTone('win');
       fireWinConfetti();
       await refresh();
-    } catch (err) { setError(err instanceof Error ? err.message : 'Cashout failed');
-    } finally { setBusy(false); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Cashout failed');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
-    <div className="px-3 pt-4">
-      <p className="font-mono-custom text-[11px] tracking-[.2em] text-primary">MINES / 3D VAULT</p>
-      <h1 className="mt-2 text-3xl font-semibold">Open gems. Cash out.</h1>
-      <RolloverStrip gameType="mines" />
-      <div className="mt-2 flex items-center justify-between">
-        <p className="font-mono-custom text-sm text-[#35D399] font-bold">
-          {booting ? 'INITIALIZING...' : active ? `${mult.toFixed(2)}x MULTIPLIER` : 'IDLE VAULT'}
-        </p>
-        {active && cashoutValue > 0 ? (
-          <span className="font-mono-custom text-xs text-[#f3d37a] font-semibold">
-            Current: {cashoutValue} KTK
+    <div className="px-3 pt-3 pb-8" style={{ touchAction: 'pan-y' }}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <span className="font-mono-custom text-[10px] uppercase tracking-[.18em] text-[#35D399]">
+            5×5 Diamond Grid
           </span>
-        ) : null}
+          <h1 className="text-xl font-bold tracking-tight text-[#E8F2EC]">Mines Vault</h1>
+        </div>
+        <div className="flex items-center gap-1.5 rounded-full border border-[#1C3A2E] bg-[#0E1A16] px-2.5 py-1 text-[11px] font-mono-custom">
+          {active ? (
+            <span className="text-[#35D399] font-bold animate-pulse">{mult.toFixed(2)}× ({cashoutValue} KTK)</span>
+          ) : (
+            <span className="text-[#8FA39A]">{mines} Mines / {25 - mines} Gems</span>
+          )}
+        </div>
       </div>
-      <div className="fx-stage mt-4 !h-[260px] !min-h-[260px] !max-h-[260px] p-3 perspective-[1000px]">
-        <WebglStage mode="ice" />
-        <div className="relative z-[2] grid w-full max-w-[250px] grid-cols-5 gap-2 mx-auto" style={{ transformStyle: 'preserve-3d', transform: 'rotateX(8deg)' }}>
+
+      {/* Compact Rollover Strip */}
+      <RolloverStrip gameType="mines" compact />
+
+      {/* Vault Grid Stage (Touch-friendly, no perspective trap) */}
+      <div className="relative mt-3 rounded-2xl border border-[#1C3A2E] bg-gradient-to-b from-[#0B1713] to-[#060E0B] p-3.5 shadow-md flex items-center justify-center">
+        <div className="grid w-full max-w-[240px] grid-cols-5 gap-2 select-none" style={{ touchAction: 'pan-y' }}>
           {Array.from({ length: TILES }, (_, i) => {
             const open = revealed.includes(i);
             const boom = mineTiles.includes(i);
@@ -139,51 +166,153 @@ export function MinesPage() {
               <button
                 key={i}
                 type="button"
-                disabled={!active || busy}
+                disabled={!active || busy || open}
                 onClick={() => void reveal(i)}
-                className={`fx-tile aspect-square rounded-xl border flex items-center justify-center transition-all duration-300 select-none ${
+                className={`aspect-square rounded-xl border flex items-center justify-center transition-all duration-200 select-none ${
                   boom
-                    ? 'boom border-destructive bg-destructive/40 shadow-[0_0_15px_rgba(239,68,68,0.5)] scale-95'
+                    ? 'border-red-500 bg-red-950/80 shadow-[0_0_12px_rgba(239,68,68,0.5)] scale-95'
                     : open
-                    ? 'open border-primary bg-gradient-to-br from-primary/30 to-emerald-950/80 text-primary shadow-[0_0_18px_rgba(53,211,153,0.45)] scale-105'
-                    : 'border-border/80 bg-gradient-to-b from-[#1a382e] to-[#0c1c16] hover:border-primary/60 hover:-translate-y-0.5 active:translate-y-0.5'
+                    ? 'border-[#35D399] bg-gradient-to-br from-[#35D399]/30 to-[#0c2419] text-[#35D399] shadow-[0_0_14px_rgba(53,211,153,0.35)]'
+                    : active
+                    ? 'border-[#1C3A2E] bg-gradient-to-b from-[#132c21] to-[#0A1812] hover:border-[#35D399]/60 active:scale-95'
+                    : 'border-[#1C3A2E]/60 bg-[#0A1612]/70 opacity-80'
                 }`}
-                style={{
-                  boxShadow: boom
-                    ? '0 0 20px rgba(239,68,68,0.6), inset 0 2px 4px rgba(255,255,255,0.2)'
-                    : open
-                    ? '0 6px 0 #062018, 0 10px 16px rgba(0,0,0,0.5), inset 0 2px 6px rgba(53,211,153,0.5)'
-                    : '0 5px 0 #06120d, 0 8px 12px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.15)',
-                }}
               >
                 {boom ? (
-                  <span className="text-xl font-black text-rose-300 drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]">💥</span>
+                  <Bomb size={18} className="text-red-400 animate-bounce" />
                 ) : open ? (
-                  <div className="relative flex items-center justify-center animate-bounce">
-                    <Gem size={20} className="text-[#35D399] drop-shadow-[0_0_10px_rgba(53,211,153,0.9)]" />
-                    <Sparkles size={10} className="absolute -top-1 -right-1 text-amber-300 animate-spin" />
+                  <div className="relative flex items-center justify-center">
+                    <Gem size={18} className="text-[#35D399] drop-shadow-[0_0_8px_rgba(53,211,153,0.9)]" />
+                    <Sparkles size={8} className="absolute -top-1 -right-1 text-[#f3d37a]" />
                   </div>
                 ) : (
-                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/30" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-[#35D399]/30" />
                 )}
               </button>
             );
           })}
         </div>
       </div>
-      {!authenticated ? <div className="mt-4"><WalletAuthButton /></div> : !active ? (
-        <div className="mt-4 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <input type="number" value={wager} onChange={(e) => setWager(Number(e.target.value))} className="rounded-lg border border-border bg-card px-3 py-2" />
-            <input type="number" min={1} max={10} value={mines} onChange={(e) => setMines(Number(e.target.value))} className="rounded-lg border border-border bg-card px-3 py-2" />
+
+      {note && (
+        <p className="mt-2 text-center text-xs font-semibold text-[#35D399] font-mono-custom">
+          {note}
+        </p>
+      )}
+
+      {!authenticated ? (
+        <div className="mt-5">
+          <WalletAuthButton />
+        </div>
+      ) : !active ? (
+        <div className="mt-3.5 space-y-3">
+          {/* Mines Count Selector */}
+          <div className="rounded-xl border border-[#1C3A2E] bg-[#0B1713] p-2.5">
+            <div className="flex items-center justify-between text-[11px] text-[#8FA39A] mb-1.5">
+              <span>Mines on Board</span>
+              <span className="font-mono-custom text-[#f3d37a] font-bold">{mines} Mines ({25 - mines} Gems)</span>
+            </div>
+            <div className="grid grid-cols-5 gap-1.5">
+              {[1, 3, 5, 10, 24].map((count) => (
+                <button
+                  key={count}
+                  type="button"
+                  onClick={() => setMines(count)}
+                  className={`rounded-lg py-1.5 font-mono-custom text-xs font-bold transition-all ${
+                    mines === count
+                      ? 'border border-[#35D399] bg-[#35D399]/25 text-[#35D399]'
+                      : 'border border-[#1C3A2E] bg-[#07110E] text-[#8FA39A] hover:text-[#E8F2EC]'
+                  }`}
+                >
+                  {count}
+                </button>
+              ))}
+            </div>
           </div>
-          <button type="button" disabled={busy || booting} onClick={() => void start()} className="w-full rounded-lg bg-secondary py-3 text-sm font-semibold text-secondary-foreground">Bet and start</button>
+
+          {/* Wager Input & Quick Buttons */}
+          <div className="rounded-xl border border-[#1C3A2E] bg-[#0B1713] p-2.5">
+            <div className="flex items-center justify-between text-[11px] text-[#8FA39A] mb-1.5">
+              <span>Wager (KTK)</span>
+              <span>Balance: {balance.toLocaleString()} KTK</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                min={10}
+                max={Math.max(10, balance)}
+                value={wager}
+                disabled={busy}
+                onChange={(e) => setWager(Math.max(1, Number(e.target.value)))}
+                className="w-full rounded-lg border border-[#1C3A2E] bg-[#07110E] px-3 py-2 font-mono-custom text-sm font-semibold text-[#E8F2EC] outline-none focus:border-[#35D399]/60"
+              />
+              <button
+                type="button"
+                disabled={busy}
+                className="rounded-lg border border-[#1C3A2E] bg-[#0E1F18] px-2.5 py-2 font-mono-custom text-xs font-semibold text-[#8FA39A] hover:text-[#E8F2EC]"
+                onClick={() => setWager(Math.max(10, Math.floor(wager / 2)))}
+              >
+                ½
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                className="rounded-lg border border-[#1C3A2E] bg-[#0E1F18] px-2.5 py-2 font-mono-custom text-xs font-semibold text-[#8FA39A] hover:text-[#E8F2EC]"
+                onClick={() => setWager(Math.min(balance || 1000, wager * 2))}
+              >
+                2×
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                className="rounded-lg border border-[#35D399]/40 bg-[#35D399]/15 px-2.5 py-2 font-mono-custom text-xs font-bold text-[#35D399] hover:bg-[#35D399]/25"
+                onClick={() => setWager(Math.max(10, balance))}
+              >
+                MAX
+              </button>
+            </div>
+          </div>
+
+          {/* Primary Action Button */}
+          <button
+            type="button"
+            disabled={busy || booting || wager > balance || wager <= 0}
+            onClick={() => void start()}
+            className="w-full rounded-xl bg-gradient-to-r from-[#35D399] to-[#10b981] py-3.5 text-base font-bold text-[#07110E] shadow-[0_4px_16px_rgba(53,211,153,0.3)] transition-all active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {busy ? (
+              <span className="inline-flex items-center gap-2">
+                <RefreshCw size={16} className="animate-spin" /> Arming Vault...
+              </span>
+            ) : (
+              'BET AND START'
+            )}
+          </button>
         </div>
       ) : (
-        <button type="button" disabled={busy || revealed.length < 1} onClick={() => void cashout()} className="mt-4 w-full rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground">Cash out {cashoutValue}</button>
+        <div className="mt-3.5 space-y-2">
+          {/* Active Cashout Button */}
+          <button
+            type="button"
+            disabled={busy || revealed.length < 1}
+            onClick={() => void cashout()}
+            className="w-full rounded-xl bg-gradient-to-r from-[#f3d37a] to-[#d4af37] py-3.5 text-base font-bold text-[#07110E] shadow-[0_4px_16px_rgba(212,175,55,0.3)] transition-all active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {busy ? (
+              <span className="inline-flex items-center gap-2">
+                <RefreshCw size={16} className="animate-spin" /> Cashing out...
+              </span>
+            ) : (
+              `CASHOUT ${cashoutValue} KTK (${mult.toFixed(2)}×)`
+            )}
+          </button>
+          <p className="text-center text-[11px] text-[#8FA39A]">
+            {revealed.length} gems revealed · Pick another gem or cash out safely
+          </p>
+        </div>
       )}
-      {note ? <p className="mt-3 text-sm text-primary">{note}</p> : null}
-      {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
+
+      {error && <p className="mt-2.5 text-center text-xs text-red-400 font-semibold">{error}</p>}
     </div>
   );
 }

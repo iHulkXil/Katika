@@ -131,18 +131,23 @@ export function Roulette3D({ busy, roll, className = '' }: Roulette3DProps) {
     if (!container) return;
 
     const width = container.clientWidth || 280;
-    const height = container.clientHeight || 200;
+    const height = container.clientHeight || 168;
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 100);
-    camera.position.set(0, 3.8, 4.4);
-    camera.lookAt(0, -0.2, 0);
+    const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 100);
+    camera.position.set(0, 3.4, 3.9);
+    camera.lookAt(0, -0.15, 0);
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setSize(width, height);
+    renderer.setSize(width, height, false);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    renderer.domElement.style.display = 'block';
+    renderer.domElement.style.pointerEvents = 'none';
+    renderer.domElement.style.touchAction = 'pan-y';
     container.appendChild(renderer.domElement);
 
     // Lights
@@ -220,15 +225,17 @@ export function Roulette3D({ busy, roll, className = '' }: Roulette3DProps) {
     scene.add(ballMesh);
     ballMeshRef.current = ballMesh;
 
-    // Mouse tilt
-    const handleMouseMove = (e: MouseEvent) => {
+    // Mouse tilt (passive, ignore touch)
+    const handlePointerMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
       const rect = container.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
       const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       const y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
       mouseRef.current.targetX = x * 0.35;
       mouseRef.current.targetY = y * 0.35;
     };
-    container.addEventListener('mousemove', handleMouseMove);
+    container.addEventListener('pointermove', handlePointerMove, { passive: true });
 
     let reqId = 0;
     const clock = new THREE.Clock();
@@ -242,8 +249,8 @@ export function Roulette3D({ busy, roll, className = '' }: Roulette3DProps) {
       mouseRef.current.y += (mouseRef.current.targetY - mouseRef.current.y) * 0.06;
 
       camera.position.x = mouseRef.current.x * 0.8;
-      camera.position.y = 3.8 + mouseRef.current.y * 0.6;
-      camera.lookAt(0, -0.1, 0);
+      camera.position.y = 3.4 + mouseRef.current.y * 0.5;
+      camera.lookAt(0, -0.15, 0);
 
       const state = stateRef.current;
 
@@ -304,20 +311,26 @@ export function Roulette3D({ busy, roll, className = '' }: Roulette3DProps) {
 
     render();
 
+    let lastW = width;
+    let lastH = height;
     const handleResize = () => {
       if (!container) return;
-      const w = container.clientWidth || 280;
-      const h = container.clientHeight || 200;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      if (!w || !h) return;
+      if (Math.abs(w - lastW) < 6 && Math.abs(h - lastH) < 6) return;
+      lastW = w;
+      lastH = h;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
+      renderer.setSize(w, h, false);
     };
     window.addEventListener('resize', handleResize);
 
     return () => {
       cancelAnimationFrame(reqId);
       window.removeEventListener('resize', handleResize);
-      container.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('pointermove', handlePointerMove);
       if (renderer.domElement.parentElement) {
         renderer.domElement.parentElement.removeChild(renderer.domElement);
       }
@@ -355,8 +368,8 @@ export function Roulette3D({ busy, roll, className = '' }: Roulette3DProps) {
   return (
     <div
       ref={containerRef}
-      className={`relative flex items-center justify-center cursor-grab active:cursor-grabbing select-none ${className}`}
-      style={{ width: '100%', height: '100%', minHeight: '220px' }}
+      className={`relative flex items-center justify-center select-none ${className}`}
+      style={{ width: '100%', height: '100%', touchAction: 'pan-y' }}
       title="3D European Roulette Wheel"
     />
   );

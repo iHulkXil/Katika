@@ -158,6 +158,7 @@ export function LegendCard({
   const [isHovered, setIsHovered] = useState(false);
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') return;
     if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
     const px = (e.clientX - rect.left) / rect.width;
@@ -181,9 +182,11 @@ export function LegendCard({
   return (
     <>
       <div
-        className="group relative cursor-pointer select-none"
-        style={{ perspective: '1200px' }}
-        onPointerEnter={() => setIsHovered(true)}
+        className="group relative select-none"
+        style={{ perspective: '1200px', touchAction: 'pan-y' }}
+        onPointerEnter={(e) => {
+          if (e.pointerType !== 'touch') setIsHovered(true);
+        }}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
       >

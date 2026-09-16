@@ -143,17 +143,22 @@ export function Dice3D({ busy, roll, target, prediction, won, className = '' }: 
     if (!container) return;
 
     const width = container.clientWidth || 280;
-    const height = container.clientHeight || 200;
+    const height = container.clientHeight || 168;
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-    camera.position.set(0, 0.4, 5.2);
+    const camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 100);
+    camera.position.set(0, 0.2, 4.9);
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setSize(width, height);
+    renderer.setSize(width, height, false);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    renderer.domElement.style.display = 'block';
+    renderer.domElement.style.pointerEvents = 'none';
+    renderer.domElement.style.touchAction = 'pan-y';
     container.appendChild(renderer.domElement);
 
     // Lights
@@ -223,15 +228,17 @@ export function Dice3D({ busy, roll, target, prediction, won, className = '' }: 
     // Slight initial angle so multiple faces are visible in 3D
     diceMesh.rotation.set(0.35, 0.45, 0);
 
-    // Mouse movement
-    const handleMouseMove = (e: MouseEvent) => {
+    // Pointer movement (passive, only applies to non-touch pointer to allow native mobile scrolling)
+    const handlePointerMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
       const rect = container.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
       const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       const y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
       mouseRef.current.targetX = x * 0.45;
       mouseRef.current.targetY = y * 0.45;
     };
-    container.addEventListener('mousemove', handleMouseMove);
+    container.addEventListener('pointermove', handlePointerMove, { passive: true });
 
     let reqId = 0;
     const clock = new THREE.Clock();
@@ -303,20 +310,26 @@ export function Dice3D({ busy, roll, target, prediction, won, className = '' }: 
 
     render();
 
+    let lastW = width;
+    let lastH = height;
     const handleResize = () => {
       if (!container) return;
-      const w = container.clientWidth || 280;
-      const h = container.clientHeight || 200;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      if (!w || !h) return;
+      if (Math.abs(w - lastW) < 6 && Math.abs(h - lastH) < 6) return;
+      lastW = w;
+      lastH = h;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
+      renderer.setSize(w, h, false);
     };
     window.addEventListener('resize', handleResize);
 
     return () => {
       cancelAnimationFrame(reqId);
       window.removeEventListener('resize', handleResize);
-      container.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('pointermove', handlePointerMove);
       if (renderer.domElement.parentElement) {
         renderer.domElement.parentElement.removeChild(renderer.domElement);
       }
@@ -374,8 +387,8 @@ export function Dice3D({ busy, roll, target, prediction, won, className = '' }: 
   return (
     <div
       ref={containerRef}
-      className={`relative flex items-center justify-center cursor-grab active:cursor-grabbing select-none ${className}`}
-      style={{ width: '100%', height: '100%', minHeight: '200px' }}
+      className={`relative flex items-center justify-center select-none ${className}`}
+      style={{ width: '100%', height: '100%', touchAction: 'pan-y' }}
       title="Interactive 3D Casino Dice"
     />
   );

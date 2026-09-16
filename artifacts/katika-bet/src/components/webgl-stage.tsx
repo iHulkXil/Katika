@@ -90,43 +90,61 @@ export function WebglStage({
     const uB = gl.getUniformLocation(program, 'u_b');
     const [cA, cB] = PALETTE[mode];
 
+    let currentW = 0;
+    let currentH = 0;
+
+    const resize = () => {
+      if (!canvas || !gl) return;
+      const parent = canvas.parentElement;
+      const w = parent?.clientWidth ?? 320;
+      const h = parent?.clientHeight ?? 168;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const targetW = Math.max(1, Math.floor(w * dpr));
+      const targetH = Math.max(1, Math.floor(h * dpr));
+
+      if (currentW !== targetW || currentH !== targetH) {
+        currentW = targetW;
+        currentH = targetH;
+        canvas.width = targetW;
+        canvas.height = targetH;
+        gl.viewport(0, 0, targetW, targetH);
+        gl.uniform2f(uRes, targetW, targetH);
+      }
+    };
+
+    resize();
+    const observer = new ResizeObserver(() => {
+      resize();
+    });
+    if (canvas.parentElement) {
+      observer.observe(canvas.parentElement);
+    }
+
     let frame = 0;
     const start = performance.now();
     const draw = (now: number) => {
       try {
-        const parent = canvas.parentElement;
-        const rect = parent?.getBoundingClientRect();
-        const w = rect && rect.width > 0 ? rect.width : (parent?.clientWidth ?? 320);
-        const h = rect && rect.height > 0 ? rect.height : (parent?.clientHeight ?? 220);
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const targetW = Math.max(1, Math.floor(w * dpr));
-        const targetH = Math.max(1, Math.floor(h * dpr));
-
-        if (canvas.width !== targetW || canvas.height !== targetH) {
-          canvas.width = targetW;
-          canvas.height = targetH;
-        }
-
-        gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.uniform2f(uRes, canvas.width, canvas.height);
         gl.uniform1f(uTime, (now - start) / 1000);
         gl.uniform3f(uA, cA[0], cA[1], cA[2]);
         gl.uniform3f(uB, cB[0], cB[1], cB[2]);
         gl.drawArrays(gl.TRIANGLES, 0, 3);
         frame = requestAnimationFrame(draw);
       } catch {
-        // Suppress any WebGL context loss errors
+        // Suppress WebGL context error
       }
     };
     frame = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
   }, [mode]);
 
   return (
     <canvas
       ref={ref}
-      className={`fx-stage-canvas pointer-events-none absolute inset-0 h-full w-full opacity-60 ${className}`}
-      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+      className={`fx-stage-canvas pointer-events-none absolute inset-0 h-full w-full opacity-50 ${className}`}
+      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', touchAction: 'pan-y', pointerEvents: 'none' }}
       aria-hidden
     />
   );
