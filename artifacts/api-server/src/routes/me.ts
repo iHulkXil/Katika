@@ -6,6 +6,7 @@ import {
   authenticateRequest,
 } from "../lib/privy-auth";
 import { getKtkEconomy, KTK_GRANT } from "../lib/ktk-economy";
+import { mintFeeState } from "../lib/mint-fee";
 
 const router: IRouter = Router();
 
@@ -45,6 +46,7 @@ router.get("/me", async (req, res) => {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       ...extra,
+      ...mintFeeState(),
     });
   } catch (error) {
     if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
