@@ -4,6 +4,8 @@ export type PerkId = (typeof PERK_IDS)[number];
 
 export const BASE_MAX_WAGER = 50;
 export const STAKE_PLUS_MAX_WAGER = 75;
+export const MINT_FEE_USD = 1;
+export const MINT_FEE_KTK = 10;
 
 export function isPerkId(value: unknown): value is PerkId {
   return PERK_IDS.includes(value as PerkId);
