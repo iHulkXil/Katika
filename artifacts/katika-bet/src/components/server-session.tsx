@@ -25,6 +25,10 @@ export type ServerUser = {
   ruleset?: number;
   maxWager?: number;
   tokenId?: number | null;
+  feeUsd?: number;
+  feeKtk?: number;
+  feeMode?: 'ktk' | 'stripe';
+  stripeReady?: boolean;
 };
 
 type ServerSessionValue = {
@@ -83,8 +87,7 @@ export function ServerSessionSync({ children }: { children?: ReactNode }) {
         setError(`API ${response.status}`);
         return;
       }
-      const body = (await response.json()) as ServerUser;
-      setServerUser(body);
+      setServerUser((await response.json()) as ServerUser);
       setError(null);
     } catch {
       setServerUser(null);
