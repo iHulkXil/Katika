@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "installCommand": "corepack enable && corepack prepare pnpm@9.15.9 --activate && pnpm install --no-frozen-lockfile",
-  "buildCommand": "pnpm --filter @workspace/katika-bet run build",
+  "installCommand": "npx --yes pnpm@9.15.9 install --no-frozen-lockfile",
+  "buildCommand": "npx --yes pnpm@9.15.9 --filter @workspace/katika-bet run build",
   "outputDirectory": "artifacts/katika-bet/dist/public",
   "rewrites": [
     {
