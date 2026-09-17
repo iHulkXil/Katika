@@ -32,26 +32,9 @@ User signs up → **600 KTK** grant. First legend card may lock **≤333** of th
 | Perks | exactly one: `kit_prime` \| `table_skin` \| `stake_plus` |
 | Ruleset | `1` (house may retune perks without changing stats) |
 
-Code constants: `lib/db/src/schema/index.ts`, `artifacts/api-server/src/lib/ktk-economy.ts`, `artifacts/api-server/src/lib/perks.ts`.
-
 ---
 
-## Layout
-
-Monorepo, pnpm.
-
-- `artifacts/katika-bet` — Vite React frontend (Wouter, Privy, Tailwind)
-- `artifacts/api-server` — Express API
-- `lib/db` — Drizzle schema + Neon
-- `artifacts/become-a-legend` — older BAL app; **Katika is the merged home**. Do not split repos.
-
-Frontend `/api/*` proxies to Render (`vercel.json`).
-
----
-
-## Neon columns that must exist on `legends`
-
-Owner said these have been run. Re-run only after a branch wipe:
+## Neon columns on `legends` (already run)
 
 ```sql
 ALTER TABLE legends ADD COLUMN IF NOT EXISTS perk_id text;
@@ -60,99 +43,31 @@ ALTER TABLE legends ADD COLUMN IF NOT EXISTS token_id integer;
 ALTER TABLE legends ADD COLUMN IF NOT EXISTS mint jsonb;
 ```
 
-Users table still uses `demo_credits` as the **KTK floor stack**. Do not surface the column name in UI. UI word is KTK.
+---
+
+## Vercel deploy (2026-09-17)
+
+Symptom: `ERR_INVALID_THIS` / `ERR_PNPM_META_FETCH_FAIL` / `Value of "this" must be of type URLSearchParams` on every `registry.npmjs.org` GET. Install command `pnpm install --no-frozen-lockfile` exits 1. **Not an app bug.** Vercel Node + pnpm fetch binding mismatch (often Node 22/24 + pnpm 10).
+
+Fix committed:
+- `package.json` → `"packageManager": "pnpm@9.15.9"`, `"engines": { "node": "20.x" }`
+- `.nvmrc` → `20`
+- `.npmrc` → registry + long timeout + `frozen-lockfile=false`
+- `vercel.json` install: `corepack enable && corepack prepare pnpm@9.15.9 --activate && pnpm install --no-frozen-lockfile`
+
+Owner must also set in Vercel project Settings:
+1. **Node.js Version = 20.x**
+2. Env `ENABLE_EXPERIMENTAL_COREPACK=1`
+3. Redeploy from latest `main` (do not retry the failed build; it is on old install command)
+
+Output directory stays `artifacts/katika-bet/dist/public`.
 
 ---
 
-## What is already built (do not redo)
+## What is already built / not done
 
-- Privy email / Google auth; user row + 600 grant on first `/api/me`
-- Legend create/save with 333 cap + rollover realloc gate
-- Four games + bet log (`game_bets`) driving rollover
-- FIFA-style card + CSS 3D avatar + WebGL-ish stage CSS (`game-motion.css`, stage height 228px)
-- Perk catalog + fake Sepolia mint stamp + persist to `legends.mint`
-- `setMint` writes Neon; `/api/me` hydrates perk / maxWager / tokenId
-- API wager cap on dice, flip, mines start, roulette
-- `WagerRow` on **mines only**
-- Mint modal: pick perk, button “Pay $1 · 10 KTK”
-- `chargeMintFee` debits 10 KTK
-- `/api/me` also returns `feeUsd`, `feeKtk`, `feeMode` (`ktk` or `stripe`), `stripeReady`
-- Deploy lockfile / Vercel output-dir / JSX template-literal issues already fixed historically
+See previous cuts. Still open: WagerRow on dice/flip/roulette; Stripe checkout route; real ERC-721; custom domain.
 
----
+## Owner preferences
 
-## What is NOT done
-
-- `WagerRow` not yet on dice, coinflip, roulette (API still enforces cap)
-- Stripe Checkout not implemented — only the switch: if Render has `STRIPE_SECRET_KEY` + `STRIPE_PRICE_ID`, `feeMode` becomes `stripe`. No session create route yet.
-- Mint is **not** a real ERC-721. Contract address in code is a stamp. Tx hashes are synthetic.
-- In-memory `mintStore` is a cache; source of truth is Neon `legends.mint` after ALTER.
-- No custom domain. No mainnet token spend. KCHIP on-chain balance is hidden on purpose.
-- Leaderboard was slimmed in a later mint-fee commit — restore volume/OVR sort if owner cares.
-
----
-
-## How to run locally (ChromeOS)
-
-Project path the owner uses: `/home/xilux/projects/Katika`
-API port **5000**, Vite **5174** (5173 has been a blank-page trap).
-Env file is edited by hand (sometimes named `new.env`). Do not assume `.env` exists in `artifacts/katika-bet`.
-
-If `EADDRINUSE :::5000`, kill the old API before start.
-
----
-
-## Env (Render API)
-
-Minimum:
-- `DATABASE_URL` (Neon)
-- Privy app + secret (existing; app id historically `cmske7xuh00750djms91aexl3`)
-- Sepolia RPC / chip address only if touching hidden KCHIP helpers
-
-Optional $1 rails:
-- `STRIPE_SECRET_KEY`
-- `STRIPE_PRICE_ID` (one-time $1)
-- `PUBLIC_APP_URL`
-
----
-
-## Build log (newest first)
-
-### 2026-09-16 — persist + caps + $1 stand-in + handover
-- Added `perk_id`, `ruleset`, `token_id`, `mint` on legends schema.
-- `mint-store` hydrates from Neon; `setMint` write-through.
-- Perk max wager on all four game **routes**.
-- Stage CSS height 228px.
-- `WagerRow` + `wager-cap.ts`; mines wired.
-- Rollover strip shows max wager + perk.
-- Mint fee 10 KTK (`charge-mint.ts`). Modal copy $1.
-- `/api/me` fee mode for future Stripe.
-- `SOFT_LAUNCH.md`, this `HANDOVER.md`.
-
-### Earlier (same project, other chats)
-- Left Replit → GitHub → ChromeOS + Render/Vercel.
-- Demo credits killed; KTK grant 600 / cap 333 / 10×.
-- BAL merged into Katika (`/play` lock, legend card as home identity).
-- Sepolia chip + vault deployed; then hidden so only KTK shows.
-- Visual pass: shaders/CSS felt, 3D avatar, game stages.
-- Economy design freeze: 6 stats + 1 live-patch perk, $1 remint same token.
-
----
-
-## Next cuts (owner said “do all”; still open)
-
-1. Swap dice / flip / roulette inputs to `WagerRow`.
-2. `POST /api/mint/checkout` when Stripe keys exist; mint only after paid session.
-3. Real ERC-721 payable mint on mainnet when treasury is ready.
-4. Restore full leaderboard if the slim version is a problem.
-5. Custom domain when there is budget.
-
----
-
-## Owner preferences (do not fight)
-
-- Visible token name is **KTK**, never KCHIP in UI.
-- Locked / playable language: card points locked; floor stack playable; rollover leftover is “to wager”, not “unlocked KTK” on the wager chip.
-- Keep 6 stats.
-- Cheap / zero-dollar path first; Stripe is optional.
-- Another AI will continue — update **this file** at the end of every build.
+KTK not KCHIP in UI. Keep 6 stats. Update this file after every build.
