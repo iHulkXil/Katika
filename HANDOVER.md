@@ -5,22 +5,21 @@ Repo: `iHulkXil/Katika`.
 - Web: Vercel (frontend only). Do not deploy API on the `katika-api-server` Vercel project.
 - DB: Neon. Auth: Privy. Visible token: **KTK**. Hide KCHIP.
 
-Read order: this file → `ECONOMY_SPEC.md` → `SOFT_LAUNCH.md` → code.
+Read order: this file → `ECONOMY_SPEC.md` → `CLUB_SPEC.md` → `SOFT_LAUNCH.md` → code.
 
 ## Product
 
-Sign up → 600 grant → first card ≤333 → 10× rollover on leftover grant → house tables + P2P Clash. Six FIFA stats. One perk. Licence approved.
+Sign up → 600 grant → first card ≤333 → 10× rollover on leftover grant → house tables + P2P Clash + Club (Four, Ludo Quick). Six FIFA stats. One perk. Licence approved.
 
 ## Economy freeze
 
-See **`ECONOMY_SPEC.md`** (2026-09-17). That file is the build spec for cashier, two-ledger KTK, attribute logic, and Clash resolve. Do not invent extra tokens or house RTP modifiers.
+`ECONOMY_SPEC.md` — cashier, two-ledger KTK, Clash lanes.
 
-Short version:
-- Playable = granted_wallet + bought_wallet (allocated already removed from wallets).
-- Debit bought first; wins credit bought.
-- House games ignore stats. Clash is the only stat resolver.
-- Cashier packs $5/10/20 = 500/1000/2000 KTK.
-- Clash rake 4% of pot. Type triangle + same-lane higher stat.
+## Club freeze (2026-09-17)
+
+`CLUB_SPEC.md` — Connect Four then 2-player Ludo Quick.
+Uses Clash money (escrow, 4% rake, maxWager, stamina). **Ignores Clash lanes.**
+No 4-player Ludo. Server RNG. Four must pay out on staging before Ludo UI.
 
 ## Neon reminders (owner must run after a wipe)
 
@@ -31,7 +30,8 @@ ALTER TABLE legends ADD COLUMN IF NOT EXISTS token_id integer;
 ALTER TABLE legends ADD COLUMN IF NOT EXISTS mint jsonb;
 ```
 
-New columns for the economy spec are listed in `ECONOMY_SPEC.md` §8.
+Economy columns: `ECONOMY_SPEC.md` §8.
+Club table: `CLUB_SPEC.md` §4.
 
 ## Vercel (working as of 2026-09-17)
 
@@ -39,9 +39,8 @@ New columns for the economy spec are listed in `ECONOMY_SPEC.md` §8.
 - Install: `npx --yes pnpm@9.15.9 install --filter @workspace/katika-bet... --no-frozen-lockfile`
 - Build: `npx --yes pnpm@9.15.9 --filter @workspace/katika-bet run build`
 - Output: `artifacts/katika-bet/dist/public`
-- `pnpm-workspace.yaml` required. `workspace:*` for local packages.
-- Dashboard Install Command must match vercel.json or overrides win.
+- Dashboard Install Command must match vercel.json.
 
 ## Owner preferences
 
-KTK not KCHIP in UI. Keep 6 stats. Update this file and `ECONOMY_SPEC.md` after every design cut.
+KTK not KCHIP in UI. Keep 6 stats. Update handover + spec files after every design cut.
