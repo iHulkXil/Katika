@@ -1,40 +1,28 @@
 # Katika / Become A Legend — handover for the next AI
 
-Repo: `iHulkXil/Katika` (public). ChromeOS local clone + live:
+Repo: `iHulkXil/Katika`.
 - API: Render `https://katika-w8bs.onrender.com`
-- Web: Vercel (custom domain later; user disliked `*.vercel.app`)
-- DB: Neon Postgres
-- Auth: Privy
-- Chain (testnet stamp only): Sepolia. KCHIP ERC-20 exists but **KTK is the visible token**. KCHIP stays hidden.
+- Web: Vercel (frontend only). Do not deploy API on the `katika-api-server` Vercel project.
+- DB: Neon. Auth: Privy. Visible token: **KTK**. Hide KCHIP.
 
-Read this file first. Then `SOFT_LAUNCH.md`. Then code.
+Read order: this file → `ECONOMY_SPEC.md` → `SOFT_LAUNCH.md` → code.
 
----
+## Product
 
-## Product in one paragraph
+Sign up → 600 grant → first card ≤333 → 10× rollover on leftover grant → house tables + P2P Clash. Six FIFA stats. One perk. Licence approved.
 
-User signs up → **600 KTK** grant. First legend card may lock **≤333** of that. Remaining grant must **10× rollover** (wager volume) before realloc / remint. Six FIFA stats (PAC SHO PAS DRI DEF PHY) are identity. One house perk on mint. Games debit **playable KTK only**, never card points. Licence is approved; tables are house games (dice, coinflip, mines, roulette), not a third-party aggregator.
+## Economy freeze
 
----
+See **`ECONOMY_SPEC.md`** (2026-09-17). That file is the build spec for cashier, two-ledger KTK, attribute logic, and Clash resolve. Do not invent extra tokens or house RTP modifiers.
 
-## Economy (frozen unless the owner changes it)
+Short version:
+- Playable = granted_wallet + bought_wallet (allocated already removed from wallets).
+- Debit bought first; wins credit bought.
+- House games ignore stats. Clash is the only stat resolver.
+- Cashier packs $5/10/20 = 500/1000/2000 KTK.
+- Clash rake 4% of pot. Type triangle + same-lane higher stat.
 
-| Rule | Value |
-| --- | --- |
-| Grant | 600 KTK |
-| First-legend cap | 333 |
-| Rollover | 10× on (600-333) = **2670** wager volume |
-| Base max wager | 50 |
-| Stake+ max wager | 75 |
-| Mint / remint price | **$1**. Live stand-in = **10 playable KTK** |
-| Remint gate | rollover complete |
-| Stats | keep all 6 |
-| Perks | exactly one: `kit_prime` \| `table_skin` \| `stake_plus` |
-| Ruleset | `1` (house may retune perks without changing stats) |
-
----
-
-## Neon columns on `legends` (already run)
+## Neon reminders (owner must run after a wipe)
 
 ```sql
 ALTER TABLE legends ADD COLUMN IF NOT EXISTS perk_id text;
@@ -43,31 +31,17 @@ ALTER TABLE legends ADD COLUMN IF NOT EXISTS token_id integer;
 ALTER TABLE legends ADD COLUMN IF NOT EXISTS mint jsonb;
 ```
 
----
+New columns for the economy spec are listed in `ECONOMY_SPEC.md` §8.
 
-## Vercel deploy (2026-09-17)
+## Vercel (working as of 2026-09-17)
 
-Symptom: `ERR_INVALID_THIS` / `ERR_PNPM_META_FETCH_FAIL` / `Value of "this" must be of type URLSearchParams` on every `registry.npmjs.org` GET. Install command `pnpm install --no-frozen-lockfile` exits 1. **Not an app bug.** Vercel Node + pnpm fetch binding mismatch (often Node 22/24 + pnpm 10).
-
-Fix committed:
-- `package.json` → `"packageManager": "pnpm@9.15.9"`, `"engines": { "node": "20.x" }`
-- `.nvmrc` → `20`
-- `.npmrc` → registry + long timeout + `frozen-lockfile=false`
-- `vercel.json` install: `corepack enable && corepack prepare pnpm@9.15.9 --activate && pnpm install --no-frozen-lockfile`
-
-Owner must also set in Vercel project Settings:
-1. **Node.js Version = 20.x**
-2. Env `ENABLE_EXPERIMENTAL_COREPACK=1`
-3. Redeploy from latest `main` (do not retry the failed build; it is on old install command)
-
-Output directory stays `artifacts/katika-bet/dist/public`.
-
----
-
-## What is already built / not done
-
-See previous cuts. Still open: WagerRow on dice/flip/roulette; Stripe checkout route; real ERC-721; custom domain.
+- Node 20.x
+- Install: `npx --yes pnpm@9.15.9 install --filter @workspace/katika-bet... --no-frozen-lockfile`
+- Build: `npx --yes pnpm@9.15.9 --filter @workspace/katika-bet run build`
+- Output: `artifacts/katika-bet/dist/public`
+- `pnpm-workspace.yaml` required. `workspace:*` for local packages.
+- Dashboard Install Command must match vercel.json or overrides win.
 
 ## Owner preferences
 
-KTK not KCHIP in UI. Keep 6 stats. Update this file after every build.
+KTK not KCHIP in UI. Keep 6 stats. Update this file and `ECONOMY_SPEC.md` after every design cut.
