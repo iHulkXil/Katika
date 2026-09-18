@@ -13,6 +13,8 @@ import { RoulettePage } from '@/components/roulette-page';
 import { PlayPage } from '@/components/play-page';
 import { LegendPage } from '@/components/legend-page';
 import { LeaderboardPage } from '@/components/leaderboard-page';
+import { ClashPage } from '@/components/clash-page';
+import { CashierPage } from '@/components/cashier-page';
 import { HomeLegendHero, LegendCard, useLegend } from '@/components/legend-card';
 import { AuthGate } from '@/components/auth-gate';
 import { DemoNotice, LayoutShell, MenuRow } from '@/components/layout-shell';
@@ -20,7 +22,7 @@ import { useServerSession } from '@/components/server-session';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import { useLogout, usePrivy } from '@privy-io/react-auth';
 import {
-  Bomb, CircleDollarSign, Dices, Gem, Grid2X2, Play, Shield, Ticket, Trophy, UserRound, WalletCards,
+  Bomb, CircleDollarSign, CreditCard, Dices, Gem, Grid2X2, Play, Shield, Swords, Ticket, Trophy, UserRound, WalletCards,
 } from 'lucide-react';
 
 const queryClient = new QueryClient();
@@ -34,10 +36,11 @@ type Game = {
   icon: ReactNode;
 };
 const games: Game[] = [
-  { name: 'Dice', description: '3D Precision Roller', badge: '1-100', payout: 'Up to 98×', href: '/games/dice', icon: <Dices /> },
-  { name: 'Coin Flip', description: '3D Katika Gold Coin', badge: '50/50', payout: '1.98× Fixed', href: '/games/coinflip', icon: <CircleDollarSign /> },
+  { name: 'Clash Arena', description: '3-Lane Tactical PVP', badge: 'Combat', payout: '6% Pot Rake', href: '/clash', icon: <Swords /> },
+  { name: 'Dice', description: '3D Precision Roller', badge: '1-100', payout: '94% RTP', href: '/games/dice', icon: <Dices /> },
+  { name: 'Coin Flip', description: '3D Katika Gold Coin', badge: '50/50', payout: '1.88× Fixed', href: '/games/coinflip', icon: <CircleDollarSign /> },
   { name: 'Mines Vault', description: '5×5 Diamond Grid', badge: 'Custom', payout: 'Cash Out', href: '/games/mines', icon: <Bomb /> },
-  { name: 'Roulette', description: '3D European Wheel', badge: '0-36', payout: 'Up to 36×', href: '/games/roulette', icon: <Ticket /> },
+  { name: 'Roulette', description: '3D European Wheel', badge: '0-36', payout: 'Up to 34.78×', href: '/games/roulette', icon: <Ticket /> },
 ];
 
 function GameTile({ game }: { game: Game }) {
@@ -140,6 +143,8 @@ function MenuPage() {
       <h1 className="text-2xl font-semibold">Kit</h1>
       <DemoNotice>$KTK is off-chain test credit.</DemoNotice>
       <MenuRow href="/legend" icon={Shield} label="My legend" />
+      <MenuRow href="/clash" icon={Swords} label="Legend Clash Arena" />
+      <MenuRow href="/cashier" icon={CreditCard} label="Cashier & Top Up" />
       <MenuRow href="/leaderboard" icon={Trophy} label="Leaderboard (OVR)" />
       <MenuRow href="/play" icon={Play} label="Play floor" />
       <MenuRow href="/games" icon={Grid2X2} label="Casino" />
@@ -180,6 +185,8 @@ function Router() {
         <Route path="/dashboard" component={Home} />
         <Route path="/play" component={PlayPage} />
         <Route path="/legend" component={LegendPage} />
+        <Route path="/clash" component={ClashPage} />
+        <Route path="/cashier" component={CashierPage} />
         <Route path="/leaderboard" component={LeaderboardPage} />
         <Route path="/menu" component={MenuPage} />
         <Route path="/kit" component={MenuPage} />

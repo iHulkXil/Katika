@@ -9,9 +9,16 @@ const POSITIONS = ['ST', 'CF', 'LW', 'RW', 'CAM', 'CM', 'CDM', 'LB', 'RB', 'CB',
 const STATS = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical'] as const;
 const FIRST_CAP = 333;
 
+const PERKS = [
+  { id: 'kit_prime', name: 'Prime Gold Aura', desc: 'Exclusive golden glowing cosmetic aura on floor & clash arena' },
+  { id: 'table_skin', name: 'Velvet Green Table', desc: 'Custom VIP velvet felt texture for 3D roulette, dice, and mines' },
+  { id: 'stake_plus', name: 'High Stakes +50%', desc: 'Expands maximum wager limit from 50 KTK up to 75 KTK across all games' },
+];
+
 type Legend = {
   name: string;
   position: string;
+  perkId?: string;
   pace: number;
   shooting: number;
   passing: number;
@@ -31,6 +38,7 @@ export function LegendPage() {
   const [legend, setLegend] = useState<Legend>({
     name: 'K. Ronaldo',
     position: 'ST',
+    perkId: 'kit_prime',
     pace: 55,
     shooting: 55,
     passing: 55,
@@ -167,6 +175,28 @@ export function LegendPage() {
         ))}
       </div>
 
+      <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Legend Perk</p>
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {PERKS.map((p) => {
+          const isSelected = (legend.perkId || 'kit_prime') === p.id;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setLegend({ ...legend, perkId: p.id })}
+              className={`rounded-xl border p-3 text-left transition-all ${
+                isSelected
+                  ? 'border-[#35D399] bg-[#35D399]/15 shadow-[0_0_12px_rgba(53,211,153,0.15)]'
+                  : 'border-[#1C3A2E] bg-[#0E1A16] hover:border-[#1C3A2E]/80'
+              }`}
+            >
+              <span className="font-mono-custom text-[11px] font-bold text-[#E8F2EC]">{p.name}</span>
+              <p className="mt-1 text-[10px] text-[#8FA39A]">{p.desc}</p>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="mt-6 flex items-end justify-between">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">
           Attributes · 1 pt = 1 KTK (Immune to table losses)
@@ -191,6 +221,14 @@ export function LegendPage() {
             <span className="text-right font-mono-custom text-sm text-[#E8F2EC]">{legend[key]}</span>
           </label>
         ))}
+      </div>
+
+      {/* Stamina preview derived from physical */}
+      <div className="mt-3 rounded-xl border border-[#1C3A2E] bg-[#07110E] p-2.5 text-xs text-[#8FA39A] flex items-center justify-between">
+        <span>Arena Clash Stamina (from PHY {legend.physical}):</span>
+        <span className="font-mono-custom font-bold text-[#f3d37a]">
+          {5 + Math.floor(Math.max(0, legend.physical - 40) / 20)} daily battles
+        </span>
       </div>
 
       <div className="mt-6 flex items-end justify-between border-t border-[#1C3A2E] pt-4">

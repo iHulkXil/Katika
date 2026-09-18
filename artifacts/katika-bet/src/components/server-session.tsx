@@ -20,15 +20,11 @@ export type ServerUser = {
   rolloverLeft?: number;
   unlocked?: boolean;
   profileComplete?: boolean;
-  perkId?: string | null;
-  perkLabel?: string;
-  ruleset?: number;
+  stamina?: number;
+  dailySlots?: number;
+  slotsUsed?: number;
   maxWager?: number;
-  tokenId?: number | null;
-  feeUsd?: number;
-  feeKtk?: number;
-  feeMode?: 'ktk' | 'stripe';
-  stripeReady?: boolean;
+  perkId?: string;
 };
 
 type ServerSessionValue = {
@@ -36,6 +32,7 @@ type ServerSessionValue = {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
+  reloadSession: () => Promise<void>;
 };
 
 const ServerSessionContext = createContext<ServerSessionValue>({
@@ -43,6 +40,7 @@ const ServerSessionContext = createContext<ServerSessionValue>({
   loading: false,
   error: null,
   refresh: async () => {},
+  reloadSession: async () => {},
 });
 
 export function useServerSession() {
@@ -87,7 +85,8 @@ export function ServerSessionSync({ children }: { children?: ReactNode }) {
         setError(`API ${response.status}`);
         return;
       }
-      setServerUser((await response.json()) as ServerUser);
+      const body = (await response.json()) as ServerUser;
+      setServerUser(body);
       setError(null);
     } catch {
       setServerUser(null);
@@ -113,7 +112,7 @@ export function ServerSessionSync({ children }: { children?: ReactNode }) {
   }, [ready, authenticated, refresh]);
 
   return (
-    <ServerSessionContext.Provider value={{ serverUser, loading, error, refresh }}>
+    <ServerSessionContext.Provider value={{ serverUser, loading, error, refresh, reloadSession: refresh }}>
       {children ?? null}
     </ServerSessionContext.Provider>
   );

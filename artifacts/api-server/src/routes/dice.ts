@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq, gte, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { randomInt } from "node:crypto";
 import {
   AuthConfigError,
@@ -7,12 +7,16 @@ import {
   authenticateRequest,
 } from "../lib/privy-auth";
 import { recordBet } from "../lib/record-bet";
-import { getKtkEconomy } from "../lib/ktk-economy";
-import { getMint } from "../lib/mint-store";
-import { maxWagerForPerk } from "../lib/perks";
+import {
+  creditBought,
+  debitPlayable,
+  getKtkEconomy,
+  getOrCreateUser,
+  maxWagerForPerk,
+  HOUSE_EDGE,
+} from "../lib/ktk-economy";
 
 const router: IRouter = Router();
-const HOUSE_EDGE = 0.01;
 
 function diceStats(target: number, prediction: "over" | "under") {
   const winOutcomes = prediction === "over" ? 100 - target : target - 1;
@@ -27,9 +31,15 @@ router.post("/games/dice", async (req, res) => {
     const wager = Number(req.body?.wager);
     const target = Number(req.body?.target);
     const prediction = req.body?.prediction;
-    const cap = maxWagerForPerk(getMint(identity.privyUserId)?.perkId);
-    if (!Number.isInteger(wager) || wager < 10 || wager > cap) {
-      return res.status(400).json({ error: `Wager must be an integer from 10 to ${cap}` });
+
+    const { db, legendsTable } = await import("@workspace/db");
+    const user = await getOrCreateUser(identity.privyUserId);
+    const cards = await db.select().from(legendsTable).where(eq(legendsTable.privyUserId, identity.privyUserId)).limit(1);
+    const card = cards[0];
+    const maxWager = maxWagerForPerk(card?.perkId);
+
+    if (!Number.isInteger(wager) || wager < 1 || wager > maxWager) {
+      return res.status(400).json({ error: `Wager must be an integer from 1 to ${maxWager} KTK` });
     }
     if (prediction !== "over" && prediction !== "under") {
       return res.status(400).json({ error: "Prediction must be over or under" });
@@ -41,19 +51,21 @@ router.post("/games/dice", async (req, res) => {
     if (winChance <= 0 || winChance >= 1) {
       return res.status(400).json({ error: "Target is outside a playable range" });
     }
+
+    const debit = await debitPlayable(user.id, identity.privyUserId, wager);
+    if (!debit.success) {
+      return res.status(400).json({ error: debit.error ?? "Not enough KTK" });
+    }
+
     const roll = randomInt(1, 101);
     const won = prediction === "over" ? roll > target : roll < target;
     const creditReturn = won ? Math.max(wager, Math.floor(wager * multiplier)) : 0;
     const delta = won ? creditReturn - wager : -wager;
-    const { db, usersTable } = await import("@workspace/db");
-    const existing = await db.select().from(usersTable).where(eq(usersTable.privyUserId, identity.privyUserId)).limit(1);
-    const user = existing[0];
-    if (!user) return res.status(404).json({ error: "User not found" });
-    const updated = await db.update(usersTable).set({
-      demoCredits: sql`${usersTable.demoCredits} + ${delta}`,
-      updatedAt: new Date(),
-    }).where(and(eq(usersTable.id, user.id), gte(usersTable.demoCredits, wager))).returning();
-    if (!updated[0]) return res.status(400).json({ error: "Not enough KTK" });
+
+    if (creditReturn > 0) {
+      await creditBought(user.id, identity.privyUserId, creditReturn);
+    }
+
     await recordBet({
       userId: user.id,
       privyUserId: identity.privyUserId,
@@ -61,9 +73,10 @@ router.post("/games/dice", async (req, res) => {
       wager,
       payout: delta,
       won,
-      detail: { roll, target, prediction },
+      detail: { roll, target, prediction, houseEdge: HOUSE_EDGE },
     });
-    const economy = await getKtkEconomy(identity.privyUserId, updated[0].demoCredits);
+
+    const economy = await getKtkEconomy(identity.privyUserId);
     return res.json({
       roll, target, prediction, wager, won,
       multiplier: Number(multiplier.toFixed(4)),

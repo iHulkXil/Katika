@@ -14,6 +14,9 @@ const memoryUsers = new Map<string, any>();
 const memoryLegends = new Map<string, any>();
 const memoryBets: any[] = [];
 const memoryMines = new Map<number, any>();
+const memoryCashierOrders = new Map<string, any>();
+const memoryClashes = new Map<string, any>();
+const memoryHouseRakes: any[] = [];
 let nextUserId = 1;
 let nextBetId = 1;
 let nextLegendId = 1;
@@ -29,8 +32,24 @@ function extractSqlValue(sqlObj: any): number | null {
   return null;
 }
 
-function extractFilterValues(filter: any): { privyUserId?: string; id?: number; settled?: boolean; minCredits?: number } {
-  const result: { privyUserId?: string; id?: number; settled?: boolean; minCredits?: number } = {};
+function extractFilterValues(filter: any): {
+  privyUserId?: string;
+  id?: any;
+  settled?: boolean;
+  minCredits?: number;
+  mode?: string;
+  state?: string;
+  stake?: number;
+} {
+  const result: {
+    privyUserId?: string;
+    id?: any;
+    settled?: boolean;
+    minCredits?: number;
+    mode?: string;
+    state?: string;
+    stake?: number;
+  } = {};
   if (!filter) return result;
 
   // Single condition
@@ -38,9 +57,12 @@ function extractFilterValues(filter: any): { privyUserId?: string; id?: number; 
   const val = filter?.right?.value ?? filter?.value;
 
   if (colName === "privy_user_id" || colName === "privyUserId") result.privyUserId = String(val);
-  if (colName === "id") result.id = Number(val);
+  if (colName === "id") result.id = val;
   if (colName === "settled") result.settled = Boolean(val);
   if (colName === "demo_credits" || colName === "demoCredits") result.minCredits = Number(val);
+  if (colName === "mode") result.mode = String(val);
+  if (colName === "state") result.state = String(val);
+  if (colName === "stake") result.stake = Number(val);
 
   // If compound condition (and / or)
   if (Array.isArray(filter?.queryChunks)) {
@@ -91,6 +113,12 @@ function createMemoryDb() {
           results = [...memoryBets].reverse();
         } else if (tableName === "mines_rounds") {
           results = Array.from(memoryMines.values());
+        } else if (tableName === "cashier_orders") {
+          results = Array.from(memoryCashierOrders.values()).reverse();
+        } else if (tableName === "clashes") {
+          results = Array.from(memoryClashes.values()).reverse();
+        } else if (tableName === "house_rake") {
+          results = [...memoryHouseRakes].reverse();
         }
 
         const filters = extractFilterValues(whereFilter);
@@ -102,6 +130,15 @@ function createMemoryDb() {
         }
         if (filters.settled !== undefined) {
           results = results.filter((r) => r.settled === filters.settled);
+        }
+        if (filters.state !== undefined) {
+          results = results.filter((r) => r.state === filters.state);
+        }
+        if (filters.mode !== undefined) {
+          results = results.filter((r) => r.mode === filters.mode);
+        }
+        if (filters.stake !== undefined) {
+          results = results.filter((r) => r.stake === filters.stake);
         }
 
         if (fields && typeof fields === "object" && "volume" in fields) {
@@ -139,6 +176,10 @@ function createMemoryDb() {
             id,
             privyUserId: insertVals.privyUserId,
             demoCredits: insertVals.demoCredits ?? 600,
+            ktkGrantedWallet: insertVals.ktkGrantedWallet ?? (insertVals.demoCredits ?? 600),
+            ktkBoughtWallet: insertVals.ktkBoughtWallet ?? 0,
+            clashSlotsUsed: insertVals.clashSlotsUsed ?? 0,
+            clashSlotsDate: insertVals.clashSlotsDate || null,
             walletAddress: insertVals.walletAddress || null,
             onChainKchip: insertVals.onChainKchip ?? 0,
             createdAt: now,
@@ -159,6 +200,15 @@ function createMemoryDb() {
             dribbling: insertVals.dribbling ?? 50,
             defending: insertVals.defending ?? 50,
             physical: insertVals.physical ?? 50,
+            perkId: insertVals.perkId || null,
+            ruleset: insertVals.ruleset ?? 1,
+            tokenId: insertVals.tokenId || null,
+            mint: insertVals.mint || null,
+            allocatedTotal: insertVals.allocatedTotal ?? 0,
+            allocatedFromGrant: insertVals.allocatedFromGrant ?? 0,
+            allocatedFromBought: insertVals.allocatedFromBought ?? 0,
+            rolloverBaseU0: insertVals.rolloverBaseU0 || null,
+            rolloverTargetR: insertVals.rolloverTargetR || null,
             profileComplete: insertVals.profileComplete ?? false,
             createdAt: now,
             updatedAt: now,
@@ -180,6 +230,18 @@ function createMemoryDb() {
             updatedAt: now,
           };
           memoryMines.set(id, row);
+          return [row];
+        } else if (tableName === "cashier_orders") {
+          const row = { ...insertVals, createdAt: now };
+          memoryCashierOrders.set(row.id, row);
+          return [row];
+        } else if (tableName === "clashes") {
+          const row = { ...insertVals, createdAt: now };
+          memoryClashes.set(row.id, row);
+          return [row];
+        } else if (tableName === "house_rake") {
+          const row = { ...insertVals, createdAt: now };
+          memoryHouseRakes.push(row);
           return [row];
         }
         return [insertVals];
@@ -258,6 +320,18 @@ function createMemoryDb() {
           const updated = { ...round, ...setVals, updatedAt: now };
           memoryMines.set(updated.id, updated);
           return [updated];
+        } else if (tableName === "clashes") {
+          let clash = filters.id ? memoryClashes.get(filters.id) : null;
+          if (!clash) return [];
+          const updated = { ...clash, ...setVals };
+          memoryClashes.set(clash.id, updated);
+          return [updated];
+        } else if (tableName === "cashier_orders") {
+          let order = filters.id ? memoryCashierOrders.get(filters.id) : null;
+          if (!order) return [];
+          const updated = { ...order, ...setVals };
+          memoryCashierOrders.set(order.id, updated);
+          return [updated];
         }
         return [];
       }
@@ -269,7 +343,15 @@ function createMemoryDb() {
 
 if (process.env.DATABASE_URL) {
   try {
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      connectionTimeoutMillis: 5000,
+      idleTimeoutMillis: 30000,
+      max: 10,
+    });
+    pool.on("error", (err: Error) => {
+      console.error("[DB] Unexpected error on idle client:", err);
+    });
     db = drizzle(pool, { schema });
   } catch (err) {
     console.warn("[AI Studio] PostgreSQL connection failed, using in-memory mock store:", err);

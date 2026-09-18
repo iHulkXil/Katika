@@ -25,7 +25,7 @@ function RouletteDisplay({
   const isZero = roll === 0;
 
   return (
-    <div className="relative flex h-52 w-full flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#1C3A2E] bg-gradient-to-b from-[#0B1E17] via-[#07140F] to-[#040C09] p-2 shadow-inner select-none">
+    <div className="relative flex h-52 max-h-52 w-full flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#1C3A2E] bg-gradient-to-b from-[#0B1E17] via-[#07140F] to-[#040C09] p-2 shadow-inner select-none">
       {/* Ambient background glow */}
       <div
         className={`absolute h-40 w-40 rounded-full blur-2xl transition-all duration-700 pointer-events-none ${

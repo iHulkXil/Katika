@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { randomInt } from "node:crypto";
 import {
   AuthConfigError,
@@ -7,12 +7,18 @@ import {
   authenticateRequest,
 } from "../lib/privy-auth";
 import { recordBet } from "../lib/record-bet";
-import { getMint } from "../lib/mint-store";
-import { maxWagerForPerk } from "../lib/perks";
+import {
+  creditBought,
+  debitPlayable,
+  getKtkEconomy,
+  getOrCreateUser,
+  maxWagerForPerk,
+  HOUSE_EDGE,
+} from "../lib/ktk-economy";
 
 const router: IRouter = Router();
 const TILES = 25;
-const HOUSE = 0.99;
+const HOUSE = 1 - HOUSE_EDGE; // 0.94 -> 6 percent house edge
 
 function pickMines(count: number) {
   const set = new Set<number>();
@@ -34,7 +40,11 @@ function asNumbers(value: unknown) {
 }
 
 function publicRound(row: {
-  wager: number; minesCount: number; mines: unknown; revealed: unknown; settled: boolean;
+  wager: number;
+  minesCount: number;
+  mines: unknown;
+  revealed: unknown;
+  settled: boolean;
 }, extra: Record<string, unknown> = {}) {
   const revealed = asNumbers(row.revealed);
   const mines = asNumbers(row.mines);
@@ -49,19 +59,6 @@ function publicRound(row: {
     cashoutValue: Math.floor(row.wager * mult),
     ...extra,
   };
-}
-
-async function adjustCredits(privyUserId: string, delta: number, need: number) {
-  const { db, usersTable } = await import("@workspace/db");
-  const existing = await db.select().from(usersTable).where(eq(usersTable.privyUserId, privyUserId)).limit(1);
-  const user = existing[0];
-  if (!user) return { error: "User not found" as const, status: 404 as const };
-  const updated = await db.update(usersTable).set({
-    demoCredits: sql`${usersTable.demoCredits} + ${delta}`,
-    updatedAt: new Date(),
-  }).where(and(eq(usersTable.id, user.id), gte(usersTable.demoCredits, need))).returning();
-  if (!updated[0]) return { error: "Not enough demo credits" as const, status: 400 as const };
-  return { user, row: updated[0] };
 }
 
 async function openRound(privyUserId: string) {
@@ -90,20 +87,30 @@ router.post("/games/mines/start", async (req, res) => {
     const identity = await authenticateRequest(req);
     const existing = await openRound(identity.privyUserId);
     if (existing.row) return res.status(400).json({ error: "Cash out or finish the open Mines round first" });
+
     const wager = Number(req.body?.wager);
     const minesCount = Number(req.body?.mines);
-    const cap = maxWagerForPerk(getMint(identity.privyUserId)?.perkId);
-    if (!Number.isInteger(wager) || wager < 10 || wager > cap) {
-      return res.status(400).json({ error: `Wager must be an integer from 10 to ${cap}` });
+
+    const { db, legendsTable, minesRoundsTable } = await import("@workspace/db");
+    const user = await getOrCreateUser(identity.privyUserId);
+    const cards = await db.select().from(legendsTable).where(eq(legendsTable.privyUserId, identity.privyUserId)).limit(1);
+    const card = cards[0];
+    const maxWager = maxWagerForPerk(card?.perkId);
+
+    if (!Number.isInteger(wager) || wager < 1 || wager > maxWager) {
+      return res.status(400).json({ error: `Wager must be an integer from 1 to ${maxWager} KTK` });
     }
     if (!Number.isInteger(minesCount) || minesCount < 1 || minesCount > 10) {
       return res.status(400).json({ error: "Mines must be 1 to 10" });
     }
-    const paid = await adjustCredits(identity.privyUserId, -wager, wager);
-    if ("error" in paid && paid.error) return res.status(paid.status).json({ error: paid.error });
-    const { db, minesRoundsTable } = await import("@workspace/db");
+
+    const debit = await debitPlayable(user.id, identity.privyUserId, wager);
+    if (!debit.success) {
+      return res.status(400).json({ error: debit.error ?? "Not enough KTK" });
+    }
+
     const created = await db.insert(minesRoundsTable).values({
-      userId: paid.row.id,
+      userId: user.id,
       privyUserId: identity.privyUserId,
       wager,
       minesCount,
@@ -111,7 +118,9 @@ router.post("/games/mines/start", async (req, res) => {
       revealed: [],
       settled: false,
     }).returning();
-    return res.json({ ...publicRound(created[0]), demoCredits: paid.row.demoCredits });
+
+    const economy = await getKtkEconomy(identity.privyUserId);
+    return res.json({ ...publicRound(created[0]), ...economy });
   } catch (error) {
     if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
     if (error instanceof AuthError) return res.status(401).json({ error: error.message });
@@ -124,45 +133,68 @@ router.post("/games/mines/reveal", async (req, res) => {
     const identity = await authenticateRequest(req);
     const { db, minesRoundsTable, row } = await openRound(identity.privyUserId);
     if (!row) return res.status(400).json({ error: "No open Mines round" });
+
     const tile = Number(req.body?.tile);
     if (!Number.isInteger(tile) || tile < 0 || tile >= TILES) {
       return res.status(400).json({ error: "Tile must be 0-24" });
     }
+
     const mines = asNumbers(row.mines);
     const revealed = asNumbers(row.revealed);
     if (revealed.includes(tile)) return res.status(400).json({ error: "Tile already open" });
+
     revealed.push(tile);
+
     if (mines.includes(tile)) {
       const updated = await db.update(minesRoundsTable).set({
         revealed, settled: true, updatedAt: new Date(),
       }).where(eq(minesRoundsTable.id, row.id)).returning();
+
       await recordBet({
-        userId: row.userId, privyUserId: identity.privyUserId, game: "mines",
-        wager: row.wager, payout: -row.wager, won: false,
-        detail: { hit: tile, minesCount: row.minesCount },
+        userId: row.userId,
+        privyUserId: identity.privyUserId,
+        game: "mines",
+        wager: row.wager,
+        payout: -row.wager,
+        won: false,
+        detail: { hit: tile, minesCount: row.minesCount, houseEdge: HOUSE_EDGE },
       });
-      return res.json(publicRound(updated[0], { hit: tile, won: false, payout: -row.wager }));
+
+      const economy = await getKtkEconomy(identity.privyUserId);
+      return res.json({ ...publicRound(updated[0], { hit: tile, won: false, payout: -row.wager }), ...economy });
     }
+
     const safeLeft = TILES - row.minesCount - revealed.length;
     if (safeLeft <= 0) {
       const creditReturn = Math.floor(row.wager * multiplier(row.minesCount, revealed.length));
-      const paid = await adjustCredits(identity.privyUserId, creditReturn, 0);
+      if (creditReturn > 0) {
+        await creditBought(row.userId, identity.privyUserId, creditReturn);
+      }
       const updated = await db.update(minesRoundsTable).set({
         revealed, settled: true, updatedAt: new Date(),
       }).where(eq(minesRoundsTable.id, row.id)).returning();
+
       await recordBet({
-        userId: row.userId, privyUserId: identity.privyUserId, game: "mines",
-        wager: row.wager, payout: creditReturn - row.wager, won: true,
-        detail: { cleared: true, minesCount: row.minesCount },
+        userId: row.userId,
+        privyUserId: identity.privyUserId,
+        game: "mines",
+        wager: row.wager,
+        payout: creditReturn - row.wager,
+        won: true,
+        detail: { cleared: true, minesCount: row.minesCount, houseEdge: HOUSE_EDGE },
       });
+
+      const economy = await getKtkEconomy(identity.privyUserId);
       return res.json({
         ...publicRound(updated[0], { hit: null, won: true, payout: creditReturn - row.wager }),
-        demoCredits: "row" in paid ? paid.row.demoCredits : undefined,
+        ...economy,
       });
     }
+
     const updated = await db.update(minesRoundsTable).set({
       revealed, updatedAt: new Date(),
     }).where(eq(minesRoundsTable.id, row.id)).returning();
+
     return res.json(publicRound(updated[0], { hit: null, won: null }));
   } catch (error) {
     if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
@@ -176,22 +208,33 @@ router.post("/games/mines/cashout", async (req, res) => {
     const identity = await authenticateRequest(req);
     const { db, minesRoundsTable, row } = await openRound(identity.privyUserId);
     if (!row) return res.status(400).json({ error: "No open Mines round" });
+
     const revealed = asNumbers(row.revealed);
     if (revealed.length < 1) return res.status(400).json({ error: "Open at least one gem first" });
+
     const creditReturn = Math.floor(row.wager * multiplier(row.minesCount, revealed.length));
-    const paid = await adjustCredits(identity.privyUserId, creditReturn, 0);
-    if ("error" in paid && paid.error) return res.status(paid.status).json({ error: paid.error });
+    if (creditReturn > 0) {
+      await creditBought(row.userId, identity.privyUserId, creditReturn);
+    }
+
     const updated = await db.update(minesRoundsTable).set({
       settled: true, updatedAt: new Date(),
     }).where(eq(minesRoundsTable.id, row.id)).returning();
+
     await recordBet({
-      userId: row.userId, privyUserId: identity.privyUserId, game: "mines",
-      wager: row.wager, payout: creditReturn - row.wager, won: true,
-      detail: { cashout: true, tiles: revealed.length, minesCount: row.minesCount },
+      userId: row.userId,
+      privyUserId: identity.privyUserId,
+      game: "mines",
+      wager: row.wager,
+      payout: creditReturn - row.wager,
+      won: true,
+      detail: { cashout: true, tiles: revealed.length, minesCount: row.minesCount, houseEdge: HOUSE_EDGE },
     });
+
+    const economy = await getKtkEconomy(identity.privyUserId);
     return res.json({
       ...publicRound(updated[0], { hit: null, won: true, payout: creditReturn - row.wager }),
-      demoCredits: paid.row.demoCredits,
+      ...economy,
     });
   } catch (error) {
     if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });

@@ -34,7 +34,7 @@ export const polygonAmoy: EvmChain = {
   id: 80002,
   name: 'Polygon Amoy',
   nativeCurrency: { name: 'MATIC', symbol: 'MATIC', decimals: 18 },
-  rpcUrls: { default: { http: ['https://rpc-amoy.polygon.technology'] } },
+  rpcUrls: { default: { http: ['https://polygon-amoy-bor-rpc.publicnode.com'] } },
   blockExplorers: { default: { name: 'Polygonscan', url: 'https://amoy.polygonscan.com' } },
 };
 

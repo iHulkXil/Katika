@@ -41,7 +41,7 @@ function DiceDisplay({
   const rollPercent = Math.min(100, Math.max(1, displayVal));
 
   return (
-    <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#1C3A2E] bg-gradient-to-b from-[#0B1E17] via-[#07140F] to-[#040C09] p-4 shadow-inner select-none">
+    <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#1C3A2E] bg-gradient-to-b from-[#0B1E17] via-[#07140F] to-[#040C09] p-4 shadow-inner select-none max-h-[170px]">
       {/* Ambient background glow */}
       <div
         className={`absolute inset-0 transition-opacity duration-500 pointer-events-none ${
@@ -134,59 +134,62 @@ function DiceDisplay({
       </div>
 
       {/* Linear Roll Spectrum Track */}
-      <div className="relative z-10 mt-3 pt-2">
-        {/* Track Bar with Win/Loss colored zones */}
-        <div className="relative h-3 w-full overflow-hidden rounded-full bg-[#08130f] border border-[#1C3A2E]">
-          {/* Under Zone */}
-          <div
-            className="absolute left-0 top-0 bottom-0 transition-all duration-300"
-            style={{
-              width: `${target}%`,
-              backgroundColor: prediction === 'under' ? '#35D399' : '#ef4444',
-              opacity: 0.85,
-            }}
-          />
-          {/* Over Zone */}
-          <div
-            className="absolute right-0 top-0 bottom-0 transition-all duration-300"
-            style={{
-              left: `${target}%`,
-              backgroundColor: prediction === 'over' ? '#35D399' : '#ef4444',
-              opacity: 0.85,
-            }}
-          />
-        </div>
-
-        {/* Target Dividing Needle */}
-        <div
-          className="absolute top-0 bottom-0 w-0.5 bg-[#E8F2EC] z-20 pointer-events-none transition-all duration-200"
-          style={{ left: `${target}%` }}
-        >
-          <div className="absolute -top-1 left-1/2 -translate-x-1/2 rounded bg-[#E8F2EC] px-1 py-0.2 font-mono-custom text-[8px] font-bold text-[#07110E]">
-            {target}
-          </div>
-        </div>
-
-        {/* Landed Roll Pin */}
-        {roll !== null && !busy && (
-          <div
-            className="absolute -bottom-1 z-30 transition-all duration-500 ease-out -translate-x-1/2 pointer-events-none"
-            style={{ left: `${rollPercent}%` }}
-          >
+      <div className="relative z-10 mt-3 pt-4 pb-1">
+        {/* Track container with relative positioning for needle and pin */}
+        <div className="relative h-3 w-full">
+          {/* Track Bar with Win/Loss colored zones */}
+          <div className="relative h-3 w-full overflow-hidden rounded-full bg-[#08130f] border border-[#1C3A2E]">
+            {/* Under Zone */}
             <div
-              className={`rounded-full px-1.5 py-0.5 font-mono-custom text-[9px] font-black border shadow-lg ${
-                won
-                  ? 'border-[#35D399] bg-[#072418] text-[#35D399]'
-                  : 'border-red-500 bg-[#260a0a] text-red-400'
-              }`}
-            >
-              ▲ {roll.toFixed(1)}
+              className="absolute left-0 top-0 bottom-0 transition-all duration-300"
+              style={{
+                width: `${target}%`,
+                backgroundColor: prediction === 'under' ? '#35D399' : '#ef4444',
+                opacity: 0.85,
+              }}
+            />
+            {/* Over Zone */}
+            <div
+              className="absolute right-0 top-0 bottom-0 transition-all duration-300"
+              style={{
+                left: `${target}%`,
+                backgroundColor: prediction === 'over' ? '#35D399' : '#ef4444',
+                opacity: 0.85,
+              }}
+            />
+          </div>
+
+          {/* Target Dividing Needle */}
+          <div
+            className="absolute -top-1 bottom-0 w-0.5 bg-[#E8F2EC] z-20 pointer-events-none transition-all duration-200"
+            style={{ left: `${target}%` }}
+          >
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded bg-[#E8F2EC] px-1 py-0.5 font-mono-custom text-[8px] font-bold text-[#07110E] shadow-sm">
+              {target}
             </div>
           </div>
-        )}
+
+          {/* Landed Roll Pin */}
+          {roll !== null && !busy && (
+            <div
+              className="absolute -top-6 z-30 transition-all duration-500 ease-out -translate-x-1/2 pointer-events-none"
+              style={{ left: `${rollPercent}%` }}
+            >
+              <div
+                className={`rounded-full px-1.5 py-0.5 font-mono-custom text-[9px] font-black border shadow-lg whitespace-nowrap ${
+                  won
+                    ? 'border-[#35D399] bg-[#072418] text-[#35D399]'
+                    : 'border-red-500 bg-[#260a0a] text-red-400'
+                }`}
+              >
+                ▲ {roll.toFixed(1)}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Min/Max Labels */}
-        <div className="mt-2 flex items-center justify-between text-[10px] font-mono-custom text-[#5C7368]">
+        <div className="mt-2.5 flex items-center justify-between text-[10px] font-mono-custom text-[#5C7368]">
           <span>1</span>
           <span>25</span>
           <span>50</span>

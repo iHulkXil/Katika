@@ -2,10 +2,12 @@ import { type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
   ChevronRight,
+  CreditCard,
   Gift,
   Home as HomeIcon,
   Play,
   Star,
+  Swords,
   UserRound,
   WalletCards,
 } from 'lucide-react';
@@ -25,18 +27,21 @@ export function Brand() {
 
 const chips = [
   { href: '/', label: 'Home' },
+  { href: '/clash', label: 'Clash' },
   { href: '/legend', label: 'Legend' },
   { href: '/play', label: 'Play' },
   { href: '/games', label: 'Casino' },
+  { href: '/cashier', label: 'Cashier' },
   { href: '/wallet', label: 'Wallet' },
   { href: '/kit', label: 'Kit' },
 ];
 
 const bottom = [
   { href: '/', label: 'Home', icon: HomeIcon },
+  { href: '/clash', label: 'Clash', icon: Swords },
   { href: '/legend', label: 'Legend', icon: Star },
   { href: '/play', label: 'Play', icon: Play },
-  { href: '/wallet', label: 'Wallet', icon: WalletCards },
+  { href: '/cashier', label: 'Cashier', icon: CreditCard },
   { href: '/profile', label: 'Profile', icon: UserRound },
 ];
 

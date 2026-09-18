@@ -22,7 +22,7 @@ function CoinDisplay({
   const rotation = currentSide === 'heads' ? 0 : 180;
 
   return (
-    <div className="relative flex h-44 w-full items-center justify-center overflow-hidden rounded-2xl border border-[#1C3A2E] bg-gradient-to-b from-[#0B1E17] via-[#07140F] to-[#040C09] shadow-inner select-none">
+    <div className="relative flex h-44 max-h-44 w-full items-center justify-center overflow-hidden rounded-2xl border border-[#1C3A2E] bg-gradient-to-b from-[#0B1E17] via-[#07140F] to-[#040C09] shadow-inner select-none">
       {/* Ambient background glow */}
       <div
         className={`absolute h-36 w-36 rounded-full blur-2xl transition-all duration-700 pointer-events-none ${
