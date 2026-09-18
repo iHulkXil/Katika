@@ -49,10 +49,6 @@ export const legendsTable = pgTable("legends", {
   rolloverBaseU0: integer("rollover_base_u0"),
   rolloverTargetR: integer("rollover_target_r"),
   profileComplete: boolean("profile_complete").notNull().default(false),
-  perkId: text("perk_id"),
-  ruleset: integer("ruleset").notNull().default(1),
-  tokenId: integer("token_id"),
-  mint: jsonb("mint"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -116,8 +112,29 @@ export const clashesTable = pgTable("clashes", {
 export const houseRakeTable = pgTable("house_rake", {
   id: text("id").primaryKey(),
   clashId: text("clash_id"),
+  clubId: text("club_id"),
   amount: integer("amount").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const clubMatchesTable = pgTable("club_matches", {
+  id: text("id").primaryKey(),
+  game: text("game").notNull(),
+  ruleset: text("ruleset").notNull(),
+  creatorId: text("creator_id").notNull(),
+  opponentId: text("opponent_id"),
+  stake: integer("stake").notNull(),
+  mode: text("mode").notNull(),
+  state: text("state").notNull(),
+  turnUserId: text("turn_user_id"),
+  board: jsonb("board").notNull().default({}),
+  winnerId: text("winner_id"),
+  rake: integer("rake"),
+  prize: integer("prize"),
+  lastSeenCreator: timestamp("last_seen_creator", { withTimezone: true }),
+  lastSeenOpponent: timestamp("last_seen_opponent", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
 });
 
 export type User = typeof usersTable.$inferSelect;
@@ -127,3 +144,4 @@ export type MinesRound = typeof minesRoundsTable.$inferSelect;
 export type CashierOrder = typeof cashierOrdersTable.$inferSelect;
 export type Clash = typeof clashesTable.$inferSelect;
 export type HouseRake = typeof houseRakeTable.$inferSelect;
+export type ClubMatch = typeof clubMatchesTable.$inferSelect;

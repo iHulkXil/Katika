@@ -20,8 +20,15 @@ function previewStats(target: number, prediction: 'over' | 'under') {
 }
 async function readApiJson(response: Response) {
   const text = await response.text();
-  if (!text) throw new Error('Empty API response');
-  return JSON.parse(text) as DiceResult & { error?: string };
+  let json: (DiceResult & { error?: string }) | null = null;
+  try {
+    json = text ? (JSON.parse(text) as DiceResult & { error?: string }) : null;
+  } catch {
+    // Non-JSON response
+  }
+  if (!response.ok) throw new Error(json?.error ?? `HTTP ${response.status}`);
+  if (!json) throw new Error('Empty API response');
+  return json;
 }
 
 function DiceDisplay({

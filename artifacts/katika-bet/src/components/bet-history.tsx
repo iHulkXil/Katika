@@ -27,8 +27,11 @@ export function BetHistory() {
         if (!token) return;
         const response = await fetch('/api/bets', { headers: { Authorization: `Bearer ${token}` } });
         const text = await response.text();
-        const body = text ? JSON.parse(text) : {};
-        if (!response.ok) throw new Error(body.error ?? 'Could not load history');
+        let body: any = {};
+        try {
+          body = text ? JSON.parse(text) : {};
+        } catch {}
+        if (!response.ok) throw new Error(body?.error ?? `HTTP ${response.status}`);
         if (!cancelled) setBets(body.bets ?? []);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'History failed');

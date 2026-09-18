@@ -17,9 +17,14 @@ async function api(path: string, token: string, body?: object, method = 'POST') 
     body: method === 'GET' ? undefined : JSON.stringify(body ?? {}),
   });
   const text = await response.text();
-  if (!text) throw new Error('Empty API response');
-  const json = JSON.parse(text);
-  if (!response.ok) throw new Error(json.error ?? `HTTP ${response.status}`);
+  let json: Record<string, any> | null = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    // Non-JSON response (e.g. gateway timeout or proxy error)
+  }
+  if (!response.ok) throw new Error(json?.error ?? `HTTP ${response.status}`);
+  if (!json) throw new Error('Empty API response');
   return json;
 }
 

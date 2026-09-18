@@ -3,6 +3,7 @@ import { Link, useLocation } from 'wouter';
 import {
   ChevronRight,
   CreditCard,
+  Gamepad2,
   Gift,
   Home as HomeIcon,
   Play,
@@ -28,8 +29,9 @@ export function Brand() {
 const chips = [
   { href: '/', label: 'Home' },
   { href: '/clash', label: 'Clash' },
-  { href: '/legend', label: 'Legend' },
+  { href: '/club', label: 'Club' },
   { href: '/play', label: 'Play' },
+  { href: '/legend', label: 'Legend' },
   { href: '/games', label: 'Casino' },
   { href: '/cashier', label: 'Cashier' },
   { href: '/wallet', label: 'Wallet' },
@@ -39,7 +41,7 @@ const chips = [
 const bottom = [
   { href: '/', label: 'Home', icon: HomeIcon },
   { href: '/clash', label: 'Clash', icon: Swords },
-  { href: '/legend', label: 'Legend', icon: Star },
+  { href: '/club', label: 'Club', icon: Gamepad2 },
   { href: '/play', label: 'Play', icon: Play },
   { href: '/cashier', label: 'Cashier', icon: CreditCard },
   { href: '/profile', label: 'Profile', icon: UserRound },

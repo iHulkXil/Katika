@@ -15,6 +15,9 @@ import { LegendPage } from '@/components/legend-page';
 import { LeaderboardPage } from '@/components/leaderboard-page';
 import { ClashPage } from '@/components/clash-page';
 import { CashierPage } from '@/components/cashier-page';
+import { ClubLobby } from '@/components/club-lobby';
+import { ClubFourPage } from '@/components/club-four';
+import { ClubLudoPage } from '@/components/club-ludo';
 import { HomeLegendHero, LegendCard, useLegend } from '@/components/legend-card';
 import { AuthGate } from '@/components/auth-gate';
 import { DemoNotice, LayoutShell, MenuRow } from '@/components/layout-shell';
@@ -22,7 +25,7 @@ import { useServerSession } from '@/components/server-session';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import { useLogout, usePrivy } from '@privy-io/react-auth';
 import {
-  Bomb, CircleDollarSign, CreditCard, Dices, Gem, Grid2X2, Play, Shield, Swords, Ticket, Trophy, UserRound, WalletCards,
+  Bomb, CircleDollarSign, CreditCard, Dices, Gamepad2, Gem, Grid2X2, Play, Shield, Swords, Ticket, Trophy, UserRound, WalletCards,
 } from 'lucide-react';
 
 const queryClient = new QueryClient();
@@ -36,6 +39,7 @@ type Game = {
   icon: ReactNode;
 };
 const games: Game[] = [
+  { name: 'Club Arena', description: 'Connect Four & Ludo Quick', badge: 'PvP', payout: '4% Pot Rake', href: '/club', icon: <Gamepad2 /> },
   { name: 'Clash Arena', description: '3-Lane Tactical PVP', badge: 'Combat', payout: '6% Pot Rake', href: '/clash', icon: <Swords /> },
   { name: 'Dice', description: '3D Precision Roller', badge: '1-100', payout: '94% RTP', href: '/games/dice', icon: <Dices /> },
   { name: 'Coin Flip', description: '3D Katika Gold Coin', badge: '50/50', payout: '1.88× Fixed', href: '/games/coinflip', icon: <CircleDollarSign /> },
@@ -186,6 +190,9 @@ function Router() {
         <Route path="/play" component={PlayPage} />
         <Route path="/legend" component={LegendPage} />
         <Route path="/clash" component={ClashPage} />
+        <Route path="/club" component={ClubLobby} />
+        <Route path="/club/four/:id" component={ClubFourPage} />
+        <Route path="/club/ludo/:id" component={ClubLudoPage} />
         <Route path="/cashier" component={CashierPage} />
         <Route path="/leaderboard" component={LeaderboardPage} />
         <Route path="/menu" component={MenuPage} />

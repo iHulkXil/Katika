@@ -16,6 +16,7 @@ const memoryBets: any[] = [];
 const memoryMines = new Map<number, any>();
 const memoryCashierOrders = new Map<string, any>();
 const memoryClashes = new Map<string, any>();
+const memoryClubMatches = new Map<string, any>();
 const memoryHouseRakes: any[] = [];
 let nextUserId = 1;
 let nextBetId = 1;
@@ -40,6 +41,7 @@ function extractFilterValues(filter: any): {
   mode?: string;
   state?: string;
   stake?: number;
+  game?: string;
 } {
   const result: {
     privyUserId?: string;
@@ -49,6 +51,7 @@ function extractFilterValues(filter: any): {
     mode?: string;
     state?: string;
     stake?: number;
+    game?: string;
   } = {};
   if (!filter) return result;
 
@@ -63,6 +66,7 @@ function extractFilterValues(filter: any): {
   if (colName === "mode") result.mode = String(val);
   if (colName === "state") result.state = String(val);
   if (colName === "stake") result.stake = Number(val);
+  if (colName === "game") result.game = String(val);
 
   // If compound condition (and / or)
   if (Array.isArray(filter?.queryChunks)) {
@@ -117,6 +121,8 @@ function createMemoryDb() {
           results = Array.from(memoryCashierOrders.values()).reverse();
         } else if (tableName === "clashes") {
           results = Array.from(memoryClashes.values()).reverse();
+        } else if (tableName === "club_matches") {
+          results = Array.from(memoryClubMatches.values()).reverse();
         } else if (tableName === "house_rake") {
           results = [...memoryHouseRakes].reverse();
         }
@@ -139,6 +145,9 @@ function createMemoryDb() {
         }
         if (filters.stake !== undefined) {
           results = results.filter((r) => r.stake === filters.stake);
+        }
+        if (filters.game !== undefined) {
+          results = results.filter((r) => r.game === filters.game);
         }
 
         if (fields && typeof fields === "object" && "volume" in fields) {
@@ -239,6 +248,10 @@ function createMemoryDb() {
           const row = { ...insertVals, createdAt: now };
           memoryClashes.set(row.id, row);
           return [row];
+        } else if (tableName === "club_matches") {
+          const row = { ...insertVals, createdAt: now };
+          memoryClubMatches.set(row.id, row);
+          return [row];
         } else if (tableName === "house_rake") {
           const row = { ...insertVals, createdAt: now };
           memoryHouseRakes.push(row);
@@ -325,6 +338,12 @@ function createMemoryDb() {
           if (!clash) return [];
           const updated = { ...clash, ...setVals };
           memoryClashes.set(clash.id, updated);
+          return [updated];
+        } else if (tableName === "club_matches") {
+          let match = filters.id ? memoryClubMatches.get(filters.id) : null;
+          if (!match) return [];
+          const updated = { ...match, ...setVals };
+          memoryClubMatches.set(match.id, updated);
           return [updated];
         } else if (tableName === "cashier_orders") {
           let order = filters.id ? memoryCashierOrders.get(filters.id) : null;

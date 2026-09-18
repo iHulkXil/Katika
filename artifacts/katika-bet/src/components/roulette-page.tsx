@@ -129,9 +129,14 @@ export function RoulettePage() {
         body: JSON.stringify({ wager, bet, number }),
       });
       const text = await response.text();
-      if (!text) throw new Error('Empty API response');
-      const body = JSON.parse(text);
-      if (!response.ok) throw new Error(body.error ?? 'Spin failed');
+      let body: any = null;
+      try {
+        body = text ? JSON.parse(text) : null;
+      } catch {
+        // Non-JSON response
+      }
+      if (!response.ok) throw new Error(body?.error ?? `HTTP ${response.status}`);
+      if (!body) throw new Error('Empty API response');
       setResult(body);
       setRibbon((prev) => [body.roll, ...prev].slice(0, 12));
       playTableTone(body.won ? 'win' : 'lose');
