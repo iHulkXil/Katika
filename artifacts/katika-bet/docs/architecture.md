@@ -4,28 +4,27 @@
 
 Katika.Bet is a client-side React + Vite single-page foundation. Wouter owns route matching and navigation; the shared `Shell` provides the responsive desktop header and mobile bottom navigation for product routes. The landing route intentionally has a focused marketing shell.
 
-## PS5 Next-Gen Graphics Subsystem
+## Hyperrealistic UHD 2D Graphics Subsystem
 
-The application features a PlayStation 5 console-grade visual pipeline:
+The application features a flat 2D ultra-high-definition (UHD) visual pipeline optimized for zero latency, maximum retina pixel density, and EA Sports FC Icon-grade photorealism:
 
-1. **3D Avatar & Character Engine (`legend-avatar.tsx`)**:
-   - Built on Three.js with `MeshPhysicalMaterial` PBR shaders (clearcoat, sheen, micro-roughness).
-   - High-precision anatomical bust sculpting (cranium, jaw, nose, ears, traps, athletic kit torso).
-   - Procedural fabric micro-normal weave textures for dynamic woven kit light scattering.
-   - Dual-layer ocular system: high-definition textured iris + high-transmission cornea with specular catchlights.
-   - Five-point cinematic stadium lighting rig (Warm Key, Mint Cyan Rim, Amber Gold Rim, Ambient Fill, Under-chin Bounce).
-   - ACES Filmic Tone Mapping with SRGB color space and dynamic pointer-driven head tracking & breathing cycle.
+1. **UHD 2D Athlete Portrait Engine (`legend-avatar.tsx`)**:
+   - Sub-pixel retina canvas rendering supporting 1080p, 4K UHD, and 8K master density.
+   - Micro-texture synthesis: breathable hexagonal jersey mesh weave, stitched metallic gold Katika shield crest, and dual-tone collar ribbing.
+   - Hyperrealistic ocular and facial detail: dual stadium floodlight corneal catchlights, iris fiber rings, and multilayered subsurface skin tone scattering.
+   - Volumetric dual-color stadium rim lighting (mint/cyan on left silhouette, warm champagne gold on right) with atmospheric floodlight cones and stadium dust particles.
+   - Curated athlete archetypes spanning Finisher, Playmaker, Titan Defender, Speed Demon, and Golden Wall.
 
-2. **PS5 3D Inspect & Attribute Radar Modal (`ps5-inspect-modal.tsx`)**:
-   - Interactive 360-degree turntable viewport with pointer/touch rotational orbit controls.
-   - Real-time lighting presets (Stadium Floodlights, Golden Hour Spotlight, Cyber Arena Neon).
-   - Camera lens presets (Face Closeup, Athlete Bust, Full Card Perspective).
-   - Equilateral 3D Hexagon Attribute Radar (EA Sports FC Icon geometry) displaying all 6 core stats (PAC, SHO, PAS, DRI, DEF, PHY) with interactive gameplay trait inspection.
+2. **UHD Studio Inspector & Precision Zoom Loupe (`ps5-inspect-modal.tsx`)**:
+   - Interactive 3.2x zoom loupe for inspecting micro-weave fabric patterns, stitched crests, corneal reflections, and skin tone transitions.
+   - Interactive Pixel Density Multiplier (Standard HD, 4K UHD, 8K Master) scaling rendered sub-pixel counts up to 6.9M+ pixels on demand.
+   - Equilateral Hexagon Attribute Radar (EA Sports FC Icon geometry) with real-time PAC, SHO, PAS, DRI, DEF, PHY stat mapping.
+   - Instant archetype switching and multi-environment studio lighting presets (Stadium Emerald, Golden Hour, Cyber Rim).
 
 3. **Casino Floor & Card Fidelity**:
-   - PS5 3D Milled Gold Coin with machined rim grooves, radial bullion luster, and volumetric stadium light beams.
-   - Carbon-fiber chamfered emerald dice with recessed gold laser pips.
-   - Linen air-cushion finish playing cards with gold foil embossed Katika backs and physical 3D drop shadows.
+   - Milled gold bullion coins with machined radial luster.
+   - Carbon-fiber chamfered emerald dice with laser gold pips.
+   - Linen air-cushion finish playing cards with foil-stamped Katika crests and crisp retina typography.
 
 ## Visual system
 

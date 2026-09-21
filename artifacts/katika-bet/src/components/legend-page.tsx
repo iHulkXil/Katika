@@ -141,7 +141,7 @@ export function LegendPage() {
         </button>
       </div>
 
-      {/* Live Interactive PS5 3D Card Showcase */}
+      {/* Live Interactive UHD 2D Living Card Showcase */}
       <div className="mb-6">
         <LegendCard
           legend={{

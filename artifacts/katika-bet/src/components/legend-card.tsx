@@ -5,7 +5,7 @@ import { useServerSession } from '@/components/server-session';
 import { LegendAvatar } from '@/components/legend-avatar';
 import { SepoliaMintModal, type MintRecord } from '@/components/sepolia-mint-modal';
 import { PS5InspectModal } from '@/components/ps5-inspect-modal';
-import { ShieldCheck, Sparkles, RotateCw, Layers, Gamepad2, Eye } from 'lucide-react';
+import { ShieldCheck, Sparkles, RotateCw, Layers, ZoomIn, Eye } from 'lucide-react';
 
 export { type MintRecord };
 
@@ -131,9 +131,9 @@ export function LegendCard({
             type="button"
             onClick={() => setInspectModalOpen(true)}
             className="flex items-center gap-1 rounded-full border border-[#35D399]/40 bg-[#35D399]/10 px-2 py-1 font-mono-custom text-[10px] font-bold text-[#35D399] hover:bg-[#35D399]/20"
-            title="Inspect 3D athlete bust"
+            title="Inspect UHD 2D portrait"
           >
-            <Gamepad2 size={12} /> 3D
+            <ZoomIn size={12} /> UHD
           </button>
 
           {isMinted ? (
@@ -252,7 +252,7 @@ export function LegendCard({
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-[#35D399] shadow-[0_0_8px_#35d399]" />
                 <p className="font-mono-custom text-[10px] font-bold tracking-[.25em] text-[#35D399]">
-                  3D LIVING CARD
+                  UHD LIVING CARD
                 </p>
               </div>
               <div className="flex items-center gap-1.5">
@@ -263,10 +263,10 @@ export function LegendCard({
                     setInspectModalOpen(true);
                   }}
                   className="inline-flex items-center gap-1 rounded-full border border-[#35D399]/60 bg-[#35D399]/15 px-2.5 py-0.5 font-mono-custom text-[10px] font-bold text-[#35D399] transition-colors hover:bg-[#35D399]/25 shadow-[0_0_12px_rgba(53,211,153,0.25)]"
-                  title="Open PS5 360-degree interactive 3D showcase"
+                  title="Open UHD 2D interactive studio showcase"
                 >
-                  <Gamepad2 size={12} />
-                  <span>3D Inspect</span>
+                  <ZoomIn size={12} />
+                  <span>UHD Inspect</span>
                 </button>
                 <button
                   type="button"
