@@ -44,6 +44,7 @@
     "@types/node": "^25.3.3",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@types/three": "^0.180.0",
     "@vitejs/plugin-react": "^5.0.4",
     "@workspace/api-client-react": "workspace:*",
     "class-variance-authority": "^0.7.1",
@@ -73,6 +74,7 @@
   },
   "dependencies": {
     "@privy-io/react-auth": "^3.37.0",
-    "@stripe/stripe-js": "^9.13.0"
+    "@stripe/stripe-js": "^9.13.0",
+    "three": "^0.180.0"
   }
 }
