@@ -1,6 +1,6 @@
 {
   "name": "Katika.Bet",
-  "description": "Katika.Bet crypto casino and football legends floor featuring Connect Four & Ludo Quick in Club Arena, Clash Arena, Dice, Coin Flip, Mines, and Roulette settled in $KTK.",
+  "description": "Katika.Bet crypto casino and legends floor featuring PvP Arena (Katika 21 with stat-gated perks, Connect Four, Ludo Quick) and House tables (Dice, Coin Flip, Mines, Roulette) settled in $KTK.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

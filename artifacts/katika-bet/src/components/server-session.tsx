@@ -11,9 +11,11 @@ import { setAuthTokenGetter } from '@workspace/api-client-react';
 
 export type ServerUser = {
   id: number;
+  userId?: number;
   privyUserId: string;
   demoCredits: number;
   ktk?: number;
+  playable?: number;
   allocated?: number;
   wagered?: number;
   rolloverNeed?: number;
@@ -29,6 +31,7 @@ export type ServerUser = {
 
 type ServerSessionValue = {
   serverUser: ServerUser | null;
+  session: ServerUser | null;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -37,6 +40,7 @@ type ServerSessionValue = {
 
 const ServerSessionContext = createContext<ServerSessionValue>({
   serverUser: null,
+  session: null,
   loading: false,
   error: null,
   refresh: async () => {},
@@ -86,6 +90,9 @@ export function ServerSessionSync({ children }: { children?: ReactNode }) {
         return;
       }
       const body = (await response.json()) as ServerUser;
+      if (body && body.id && !body.userId) {
+        body.userId = body.id;
+      }
       setServerUser(body);
       setError(null);
     } catch {
@@ -112,7 +119,7 @@ export function ServerSessionSync({ children }: { children?: ReactNode }) {
   }, [ready, authenticated, refresh]);
 
   return (
-    <ServerSessionContext.Provider value={{ serverUser, loading, error, refresh, reloadSession: refresh }}>
+    <ServerSessionContext.Provider value={{ serverUser, session: serverUser, loading, error, refresh, reloadSession: refresh }}>
       {children ?? null}
     </ServerSessionContext.Provider>
   );

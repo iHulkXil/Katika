@@ -32,26 +32,18 @@ export function PlayPage() {
       <RolloverStrip />
 
       <div className="mt-5 flex items-center justify-between px-1">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-[#E8F2EC]">PvP &amp; Club Arenas</h2>
-        <span className="font-mono-custom text-xs text-[#35D399]">4% &ndash; 6% Pot Rake</span>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-[#E8F2EC]">PvP Arena</h2>
+        <span className="font-mono-custom text-xs text-[#35D399]">4% Pot Rake</span>
       </div>
 
-      <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-        <Link href="/club" className="group rounded-2xl border border-[#35D399]/40 bg-gradient-to-br from-[#12241E] to-[#0A1612] p-3.5 transition-all hover:border-[#35D399] hover:shadow-[0_0_20px_rgba(53,211,153,0.15)]">
+      <div className="mt-2.5">
+        <Link href="/pvp" className="block group rounded-2xl border border-[#35D399]/40 bg-gradient-to-br from-[#12241E] to-[#0A1612] p-4 transition-all hover:border-[#35D399] hover:shadow-[0_0_20px_rgba(53,211,153,0.15)]">
           <div className="flex items-center justify-between">
-            <span className="font-mono-custom text-[10px] font-bold text-[#35D399]">CLUB PVP</span>
-            <span className="rounded bg-red-500/20 px-1.5 py-0.5 font-mono-custom text-[9px] font-bold text-red-400">4% RAKE</span>
+            <span className="font-mono-custom text-[10px] font-bold text-[#35D399]">1V1 ARENA</span>
+            <span className="rounded bg-[#35D399]/20 px-2 py-0.5 font-mono-custom text-[9px] font-bold text-[#35D399]">4% RAKE</span>
           </div>
-          <h3 className="mt-1 text-base font-bold text-[#E8F2EC] group-hover:text-[#35D399]">Club Arena</h3>
-          <p className="mt-0.5 text-xs text-[#8FA39A]">Connect Four &amp; Ludo Quick</p>
-        </Link>
-        <Link href="/clash" className="group rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] p-3.5 transition-all hover:border-[#35D399]/50">
-          <div className="flex items-center justify-between">
-            <span className="font-mono-custom text-[10px] font-bold text-[#f3d37a]">TACTICAL</span>
-            <span className="rounded bg-amber-500/20 px-1.5 py-0.5 font-mono-custom text-[9px] font-bold text-amber-400">6% RAKE</span>
-          </div>
-          <h3 className="mt-1 text-base font-bold text-[#E8F2EC] group-hover:text-[#35D399]">Clash Arena</h3>
-          <p className="mt-0.5 text-xs text-[#8FA39A]">3-Lane Legend Combat</p>
+          <h3 className="mt-1 text-base font-bold text-[#E8F2EC] group-hover:text-[#35D399]">PvP Arena</h3>
+          <p className="mt-0.5 text-xs text-[#8FA39A]">Katika 21 (Stat-Gated BJ) • Connect Four • Ludo Quick</p>
         </Link>
       </div>
 

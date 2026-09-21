@@ -54,9 +54,10 @@ interface ClubMatchResponse {
 }
 
 export function ClubFourPage() {
-  const [, params] = useRoute('/club/four/:id');
+  const [, paramsPvp] = useRoute('/pvp/four/:id');
+  const [, paramsClub] = useRoute('/club/four/:id');
   const [, setLocation] = useLocation();
-  const matchId = params?.id;
+  const matchId = paramsPvp?.id || paramsClub?.id;
   const { session, refresh: refreshSession } = useServerSession();
   const { toast } = useToast();
 
@@ -225,7 +226,7 @@ export function ClubFourPage() {
         throw new Error(json.error || 'Rematch failed');
       }
       await refreshSession();
-      setLocation(`/club/four/${json.newMatchId}`);
+      setLocation(`/pvp/four/${json.newMatchId}`);
     } catch (err: any) {
       toast({ title: 'Rematch Error', description: err.message, variant: 'destructive' });
     } finally {
@@ -498,10 +499,10 @@ export function ClubFourPage() {
             </button>
             <button
               type="button"
-              onClick={() => setLocation('/club')}
+              onClick={() => setLocation('/pvp')}
               className="rounded-xl border border-[#1C3A2E] bg-[#07110E] px-4 py-2.5 font-mono-custom text-xs text-[#8FA39A] hover:text-[#E8F2EC]"
             >
-              Back to Club
+              Back to PvP
             </button>
           </div>
         </div>

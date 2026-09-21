@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -13,9 +13,9 @@ import { RoulettePage } from '@/components/roulette-page';
 import { PlayPage } from '@/components/play-page';
 import { LegendPage } from '@/components/legend-page';
 import { LeaderboardPage } from '@/components/leaderboard-page';
-import { ClashPage } from '@/components/clash-page';
 import { CashierPage } from '@/components/cashier-page';
-import { ClubLobby } from '@/components/club-lobby';
+import { PvPLobby } from '@/components/pvp-lobby';
+import { PvP21Page } from '@/components/pvp-twentyone';
 import { ClubFourPage } from '@/components/club-four';
 import { ClubLudoPage } from '@/components/club-ludo';
 import { HomeLegendHero, LegendCard, useLegend } from '@/components/legend-card';
@@ -25,10 +25,18 @@ import { useServerSession } from '@/components/server-session';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import { useLogout, usePrivy } from '@privy-io/react-auth';
 import {
-  Bomb, CircleDollarSign, CreditCard, Dices, Gamepad2, Gem, Grid2X2, Play, Shield, Swords, Ticket, Trophy, UserRound, WalletCards,
+  Bomb, CircleDollarSign, CreditCard, Dices, Gamepad2, Gem, Grid2X2, Layers, Play, Shield, Swords, Ticket, Trophy, UserRound, Users, WalletCards,
 } from 'lucide-react';
 
 const queryClient = new QueryClient();
+
+function RedirectTo({ to }: { to: string }) {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation(to);
+  }, [to, setLocation]);
+  return null;
+}
 
 type Game = {
   name: string;
@@ -39,8 +47,9 @@ type Game = {
   icon: ReactNode;
 };
 const games: Game[] = [
-  { name: 'Club Arena', description: 'Connect Four & Ludo Quick', badge: 'PvP', payout: '4% Pot Rake', href: '/club', icon: <Gamepad2 /> },
-  { name: 'Clash Arena', description: '3-Lane Tactical PVP', badge: 'Combat', payout: '6% Pot Rake', href: '/clash', icon: <Swords /> },
+  { name: 'Katika 21', description: 'Closest to 21 • Stat-Gated Double & Split', badge: 'PvP Cards', payout: '4% Pot Rake', href: '/pvp', icon: <Layers /> },
+  { name: 'Connect Four', description: '7×6 Gravity Grid • 4-in-a-row', badge: 'PvP Grid', payout: '4% Pot Rake', href: '/pvp', icon: <Gamepad2 /> },
+  { name: 'Ludo Quick', description: '2 Tokens Home • Captures & Safe Tiles', badge: 'PvP Race', payout: '4% Pot Rake', href: '/pvp', icon: <Users /> },
   { name: 'Dice', description: '3D Precision Roller', badge: '1-100', payout: '94% RTP', href: '/games/dice', icon: <Dices /> },
   { name: 'Coin Flip', description: '3D Katika Gold Coin', badge: '50/50', payout: '1.88× Fixed', href: '/games/coinflip', icon: <CircleDollarSign /> },
   { name: 'Mines Vault', description: '5×5 Diamond Grid', badge: 'Custom', payout: 'Cash Out', href: '/games/mines', icon: <Bomb /> },
@@ -147,7 +156,7 @@ function MenuPage() {
       <h1 className="text-2xl font-semibold">Kit</h1>
       <DemoNotice>$KTK is off-chain test credit.</DemoNotice>
       <MenuRow href="/legend" icon={Shield} label="My legend" />
-      <MenuRow href="/clash" icon={Swords} label="Legend Clash Arena" />
+      <MenuRow href="/pvp" icon={Swords} label="PvP Arena (21, Four, Ludo)" />
       <MenuRow href="/cashier" icon={CreditCard} label="Cashier & Top Up" />
       <MenuRow href="/leaderboard" icon={Trophy} label="Leaderboard (OVR)" />
       <MenuRow href="/play" icon={Play} label="Play floor" />
@@ -189,10 +198,19 @@ function Router() {
         <Route path="/dashboard" component={Home} />
         <Route path="/play" component={PlayPage} />
         <Route path="/legend" component={LegendPage} />
-        <Route path="/clash" component={ClashPage} />
-        <Route path="/club" component={ClubLobby} />
-        <Route path="/club/four/:id" component={ClubFourPage} />
-        <Route path="/club/ludo/:id" component={ClubLudoPage} />
+
+        {/* Redirects for legacy routes /clash and /club */}
+        <Route path="/clash">{() => <RedirectTo to="/pvp" />}</Route>
+        <Route path="/club">{() => <RedirectTo to="/pvp" />}</Route>
+        <Route path="/club/four/:id">{(params) => <RedirectTo to={`/pvp/four/${params.id}`} />}</Route>
+        <Route path="/club/ludo/:id">{(params) => <RedirectTo to={`/pvp/ludo/${params.id}`} />}</Route>
+
+        {/* PvP Floor & Games */}
+        <Route path="/pvp" component={PvPLobby} />
+        <Route path="/pvp/21/:id" component={PvP21Page} />
+        <Route path="/pvp/four/:id" component={ClubFourPage} />
+        <Route path="/pvp/ludo/:id" component={ClubLudoPage} />
+
         <Route path="/cashier" component={CashierPage} />
         <Route path="/leaderboard" component={LeaderboardPage} />
         <Route path="/menu" component={MenuPage} />

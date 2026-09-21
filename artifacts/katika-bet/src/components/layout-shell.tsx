@@ -27,9 +27,8 @@ export function Brand() {
 }
 
 const chips = [
-  { href: '/', label: 'Home' },
-  { href: '/clash', label: 'Clash' },
-  { href: '/club', label: 'Club' },
+  { href: '/', label: 'House' },
+  { href: '/pvp', label: 'PvP' },
   { href: '/play', label: 'Play' },
   { href: '/legend', label: 'Legend' },
   { href: '/games', label: 'Casino' },
@@ -39,9 +38,8 @@ const chips = [
 ];
 
 const bottom = [
-  { href: '/', label: 'Home', icon: HomeIcon },
-  { href: '/clash', label: 'Clash', icon: Swords },
-  { href: '/club', label: 'Club', icon: Gamepad2 },
+  { href: '/', label: 'House', icon: HomeIcon },
+  { href: '/pvp', label: 'PvP', icon: Swords },
   { href: '/play', label: 'Play', icon: Play },
   { href: '/cashier', label: 'Cashier', icon: CreditCard },
   { href: '/profile', label: 'Profile', icon: UserRound },
