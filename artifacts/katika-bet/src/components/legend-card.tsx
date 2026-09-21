@@ -4,7 +4,8 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { LegendAvatar } from '@/components/legend-avatar';
 import { SepoliaMintModal, type MintRecord } from '@/components/sepolia-mint-modal';
-import { ShieldCheck, Sparkles, RotateCw, Layers } from 'lucide-react';
+import { PS5InspectModal } from '@/components/ps5-inspect-modal';
+import { ShieldCheck, Sparkles, RotateCw, Layers, Gamepad2, Eye } from 'lucide-react';
 
 export { type MintRecord };
 
@@ -79,6 +80,7 @@ export function LegendCard({
   onRefresh?: () => void;
 }) {
   const [mintModalOpen, setMintModalOpen] = useState(false);
+  const [inspectModalOpen, setInspectModalOpen] = useState(false);
 
   if (!legend || !legend.profileComplete || variant === 'ghost') {
     return (
@@ -124,6 +126,16 @@ export function LegendCard({
               </span>
             </span>
           </Link>
+
+          <button
+            type="button"
+            onClick={() => setInspectModalOpen(true)}
+            className="flex items-center gap-1 rounded-full border border-[#35D399]/40 bg-[#35D399]/10 px-2 py-1 font-mono-custom text-[10px] font-bold text-[#35D399] hover:bg-[#35D399]/20"
+            title="Inspect 3D athlete bust"
+          >
+            <Gamepad2 size={12} /> 3D
+          </button>
+
           {isMinted ? (
             <button
               type="button"
@@ -147,6 +159,11 @@ export function LegendCard({
           onClose={() => setMintModalOpen(false)}
           legend={legend}
           onMintSuccess={() => onRefresh?.()}
+        />
+        <PS5InspectModal
+          isOpen={inspectModalOpen}
+          onClose={() => setInspectModalOpen(false)}
+          legend={legend}
         />
       </>
     );
@@ -243,13 +260,25 @@ export function LegendCard({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
+                    setInspectModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-full border border-[#35D399]/60 bg-[#35D399]/15 px-2.5 py-0.5 font-mono-custom text-[10px] font-bold text-[#35D399] transition-colors hover:bg-[#35D399]/25 shadow-[0_0_12px_rgba(53,211,153,0.25)]"
+                  title="Open PS5 360-degree interactive 3D showcase"
+                >
+                  <Gamepad2 size={12} />
+                  <span>3D Inspect</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setIsFlipped(true);
                   }}
                   className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 font-mono-custom text-[10px] text-primary transition-colors hover:bg-primary/20"
                   title="Flip to passport back"
                 >
                   <RotateCw size={11} />
-                  <span>3D Flip</span>
+                  <span>Flip</span>
                 </button>
                 {isMinted ? (
                   <button
@@ -424,6 +453,11 @@ export function LegendCard({
         onClose={() => setMintModalOpen(false)}
         legend={legend}
         onMintSuccess={() => onRefresh?.()}
+      />
+      <PS5InspectModal
+        isOpen={inspectModalOpen}
+        onClose={() => setInspectModalOpen(false)}
+        legend={legend}
       />
     </>
   );

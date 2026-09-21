@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
+import { LegendCard } from '@/components/legend-card';
 import { SepoliaMintModal, type MintRecord } from '@/components/sepolia-mint-modal';
 import { Sparkles, ShieldCheck, Trophy, ArrowRight } from 'lucide-react';
 
@@ -138,6 +139,19 @@ export function LegendPage() {
         >
           {isMinted ? 'Passport' : 'Mint Card'}
         </button>
+      </div>
+
+      {/* Live Interactive PS5 3D Card Showcase */}
+      <div className="mb-6">
+        <LegendCard
+          legend={{
+            ...legend,
+            profileComplete: true,
+            allocatedKchip: nextAlloc,
+          }}
+          playable={estPlayable}
+          onRefresh={load}
+        />
       </div>
 
       <div className="flex items-center justify-between">

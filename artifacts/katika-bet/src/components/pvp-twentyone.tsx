@@ -589,16 +589,21 @@ export function PvP21Page() {
 }
 
 /**
- * Playing Card Visual Component
+ * PS5 Next-Gen Playing Card Visual Component
+ * Features realistic linen air-cushion finish, gold foil embossed Katika card backs,
+ * and physical 3D drop shadow.
  */
 function PlayingCard({ card, isHole }: { card: string; isHole: boolean }) {
   if (isHole || card === '??') {
     return (
-      <div className="relative flex h-24 w-16 flex-col items-center justify-center rounded-xl border-2 border-[#1C3A2E] bg-gradient-to-br from-[#122019] via-[#0E1A16] to-[#07110E] shadow-lg">
-        <div className="grid h-8 w-8 place-items-center rounded-full border border-[#f3d37a]/30 bg-[#f3d37a]/10 font-bold text-[#f3d37a]">
-          K
+      <div className="relative flex h-24 w-16 select-none flex-col items-center justify-center rounded-xl border border-[#d4af37]/60 bg-gradient-to-br from-[#183a2d] via-[#0d2119] to-[#06120d] p-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.6),0_0_12px_rgba(53,211,153,0.15)] transition-transform hover:-translate-y-1">
+        {/* Subtle geometric guilloche weave pattern on card back */}
+        <div className="flex h-full w-full flex-col items-center justify-center rounded-lg border border-[#f3d37a]/30 bg-[#091812]/80">
+          <div className="grid h-8 w-8 place-items-center rounded-full border-2 border-[#f3d37a] bg-gradient-to-br from-[#f3d37a] to-[#8a6410] shadow-[0_0_10px_rgba(243,211,122,0.35)]">
+            <span className="font-mono-custom text-sm font-black text-[#1a0f02]">K</span>
+          </div>
+          <span className="mt-1 font-mono-custom text-[8px] font-bold tracking-widest text-[#f3d37a]/80">KATIKA</span>
         </div>
-        <span className="mt-1 font-mono-custom text-[9px] text-[#5C7368]">HOLE</span>
       </div>
     );
   }
@@ -617,23 +622,32 @@ function PlayingCard({ card, isHole }: { card: string; isHole: boolean }) {
   const displayRank = rank === 'T' ? '10' : rank;
 
   return (
-    <div className="relative flex h-24 w-16 flex-col justify-between rounded-xl border border-neutral-300 bg-[#FAFBF9] p-2 text-neutral-900 shadow-md">
-      <div className="flex flex-col items-start leading-none">
-        <span className="font-bold text-sm font-mono-custom">{displayRank}</span>
-        <span className={`text-xs ${isRed ? 'text-red-600' : 'text-neutral-900'}`}>
+    <div className="relative flex h-24 w-16 select-none flex-col justify-between rounded-xl border border-[#e5e7eb] bg-[#fbfdfc] p-2 text-neutral-900 shadow-[0_8px_18px_rgba(0,0,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.9)] transition-transform hover:-translate-y-1">
+      {/* Air-cushion linen finish micro-texture overlay */}
+      <div
+        className="pointer-events-none absolute inset-0 rounded-xl opacity-30"
+        style={{
+          backgroundImage: 'radial-gradient(#9ca3af 0.75px, transparent 0.75px)',
+          backgroundSize: '4px 4px',
+        }}
+      />
+
+      <div className="relative z-10 flex flex-col items-start leading-none">
+        <span className="font-mono-custom text-xs font-black tracking-tight">{displayRank}</span>
+        <span className={`text-[11px] ${isRed ? 'text-rose-600' : 'text-neutral-950'}`}>
           {suitSymbols[suit] || suit}
         </span>
       </div>
 
-      <div className="self-center">
-        <span className={`text-xl ${isRed ? 'text-red-600' : 'text-neutral-900'}`}>
+      <div className="relative z-10 self-center">
+        <span className={`text-2xl font-black drop-shadow-sm ${isRed ? 'text-rose-600' : 'text-neutral-950'}`}>
           {suitSymbols[suit] || suit}
         </span>
       </div>
 
-      <div className="flex flex-col items-end leading-none rotate-180">
-        <span className="font-bold text-sm font-mono-custom">{displayRank}</span>
-        <span className={`text-xs ${isRed ? 'text-red-600' : 'text-neutral-900'}`}>
+      <div className="relative z-10 flex rotate-180 flex-col items-start leading-none">
+        <span className="font-mono-custom text-xs font-black tracking-tight">{displayRank}</span>
+        <span className={`text-[11px] ${isRed ? 'text-rose-600' : 'text-neutral-950'}`}>
           {suitSymbols[suit] || suit}
         </span>
       </div>
