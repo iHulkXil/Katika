@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+
+const GLB_PATH = '/models/legend-bust.glb';
 
 function hash(input: string) {
   let h = 2166136261;
@@ -10,107 +14,94 @@ function hash(input: string) {
 }
 
 function kit(position: string) {
-  if (position === 'GK') return { shirt: '#f2c14e', stripe: '#062018' };
-  if (position === 'CB' || position === 'LB' || position === 'RB') return { shirt: '#2f6bff', stripe: '#dce7ff' };
-  if (position === 'CDM' || position === 'CM' || position === 'CAM') return { shirt: '#35d399', stripe: '#062018' };
-  return { shirt: '#e11d48', stripe: '#fff1f3' };
+  if (position === 'GK') return { shirt: 0xf2c14e, stripe: 0x062018 };
+  if (position === 'CB' || position === 'LB' || position === 'RB') return { shirt: 0x2f6bff, stripe: 0xdce7ff };
+  if (position === 'CDM' || position === 'CM' || position === 'CAM') return { shirt: 0x35d399, stripe: 0x062018 };
+  return { shirt: 0xe11d48, stripe: 0xfff1f3 };
 }
 
-const VERT = `attribute vec2 a; void main(){ gl_Position = vec4(a,0.0,1.0); }`;
-const FRAG = `
-precision highp float;
-uniform vec2 u_res;
-uniform float u_time;
-uniform vec3 u_skin;
-uniform float u_seed;
-void main(){
-  vec2 uv = gl_FragCoord.xy / u_res.xy;
-  vec2 p = (uv - 0.5) * 2.0;
-  float face = smoothstep(1.05, 0.62, length(p * vec2(0.92, 1.08)));
-  float cheek = 0.08 * sin(p.x * 6.0 + u_seed);
-  vec3 col = u_skin + vec3(0.08, 0.03, 0.01) * cheek;
-  float eyeY = p.y - 0.12;
-  float eyeL = length(p - vec2(-0.22, 0.14));
-  float eyeR = length(p - vec2(0.22, 0.14));
-  float blink = step(0.04, abs(sin(u_time * 2.4 + u_seed)));
-  col = mix(col, vec3(0.05), smoothstep(0.11, 0.07, eyeL) * blink);
-  col = mix(col, vec3(0.05), smoothstep(0.11, 0.07, eyeR) * blink);
-  col = mix(col, vec3(0.95), smoothstep(0.045, 0.02, eyeL) * blink);
-  col = mix(col, vec3(0.95), smoothstep(0.045, 0.02, eyeR) * blink);
-  float mouth = smoothstep(0.16, 0.08, length((p - vec2(0.0, -0.28)) * vec2(1.8, 3.4)));
-  col = mix(col, vec3(0.25, 0.08, 0.08), mouth * 0.85);
-  float hair = smoothstep(0.2, -0.05, p.y + 0.55 * abs(p.x));
-  col = mix(col, vec3(0.07, 0.05, 0.04), hair * 0.9);
-  gl_FragColor = vec4(col, face);
+function hexToCss(n: number) {
+  return `#${n.toString(16).padStart(6, '0')}`;
 }
-`;
 
-function FaceCanvas({ seed, skin }: { seed: number; skin: [number, number, number] }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    let gl: WebGLRenderingContext | null = null;
-    try {
-      gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false });
-    } catch {
-      return;
-    }
-    if (!gl) return;
-    const compile = (type: number, src: string) => {
-      const s = gl!.createShader(type);
-      if (!s) return null;
-      gl!.shaderSource(s, src);
-      gl!.compileShader(s);
-      return s;
-    };
-    const vertShader = compile(gl.VERTEX_SHADER, VERT);
-    const fragShader = compile(gl.FRAGMENT_SHADER, FRAG);
-    if (!vertShader || !fragShader) return;
+function buildProceduralBust(seed: number, shirt: number, stripe: number, skinHex: number) {
+  const root = new THREE.Group();
+  const skin = new THREE.MeshStandardMaterial({
+    color: skinHex,
+    roughness: 0.55,
+    metalness: 0.04,
+  });
+  const hair = new THREE.MeshStandardMaterial({
+    color: seed % 3 === 0 ? 0x1a120c : seed % 3 === 1 ? 0x0b0b0b : 0x3b2416,
+    roughness: 0.85,
+  });
+  const kitMat = new THREE.MeshStandardMaterial({
+    color: shirt,
+    roughness: 0.45,
+    metalness: 0.08,
+  });
+  const trim = new THREE.MeshStandardMaterial({ color: stripe, roughness: 0.4 });
 
-    const program = gl.createProgram();
-    if (!program) return;
-    gl.attachShader(program, vertShader);
-    gl.attachShader(program, fragShader);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return;
-    gl.useProgram(program);
-    const buf = gl.createBuffer();
-    if (!buf) return;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    const loc = gl.getAttribLocation(program, 'a');
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    const uRes = gl.getUniformLocation(program, 'u_res');
-    const uTime = gl.getUniformLocation(program, 'u_time');
-    const uSkin = gl.getUniformLocation(program, 'u_skin');
-    const uSeed = gl.getUniformLocation(program, 'u_seed');
-    let frame = 0;
-    const start = performance.now();
-    canvas.width = 160;
-    canvas.height = 160;
-    gl.viewport(0, 0, 160, 160);
-    const draw = (now: number) => {
-      try {
-        gl.uniform2f(uRes, 160, 160);
-        gl.uniform1f(uTime, (now - start) / 1000);
-        gl.uniform3f(uSkin, skin[0], skin[1], skin[2]);
-        gl.uniform1f(uSeed, seed % 97);
-        gl.clearColor(0, 0, 0, 0);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
-        frame = requestAnimationFrame(draw);
-      } catch {
-        // Suppress any context lost or transient render errors
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 32, 24), skin);
+  head.position.y = 0.72;
+  head.scale.set(0.92, 1.05, 0.88);
+  root.add(head);
+
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.44, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2), hair);
+  cap.position.set(0, 0.86, 0);
+  cap.scale.set(1.02, 0.7, 1.05);
+  root.add(cap);
+
+  const eyeGeo = new THREE.SphereGeometry(0.055, 16, 12);
+  const eyeWhite = new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 0.3 });
+  const pupil = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 });
+  for (const x of [-0.14, 0.14]) {
+    const w = new THREE.Mesh(eyeGeo, eyeWhite);
+    w.position.set(x, 0.76, 0.34);
+    const p = new THREE.Mesh(new THREE.SphereGeometry(0.028, 12, 10), pupil);
+    p.position.set(x, 0.76, 0.39);
+    root.add(w, p);
+  }
+
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.22, 16), skin);
+  neck.position.y = 0.38;
+  root.add(neck);
+
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.36, 0.42, 8, 16), kitMat);
+  torso.position.y = 0.02;
+  torso.scale.set(1.15, 0.85, 0.55);
+  root.add(torso);
+
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.03, 8, 20), trim);
+  collar.position.y = 0.28;
+  collar.rotation.x = Math.PI / 2;
+  root.add(collar);
+
+  const shoulder = new THREE.SphereGeometry(0.14, 16, 12);
+  const sl = new THREE.Mesh(shoulder, kitMat);
+  sl.position.set(-0.42, 0.18, 0);
+  const sr = sl.clone();
+  sr.position.x = 0.42;
+  root.add(sl, sr);
+
+  root.rotation.y = -0.22;
+  return root;
+}
+
+function tintKit(root: THREE.Object3D, shirt: number) {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const m of mats) {
+      const std = m as THREE.MeshStandardMaterial;
+      if (!std.color) continue;
+      const name = `${mesh.name} ${std.name}`.toLowerCase();
+      if (name.includes('kit') || name.includes('shirt') || name.includes('jersey') || name.includes('body')) {
+        std.color.setHex(shirt);
       }
-    };
-    frame = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(frame);
-  }, [seed, skin]);
-  return <canvas ref={ref} className="h-full w-full rounded-full" />;
+    }
+  });
 }
 
 export function LegendAvatar({
@@ -122,24 +113,98 @@ export function LegendAvatar({
   position?: string;
   size?: 'sm' | 'lg';
 }) {
+  const wrap = useRef<HTMLDivElement>(null);
   const seed = useMemo(() => hash(`${name ?? 'ghost'}|${position ?? 'XX'}`), [name, position]);
   const colors = kit(position ?? 'ST');
   const tone = ((seed >> 8) % 40) / 100;
-  const skin: [number, number, number] = [0.42 + tone, 0.28 + tone * 0.5, 0.18 + tone * 0.2];
+  const skinHex =
+    (Math.floor((0.35 + tone) * 255) << 16) +
+    (Math.floor((0.22 + tone * 0.45) * 255) << 8) +
+    Math.floor((0.14 + tone * 0.2) * 255);
   const wide = size === 'lg' ? 'h-36 w-28' : 'h-12 w-10';
 
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    const w = Math.max(40, el.clientWidth || 112);
+    const h = Math.max(48, el.clientHeight || 144);
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(28, w / h, 0.1, 20);
+    camera.position.set(0, 0.55, 3.05);
+    camera.lookAt(0, 0.45, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(w, h, false);
+    renderer.setClearColor(0x000000, 0);
+    el.innerHTML = '';
+    el.appendChild(renderer.domElement);
+
+    const key = new THREE.DirectionalLight(0xfff4e6, 1.35);
+    key.position.set(1.6, 2.4, 2.2);
+    const rim = new THREE.DirectionalLight(0x88bbff, 0.55);
+    rim.position.set(-2.2, 0.8, -0.4);
+    const fill = new THREE.AmbientLight(0x6a7a88, 0.55);
+    scene.add(key, rim, fill);
+
+    const rig = new THREE.Group();
+    scene.add(rig);
+
+    const fallback = buildProceduralBust(seed, colors.shirt, colors.stripe, skinHex);
+    rig.add(fallback);
+
+    const loader = new GLTFLoader();
+    loader.load(
+      GLB_PATH,
+      (gltf) => {
+        rig.remove(fallback);
+        fallback.traverse((o) => {
+          const m = o as THREE.Mesh;
+          m.geometry?.dispose?.();
+        });
+        const model = gltf.scene;
+        model.traverse((o) => {
+          const mesh = o as THREE.Mesh;
+          if (mesh.isMesh) mesh.castShadow = false;
+        });
+        const box = new THREE.Box3().setFromObject(model);
+        const sizeVec = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(sizeVec.x, sizeVec.y, sizeVec.z) || 1;
+        model.scale.setScalar(1.7 / maxDim);
+        box.setFromObject(model);
+        const c = box.getCenter(new THREE.Vector3());
+        model.position.sub(c);
+        model.position.y += 0.15;
+        tintKit(model, colors.shirt);
+        rig.add(model);
+      },
+      undefined,
+      () => {
+        /* keep procedural bust if no GLB in /models */
+      },
+    );
+
+    let frame = 0;
+    const tick = (t: number) => {
+      rig.rotation.y = -0.18 + Math.sin(t / 1800) * 0.06;
+      renderer.render(scene, camera);
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      renderer.dispose();
+      if (renderer.domElement.parentNode === el) el.removeChild(renderer.domElement);
+    };
+  }, [seed, colors.shirt, colors.stripe, skinHex]);
+
   return (
-    <div className={`legend-avatar ${wide}`} style={{ ['--kit' as string]: colors.shirt, ['--stripe' as string]: colors.stripe }}>
-      <div className="legend-avatar-rig">
-        <div className="legend-avatar-head">
-          <FaceCanvas seed={seed} skin={skin} />
-        </div>
-        <div className="legend-avatar-torso">
-          <span className="legend-avatar-num">{(name ?? 'K').slice(0, 1).toUpperCase()}</span>
-        </div>
-        <div className="legend-avatar-arm left" />
-        <div className="legend-avatar-arm right" />
-      </div>
+    <div
+      className={`legend-avatar ${wide}`}
+      style={{ ['--kit' as string]: hexToCss(colors.shirt), ['--stripe' as string]: hexToCss(colors.stripe) }}
+    >
+      <div ref={wrap} className="h-full w-full overflow-hidden rounded-[18px]" />
     </div>
   );
 }
