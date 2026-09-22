@@ -4,6 +4,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { LegendCard } from '@/components/legend-card';
 import { SepoliaMintModal, type MintRecord } from '@/components/sepolia-mint-modal';
+import { ARCHETYPES } from '@/components/legend-avatar';
 import { Sparkles, ShieldCheck, Trophy, ArrowRight } from 'lucide-react';
 
 const POSITIONS = ['ST', 'CF', 'LW', 'RW', 'CAM', 'CM', 'CDM', 'LB', 'RB', 'CB', 'GK'];
@@ -31,6 +32,8 @@ type Legend = {
   allocatedKtk?: number;
   overall?: number;
   mint?: MintRecord | null;
+  photoUrl?: string;
+  nationFlag?: string;
 };
 
 export function LegendPage() {
@@ -48,6 +51,8 @@ export function LegendPage() {
     physical: 55,
     profileComplete: false,
     allocatedKchip: 330,
+    photoUrl: ARCHETYPES[0].photoUrl,
+    nationFlag: ARCHETYPES[0].nation.flag,
   });
   const [status, setStatus] = useState<string | null>(null);
   const [mintModalOpen, setMintModalOpen] = useState(false);
@@ -187,6 +192,47 @@ export function LegendPage() {
             {position}
           </button>
         ))}
+      </div>
+
+      <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Athlete Cutout & Nation</p>
+      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
+        {ARCHETYPES.map((arch) => {
+          const isSelected = (legend.photoUrl || ARCHETYPES[0].photoUrl) === arch.photoUrl;
+          return (
+            <button
+              key={arch.id}
+              type="button"
+              onClick={() =>
+                setLegend({
+                  ...legend,
+                  photoUrl: arch.photoUrl,
+                  nationFlag: arch.nation.flag,
+                })
+              }
+              className={`flex items-center gap-2 rounded-xl border p-2 text-left transition-all ${
+                isSelected
+                  ? 'border-[#fef08a] bg-[#fef08a]/15 shadow-[0_0_12px_rgba(254,240,138,0.2)]'
+                  : 'border-[#1C3A2E] bg-[#0E1A16] hover:border-[#35D399]/40'
+              }`}
+            >
+              <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-black/40">
+                <img
+                  src={arch.photoUrl}
+                  alt={arch.name}
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
+                  className="h-full w-full object-cover object-top"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="block truncate font-mono-custom text-xs font-bold text-[#E8F2EC]">
+                  {arch.nation.flag} {arch.name}
+                </span>
+                <span className="block truncate text-[9px] text-[#8FA39A]">{arch.title}</span>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Legend Perk</p>

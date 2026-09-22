@@ -1,476 +1,444 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   X,
   Sparkles,
   ShieldCheck,
   Zap,
   ZoomIn,
-  Sliders,
   Eye,
   CheckCircle2,
-  Layers,
+  Award,
+  Star,
   Flame,
 } from 'lucide-react';
 import type { LegendCardData } from './legend-card';
 import {
-  drawUHDPlayerPortrait,
   ARCHETYPES,
   type AthleteArchetype,
   kit,
 } from './legend-avatar';
 
-interface UHDInspectModalProps {
+interface FUTInspectModalProps {
   isOpen: boolean;
   onClose: () => void;
   legend: LegendCardData | null;
 }
 
-export function PS5InspectModal({ isOpen, onClose, legend }: UHDInspectModalProps) {
-  const [pixelMultiplier, setPixelMultiplier] = useState<number>(4); // 2x, 4x (4K), 6x (8K)
-  const [lightingMode, setLightingMode] = useState<'stadium' | 'golden' | 'cyber'>('stadium');
+export function PS5InspectModal({ isOpen, onClose, legend }: FUTInspectModalProps) {
+  const [cardEdition, setCardEdition] = useState<'icon' | 'toty' | 'emerald'>('icon');
   const [selectedArchetype, setSelectedArchetype] = useState<AthleteArchetype>(ARCHETYPES[0]);
-  const [isMagnifierActive, setIsMagnifierActive] = useState<boolean>(true);
-  const [mousePos, setMousePos] = useState<{ x: number; y: number; normX: number; normY: number } | null>(null);
-
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const loupeCanvasRef = useRef<HTMLCanvasElement>(null);
-  const viewportRef = useRef<HTMLDivElement>(null);
-
-  // Sync archetype with player position or initial state
-  useEffect(() => {
-    if (!legend) return;
-    const pos = legend.position || 'ST';
-    if (pos === 'GK') setSelectedArchetype(ARCHETYPES[4]);
-    else if (pos === 'CB' || pos === 'LB' || pos === 'RB') setSelectedArchetype(ARCHETYPES[2]);
-    else if (pos === 'CDM' || pos === 'CM' || pos === 'CAM') setSelectedArchetype(ARCHETYPES[1]);
-    else setSelectedArchetype(ARCHETYPES[0]);
-  }, [legend?.position]);
+  const [activePhoto, setActivePhoto] = useState<string>(ARCHETYPES[0].photoUrl);
 
   // Overall rating
   const overall = useMemo(() => {
     if (!legend) return 75;
     return Math.round(
-      (legend.pace +
-        legend.shooting +
-        legend.passing +
-        legend.dribbling +
-        legend.defending +
-        legend.physical) /
+      ((legend.pace ?? 50) +
+        (legend.shooting ?? 50) +
+        (legend.passing ?? 50) +
+        (legend.dribbling ?? 50) +
+        (legend.defending ?? 50) +
+        (legend.physical ?? 50)) /
         6,
     );
   }, [legend]);
 
-  // Render Primary UHD Portrait
-  useEffect(() => {
-    if (!isOpen) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  // Sync archetype with player position or initial state
+  useMemo(() => {
+    if (!legend) return;
+    const pos = legend.position || 'ST';
+    let arch = ARCHETYPES[0];
+    if (pos === 'GK') arch = ARCHETYPES[4];
+    else if (pos === 'CB' || pos === 'LB' || pos === 'RB') arch = ARCHETYPES[2];
+    else if (pos === 'CDM' || pos === 'CM' || pos === 'CAM') arch = ARCHETYPES[1];
+    else if (pos === 'RW' || pos === 'LW') arch = ARCHETYPES[3];
 
-    // Base dimensions for the inspector viewport
-    const baseW = 400;
-    const baseH = 480;
-
-    // Multiplied pixels for Ultra-High Definition
-    canvas.width = baseW * pixelMultiplier;
-    canvas.height = baseH * pixelMultiplier;
-
-    drawUHDPlayerPortrait(ctx, canvas.width, canvas.height, {
-      name: legend?.name || 'Legend',
-      position: legend?.position || 'ST',
-      archetypeId: selectedArchetype.id,
-      pixelScale: pixelMultiplier,
-      lightingMode,
-    });
-  }, [isOpen, legend?.name, legend?.position, selectedArchetype.id, pixelMultiplier, lightingMode]);
-
-  // Render Zoom Loupe Magnifier
-  useEffect(() => {
-    if (!isOpen || !isMagnifierActive || !mousePos) return;
-    const loupe = loupeCanvasRef.current;
-    if (!loupe) return;
-    const ctx = loupe.getContext('2d');
-    if (!ctx) return;
-
-    loupe.width = 240;
-    loupe.height = 240;
-
-    // Draw magnified sub-section at 3x zoom
-    const zoomLevel = 3.2;
-    // Calculate pan offset based on normalized mouse coords
-    const panX = -(mousePos.normX - 0.5) * loupe.width * zoomLevel;
-    const panY = -(mousePos.normY - 0.5) * loupe.height * zoomLevel;
-
-    drawUHDPlayerPortrait(ctx, loupe.width, loupe.height, {
-      name: legend?.name || 'Legend',
-      position: legend?.position || 'ST',
-      archetypeId: selectedArchetype.id,
-      pixelScale: pixelMultiplier,
-      lightingMode,
-      zoom: zoomLevel,
-      panX,
-      panY,
-    });
-  }, [isOpen, isMagnifierActive, mousePos, legend?.name, legend?.position, selectedArchetype.id, pixelMultiplier, lightingMode]);
+    setSelectedArchetype(arch);
+    setActivePhoto(legend.photoUrl || arch.photoUrl);
+  }, [legend]);
 
   if (!isOpen || !legend) return null;
 
   const kitInfo = kit(legend.position || 'ST');
+  const futShieldClip = 'polygon(7% 0%, 93% 0%, 100% 5%, 100% 83%, 50% 100%, 0% 83%, 0% 5%)';
 
-  // Interactive mouse tracking on portrait
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!viewportRef.current) return;
-    const rect = viewportRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-    const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
-    setMousePos({
-      x,
-      y,
-      normX: x / rect.width,
-      normY: y / rect.height,
-    });
-  };
+  // Calculate Hexagon radar vertices
+  const stats = [
+    { label: 'PAC', val: legend.pace ?? 50 },
+    { label: 'SHO', val: legend.shooting ?? 50 },
+    { label: 'PAS', val: legend.passing ?? 50 },
+    { label: 'DRI', val: legend.dribbling ?? 50 },
+    { label: 'DEF', val: legend.defending ?? 50 },
+    { label: 'PHY', val: legend.physical ?? 50 },
+  ];
 
-  const currentResolutionLabel =
-    pixelMultiplier === 2 ? '1080p Standard (800×960px)' : pixelMultiplier === 4 ? '4K Ultra-HD (1600×1920px)' : '8K Master Studio (2400×2880px)';
+  const radarRadius = 80;
+  const radarCenter = 100;
+  const radarPoints = stats
+    .map((s, i) => {
+      const angle = (Math.PI / 3) * i - Math.PI / 2;
+      const normalized = Math.min(99, Math.max(20, s.val)) / 99;
+      const r = radarRadius * normalized;
+      const x = radarCenter + r * Math.cos(angle);
+      const y = radarCenter + r * Math.sin(angle);
+      return `${x},${y}`;
+    })
+    .join(' ');
 
-  const subPixelCount = ((400 * pixelMultiplier) * (480 * pixelMultiplier) / 1000000).toFixed(1);
+  const gridLevels = [0.33, 0.66, 1.0];
 
-  // Inspector inspection hotspot text
-  const hotspotLabel = mousePos
-    ? mousePos.normY < 0.28
-      ? 'Micro-Fade Hairline & Forehead Specular Sheen'
-      : mousePos.normY < 0.45
-        ? 'Dual Stadium Catchlights & Cornea Detail'
-        : mousePos.normY < 0.6
-          ? 'Subsurface Skin Scattering & Sculpted Jaw'
-          : mousePos.normX < 0.45
-            ? 'Embossed Katika Gold Shield Crest & 5-Point Star'
-            : 'Breathable Hex-Mesh Kit Micro-Weave Pattern'
-    : 'Hover to inspect sub-pixel details';
+  // Card themes
+  const editionStyles = {
+    icon: {
+      border: 'linear-gradient(135deg, #FFE57F 0%, #D4AF37 25%, #8A6410 50%, #D4AF37 75%, #FFE57F 100%)',
+      bg: 'linear-gradient(180deg, #133a2a 0%, #0a2117 35%, #05130e 75%, #020906 100%)',
+      title: 'KATIKA ICON',
+      accentColor: '#fef08a',
+    },
+    toty: {
+      border: 'linear-gradient(135deg, #38bdf8 0%, #818cf8 35%, #d946ef 70%, #38bdf8 100%)',
+      bg: 'linear-gradient(180deg, #081d38 0%, #051024 35%, #020712 100%)',
+      title: 'TEAM OF THE YEAR',
+      accentColor: '#38bdf8',
+    },
+    emerald: {
+      border: 'linear-gradient(135deg, #34d399 0%, #059669 40%, #047857 70%, #6ee7b7 100%)',
+      bg: 'linear-gradient(180deg, #062b1e 0%, #041912 40%, #010a07 100%)',
+      title: 'EMERALD ELITE',
+      accentColor: '#34d399',
+    },
+  }[cardEdition];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-[#d4af37]/60 bg-gradient-to-b from-[#0e2119] via-[#081510] to-[#040a08] shadow-[0_20px_70px_rgba(0,0,0,0.8),0_0_40px_rgba(53,211,153,0.15)]">
-        {/* HEADER BAR */}
-        <div className="flex items-center justify-between border-b border-[#1C3A2E] bg-[#0A1813]/90 px-6 py-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md">
+      <div className="relative flex max-h-[95vh] w-full max-w-4xl flex-col overflow-y-auto rounded-3xl border border-[#d4af37]/40 bg-[#091712] shadow-[0_20px_60px_rgba(0,0,0,0.9)]">
+        {/* Header Bar */}
+        <div className="flex items-center justify-between border-b border-[#1C3A2E] px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl border border-[#d4af37]/50 bg-gradient-to-br from-[#f3d37a] to-[#8a6410] font-mono-custom text-xl font-bold text-black shadow-[0_0_15px_rgba(212,175,55,0.4)]">
-              {overall}
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#fef08a]/60 bg-gradient-to-br from-[#d4af37]/30 to-[#8a6410]/30 shadow-inner">
+              <Award className="text-[#fef08a]" size={18} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold tracking-tight text-[#E8F2EC]">{legend.name}</h3>
-                <span className="rounded-full border border-[#35D399]/40 bg-[#35D399]/15 px-2.5 py-0.5 font-mono-custom text-xs font-bold text-[#35D399]">
-                  {legend.position}
+              <h2 className="flex items-center gap-2 font-mono-custom text-base font-bold text-[#E8F2EC]">
+                <span>FUT ULTIMATE CARD STUDIO</span>
+                <span className="rounded-full border border-[#fef08a]/50 bg-[#fef08a]/10 px-2 py-0.5 text-[10px] font-black text-[#fef08a]">
+                  EA FC ICON GRADE
                 </span>
-                <span className="rounded-full border border-[#f3d37a]/40 bg-[#f3d37a]/15 px-2.5 py-0.5 font-mono-custom text-xs font-bold text-[#f3d37a]">
-                  UHD 4K
-                </span>
-              </div>
+              </h2>
               <p className="text-xs text-[#8FA39A]">
-                Ultra-High Definition 2D Retina Studio Visualizer • {kitInfo.name}
+                Photorealistic footballer athlete render & equilateral attribute radar
               </p>
             </div>
           </div>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-mono-custom text-xs text-primary">
-              <Eye size={13} />
-              <span>{subPixelCount}M Sub-Pixels</span>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="grid h-9 w-9 place-items-center rounded-xl border border-[#1C3A2E] bg-[#0E1A16] text-[#8FA39A] transition-colors hover:border-[#35D399] hover:text-white"
-            >
-              <X size={18} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-[#8FA39A] transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <X size={20} />
+          </button>
         </div>
 
-        {/* MODAL BODY */}
-        <div className="grid flex-1 grid-cols-1 gap-6 overflow-y-auto p-6 lg:grid-cols-12">
-          {/* LEFT: UHD PORTRAIT & INTERACTIVE MAGNIFIER (7 COLS) */}
-          <div className="flex flex-col gap-4 lg:col-span-7">
-            {/* Viewport Card */}
-            <div
-              ref={viewportRef}
-              onPointerMove={handlePointerMove}
-              onPointerEnter={() => setIsMagnifierActive(true)}
-              onPointerLeave={() => setMousePos(null)}
-              className="group relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-2xl border border-[#d4af37]/40 bg-[#050e0a] shadow-[0_12px_36px_rgba(0,0,0,0.7)] cursor-crosshair"
-            >
-              {/* Primary UHD Canvas */}
-              <canvas
-                ref={canvasRef}
-                className="h-full w-full object-contain"
-                style={{
-                  imageRendering: '-webkit-optimize-contrast',
-                }}
-              />
-
-              {/* FLOATING ZOOM LOUPE MAGNIFIER */}
-              {isMagnifierActive && mousePos && (
-                <div
-                  className="pointer-events-none absolute h-36 w-36 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full border-2 border-[#f3d37a] bg-black/90 shadow-[0_0_30px_rgba(243,211,122,0.6),0_10px_25px_rgba(0,0,0,0.9)] transition-transform duration-75"
-                  style={{
-                    left: `${mousePos.x}px`,
-                    top: `${mousePos.y}px`,
-                  }}
+        {/* Modal Main Grid */}
+        <div className="grid gap-6 p-6 lg:grid-cols-12">
+          {/* LEFT 6 COLS: THE AUTHENTIC FUT CARD */}
+          <div className="flex flex-col items-center justify-center lg:col-span-6">
+            {/* Card Tier Switcher */}
+            <div className="mb-4 flex items-center gap-2">
+              <span className="font-mono-custom text-[10px] uppercase text-[#8FA39A]">Card Edition:</span>
+              {[
+                { id: 'icon', label: 'Icon Gold' },
+                { id: 'toty', label: 'TOTY Blue' },
+                { id: 'emerald', label: 'Emerald' },
+              ].map((tier) => (
+                <button
+                  key={tier.id}
+                  type="button"
+                  onClick={() => setCardEdition(tier.id as any)}
+                  className={`rounded-lg border px-2.5 py-1 font-mono-custom text-xs font-bold transition-colors ${
+                    cardEdition === tier.id
+                      ? 'border-[#fef08a] bg-[#fef08a]/20 text-[#fef08a]'
+                      : 'border-[#1C3A2E] bg-[#0E1A16] text-[#8FA39A] hover:text-white'
+                  }`}
                 >
-                  <canvas ref={loupeCanvasRef} className="h-full w-full object-cover" />
-                  {/* Crosshair guide */}
-                  <div className="absolute inset-0 grid place-items-center">
-                    <div className="h-4 w-4 rounded-full border border-white/60" />
-                  </div>
-                  <div className="absolute bottom-1 left-0 right-0 text-center font-mono-custom text-[8px] font-bold text-[#f3d37a] drop-shadow">
-                    3.2× UHD
-                  </div>
-                </div>
-              )}
-
-              {/* Bottom Inspection Hotspot readout */}
-              <div className="pointer-events-none absolute bottom-3 left-3 right-3 flex items-center justify-between rounded-xl border border-white/10 bg-black/75 px-3 py-1.5 backdrop-blur-md">
-                <div className="flex items-center gap-2 text-xs text-[#E8F2EC]">
-                  <ZoomIn size={14} className="text-[#35D399]" />
-                  <span className="truncate font-mono-custom text-[11px] text-[#f3d37a]">{hotspotLabel}</span>
-                </div>
-                <span className="shrink-0 font-mono-custom text-[10px] text-[#8FA39A]">
-                  {pixelMultiplier}× Pixels
-                </span>
-              </div>
+                  {tier.label}
+                </button>
+              ))}
             </div>
 
-            {/* PIXEL DENSITY / RESOLUTION MULTIPLIER CONTROLLER */}
+            {/* THE FUT SHIELD CARD */}
+            <div
+              className="relative w-[300px] h-[450px] p-[3px] select-none"
+              style={{
+                clipPath: futShieldClip,
+                background: editionStyles.border,
+                boxShadow: '0 20px 50px rgba(0,0,0,0.85), 0 0 35px rgba(212,175,55,0.3)',
+              }}
+            >
+              <div
+                className="relative h-full w-full overflow-hidden p-3"
+                style={{
+                  clipPath: futShieldClip,
+                  background: editionStyles.bg,
+                }}
+              >
+                {/* Sunburst Radial Ray Background */}
+                <div
+                  className="pointer-events-none absolute inset-0 opacity-45"
+                  style={{
+                    background:
+                      'radial-gradient(circle at 65% 30%, rgba(254,240,138,0.35) 0%, rgba(53,211,153,0.18) 45%, transparent 75%)',
+                  }}
+                />
+
+                {/* Top Strip Watermark */}
+                <div className="absolute right-4 top-2 z-10 flex items-center gap-1 opacity-70">
+                  <Star size={10} className="fill-[#fef08a] text-[#fef08a]" />
+                  <span className="font-mono-custom text-[8px] font-black uppercase tracking-widest text-[#fef08a]">
+                    {editionStyles.title}
+                  </span>
+                  <Star size={10} className="fill-[#fef08a] text-[#fef08a]" />
+                </div>
+
+                {/* UPPER HALF: RATINGS BLOCK + REAL FOOTBALLER CUTOUT */}
+                <div className="relative z-20 mt-1 flex h-[215px] w-full">
+                  {/* Left Ratings Column */}
+                  <div className="flex w-16 flex-col items-center pt-2 text-center">
+                    <span className="font-mono-custom text-4xl font-black leading-none tracking-tighter text-[#fef08a] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                      {overall}
+                    </span>
+                    <span className="mt-0.5 font-mono-custom text-sm font-black tracking-wider text-[#E8F2EC]">
+                      {legend.position}
+                    </span>
+                    <div className="my-1.5 h-[1px] w-7 bg-gradient-to-r from-transparent via-[#fef08a]/80 to-transparent" />
+                    <div className="text-xl">{selectedArchetype.nation.flag}</div>
+                    <div className="my-1.5 h-[1px] w-7 bg-gradient-to-r from-transparent via-[#fef08a]/80 to-transparent" />
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#fef08a]/60 bg-[#d4af37]/20 shadow-inner">
+                      <span className="font-mono-custom text-[9px] font-black text-[#fef08a]">KTK</span>
+                    </div>
+                  </div>
+
+                  {/* Real Football Player Photo Cutout (NO ROBOT!) */}
+                  <div className="relative flex-1">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(254,240,138,0.25)_0%,rgba(53,211,153,0.1)_45%,transparent_70%)]" />
+                    <img
+                      src={activePhoto}
+                      alt={legend.name}
+                      referrerPolicy="no-referrer"
+                      crossOrigin="anonymous"
+                      className="absolute inset-0 h-full w-full object-contain object-bottom scale-110 drop-shadow-[0_12px_16px_rgba(0,0,0,0.85)]"
+                    />
+                    <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#081f16] to-transparent" />
+                  </div>
+                </div>
+
+                {/* Name Banner Ribbon */}
+                <div className="relative z-30 mt-1">
+                  <div className="flex h-8 items-center justify-center rounded-lg border border-[#fef08a]/70 bg-gradient-to-r from-[#854d0e] via-[#fef08a] to-[#854d0e] px-2 shadow">
+                    <span className="truncate font-mono-custom text-xs font-black uppercase tracking-wider text-[#140b02]">
+                      {legend.name}
+                    </span>
+                  </div>
+                </div>
+
+                {/* The 6 Core FUT Stats */}
+                <div className="relative z-30 mt-2.5 rounded-xl border border-[#d4af37]/30 bg-black/45 px-3 py-1.5 backdrop-blur-sm">
+                  <div className="grid grid-cols-2 divide-x divide-[#fef08a]/20">
+                    <div className="space-y-0.5 pr-2 font-mono-custom">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-black text-white">{legend.pace}</span>
+                        <span className="font-bold text-[#fef08a]">PAC</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-black text-white">{legend.shooting}</span>
+                        <span className="font-bold text-[#fef08a]">SHO</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-black text-white">{legend.passing}</span>
+                        <span className="font-bold text-[#fef08a]">PAS</span>
+                      </div>
+                    </div>
+                    <div className="space-y-0.5 pl-2 font-mono-custom">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-black text-white">{legend.dribbling}</span>
+                        <span className="font-bold text-[#fef08a]">DRI</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-black text-white">{legend.defending}</span>
+                        <span className="font-bold text-[#fef08a]">DEF</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-black text-white">{legend.physical}</span>
+                        <span className="font-bold text-[#fef08a]">PHY</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Chemistry & Allocation Tip */}
+                <div className="relative z-30 mt-2 flex flex-col items-center justify-center font-mono-custom text-center">
+                  <div className="flex items-center gap-1.5 text-[9px] font-bold text-[#35D399]">
+                    <span>HUNTER</span>
+                    <span className="flex gap-0.5">◆◆◆</span>
+                    <span className="text-[#8FA39A]">·</span>
+                    <span className="text-[#f3d37a]">330 KTK</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT 6 COLS: ATTRIBUTE RADAR & ATHLETE CUTOUT SELECTOR */}
+          <div className="space-y-5 lg:col-span-6">
+            {/* ATHLETE CUTOUT PICKER */}
             <div className="rounded-2xl border border-[#1C3A2E] bg-[#0A1813] p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sliders size={16} className="text-[#35D399]" />
-                  <span className="font-mono-custom text-xs font-bold uppercase tracking-wider text-[#E8F2EC]">
-                    Pixel Density & Crispness
-                  </span>
-                </div>
-                <span className="font-mono-custom text-xs text-[#f3d37a]">{currentResolutionLabel}</span>
+                <span className="font-mono-custom text-xs font-bold uppercase tracking-wider text-[#E8F2EC]">
+                  Footballer Cutout
+                </span>
+                <span className="text-xs text-[#35D399] font-mono-custom">
+                  {selectedArchetype.nation.flag} {selectedArchetype.title}
+                </span>
               </div>
-
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                {[
-                  { mult: 2, label: 'Standard HD', sub: '2× Retina' },
-                  { mult: 4, label: '4K Ultra-HD', sub: '4× Crisp (Recommended)' },
-                  { mult: 6, label: '8K Master', sub: '6× Maximum Sub-Pixel' },
-                ].map((tier) => (
+              <div className="mt-3 grid grid-cols-5 gap-2">
+                {ARCHETYPES.map((arch) => (
                   <button
-                    key={tier.mult}
+                    key={arch.id}
                     type="button"
-                    onClick={() => setPixelMultiplier(tier.mult)}
-                    className={`flex flex-col items-center justify-center rounded-xl border p-2.5 transition-all ${
-                      pixelMultiplier === tier.mult
-                        ? 'border-[#35D399] bg-[#35D399]/20 text-[#35D399] shadow-[0_0_12px_rgba(53,211,153,0.3)]'
-                        : 'border-[#1C3A2E] bg-[#0E1A16] text-[#8FA39A] hover:border-[#35D399]/50 hover:text-white'
+                    onClick={() => {
+                      setSelectedArchetype(arch);
+                      setActivePhoto(arch.photoUrl);
+                    }}
+                    className={`group relative flex flex-col items-center rounded-xl border p-1.5 transition-all ${
+                      selectedArchetype.id === arch.id
+                        ? 'border-[#fef08a] bg-[#fef08a]/20 shadow-[0_0_12px_rgba(254,240,138,0.3)]'
+                        : 'border-[#1C3A2E] bg-[#0E1A16] hover:border-[#35D399]/50'
                     }`}
                   >
-                    <span className="font-mono-custom text-xs font-bold">{tier.label}</span>
-                    <span className="mt-0.5 text-[10px] opacity-75">{tier.sub}</span>
+                    <div className="relative h-12 w-12 overflow-hidden rounded-lg bg-black/40">
+                      <img
+                        src={arch.photoUrl}
+                        alt={arch.name}
+                        referrerPolicy="no-referrer"
+                        crossOrigin="anonymous"
+                        className="h-full w-full object-cover object-top"
+                      />
+                    </div>
+                    <span className="mt-1 font-mono-custom text-[9px] font-bold text-[#E8F2EC] truncate max-w-full">
+                      {arch.name.split(' ')[0]}
+                    </span>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* LIGHTING ENVIRONMENT PRESETS */}
-            <div className="flex items-center gap-2">
-              <span className="font-mono-custom text-[10px] uppercase tracking-wider text-[#8FA39A]">
-                Studio Lighting:
-              </span>
-              {[
-                { id: 'stadium', label: 'Stadium Emerald' },
-                { id: 'golden', label: 'Golden Hour' },
-                { id: 'cyber', label: 'Cyber Rim' },
-              ].map((light) => (
-                <button
-                  key={light.id}
-                  type="button"
-                  onClick={() => setLightingMode(light.id as any)}
-                  className={`rounded-lg border px-3 py-1 font-mono-custom text-xs transition-colors ${
-                    lightingMode === light.id
-                      ? 'border-[#f3d37a] bg-[#f3d37a]/20 text-[#f3d37a]'
-                      : 'border-[#1C3A2E] bg-[#0E1A16] text-[#8FA39A] hover:text-white'
-                  }`}
-                >
-                  {light.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* RIGHT: ARCHETYPES & ATTRIBUTE RADAR (5 COLS) */}
-          <div className="flex flex-col gap-4 lg:col-span-5">
-            {/* ARCHETYPE SELECTOR */}
+            {/* EQUILATERAL ATTRIBUTE RADAR */}
             <div className="rounded-2xl border border-[#1C3A2E] bg-[#0A1813] p-4">
               <div className="flex items-center justify-between">
                 <span className="font-mono-custom text-xs font-bold uppercase tracking-wider text-[#E8F2EC]">
-                  Athlete Archetypes (UHD 2D)
+                  EA Sports FC Attribute Hexagon
                 </span>
-                <span className="text-[10px] text-[#8FA39A]">Pick Face & Style</span>
+                <span className="font-mono-custom text-xs font-bold text-[#fef08a]">{overall} OVR</span>
               </div>
 
-              <div className="mt-3 flex flex-col gap-2">
-                {ARCHETYPES.map((arch) => {
-                  const isSelected = selectedArchetype.id === arch.id;
-                  return (
-                    <button
-                      key={arch.id}
-                      type="button"
-                      onClick={() => setSelectedArchetype(arch)}
-                      className={`flex items-center justify-between rounded-xl border p-2.5 text-left transition-all ${
-                        isSelected
-                          ? 'border-[#d4af37] bg-gradient-to-r from-[#d4af37]/20 to-transparent text-[#f3d37a] shadow-[0_0_12px_rgba(212,175,55,0.2)]'
-                          : 'border-[#1C3A2E] bg-[#0E1A16] text-[#8FA39A] hover:border-[#35D399]/40 hover:text-white'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs text-[#E8F2EC]">{arch.name}</span>
-                          <span className="text-[10px] text-[#8FA39A] font-mono-custom">({arch.hairStyle})</span>
-                        </div>
-                        <p className="text-[11px] text-[#8FA39A]">{arch.title}</p>
-                      </div>
-                      {isSelected ? (
-                        <CheckCircle2 size={16} className="text-[#f3d37a]" />
-                      ) : (
-                        <div className="h-4 w-4 rounded-full border border-white/20" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* EA SPORTS FC ICON ATTRIBUTE RADAR */}
-            <div className="rounded-2xl border border-[#1C3A2E] bg-[#0A1813] p-4">
-              <div className="flex items-center justify-between">
-                <span className="font-mono-custom text-xs font-bold uppercase tracking-wider text-[#E8F2EC]">
-                  Icon Attribute Radar
-                </span>
-                <span className="font-mono-custom text-xs font-bold text-[#35D399]">{overall} OVR</span>
-              </div>
-
-              {/* Equilateral Hexagon Radar SVG */}
-              <div className="relative mt-2 flex items-center justify-center">
-                <svg width="220" height="200" viewBox="0 0 220 200" className="overflow-visible">
-                  {/* Background concentric reference hexagons */}
-                  {[0.33, 0.66, 1].map((scale, idx) => {
-                    const r = 70 * scale;
-                    const points = [0, 60, 120, 180, 240, 300]
-                      .map((deg) => {
-                        const rad = ((deg - 90) * Math.PI) / 180;
-                        return `${110 + r * Math.cos(rad)},${100 + r * Math.sin(rad)}`;
+              <div className="mt-4 flex items-center justify-center">
+                <svg viewBox="0 0 200 200" className="h-44 w-44">
+                  {/* Concentric Hexagons */}
+                  {gridLevels.map((lvl) => {
+                    const r = radarRadius * lvl;
+                    const pts = [0, 1, 2, 3, 4, 5]
+                      .map((i) => {
+                        const a = (Math.PI / 3) * i - Math.PI / 2;
+                        return `${radarCenter + r * Math.cos(a)},${radarCenter + r * Math.sin(a)}`;
                       })
                       .join(' ');
                     return (
                       <polygon
-                        key={idx}
-                        points={points}
-                        fill={idx === 2 ? 'rgba(53,211,153,0.03)' : 'none'}
-                        stroke={idx === 2 ? '#1C3A2E' : '#142a21'}
+                        key={lvl}
+                        points={pts}
+                        fill="none"
+                        stroke="#1C3A2E"
                         strokeWidth="1"
-                        strokeDasharray={idx < 2 ? '2,2' : undefined}
+                        strokeDasharray={lvl === 1.0 ? 'none' : '2,2'}
                       />
                     );
                   })}
 
-                  {/* Player Stats Hexagon Shape */}
-                  {(() => {
-                    const stats = [
-                      legend.pace,
-                      legend.shooting,
-                      legend.passing,
-                      legend.dribbling,
-                      legend.defending,
-                      legend.physical,
-                    ];
-                    const rMax = 70;
-                    const points = stats
-                      .map((val, i) => {
-                        const normalized = Math.max(0.25, Math.min(1, val / 99));
-                        const deg = i * 60 - 90;
-                        const rad = (deg * Math.PI) / 180;
-                        const r = rMax * normalized;
-                        return `${110 + r * Math.cos(rad)},${100 + r * Math.sin(rad)}`;
-                      })
-                      .join(' ');
-
+                  {/* Axis lines */}
+                  {[0, 1, 2, 3, 4, 5].map((i) => {
+                    const a = (Math.PI / 3) * i - Math.PI / 2;
                     return (
-                      <>
-                        <polygon
-                          points={points}
-                          fill="rgba(53, 211, 153, 0.35)"
-                          stroke="#35D399"
-                          strokeWidth="2"
-                        />
-                        {/* Golden Points */}
-                        {stats.map((val, i) => {
-                          const normalized = Math.max(0.25, Math.min(1, val / 99));
-                          const deg = i * 60 - 90;
-                          const rad = (deg * Math.PI) / 180;
-                          const r = rMax * normalized;
-                          return (
-                            <circle
-                              key={i}
-                              cx={110 + r * Math.cos(rad)}
-                              cy={100 + r * Math.sin(rad)}
-                              r="3.5"
-                              fill="#f3d37a"
-                              stroke="#06120e"
-                              strokeWidth="1.5"
-                            />
-                          );
-                        })}
-                      </>
+                      <line
+                        key={i}
+                        x1={radarCenter}
+                        y1={radarCenter}
+                        x2={radarCenter + radarRadius * Math.cos(a)}
+                        y2={radarCenter + radarRadius * Math.sin(a)}
+                        stroke="#1C3A2E"
+                        strokeWidth="1"
+                      />
                     );
-                  })()}
+                  })}
 
-                  {/* Stat Labels around perimeter */}
-                  {[
-                    { label: `PAC ${legend.pace}`, x: 110, y: 15, align: 'middle' },
-                    { label: `SHO ${legend.shooting}`, x: 195, y: 55, align: 'start' },
-                    { label: `PAS ${legend.passing}`, x: 195, y: 155, align: 'start' },
-                    { label: `DRI ${legend.dribbling}`, x: 110, y: 195, align: 'middle' },
-                    { label: `DEF ${legend.defending}`, x: 25, y: 155, align: 'end' },
-                    { label: `PHY ${legend.physical}`, x: 25, y: 55, align: 'end' },
-                  ].map((item, i) => (
-                    <text
-                      key={i}
-                      x={item.x}
-                      y={item.y}
-                      fill="#8FA39A"
-                      fontSize="9"
-                      fontFamily="monospace"
-                      fontWeight="bold"
-                      textAnchor={item.align as any}
-                    >
-                      {item.label}
-                    </text>
-                  ))}
+                  {/* Filled Attribute Polygon */}
+                  <polygon
+                    points={radarPoints}
+                    fill="rgba(254, 240, 138, 0.35)"
+                    stroke="#fef08a"
+                    strokeWidth="2.5"
+                  />
+
+                  {/* Stat Vertex Dots & Labels */}
+                  {stats.map((s, i) => {
+                    const angle = (Math.PI / 3) * i - Math.PI / 2;
+                    const labelR = radarRadius + 14;
+                    const lx = radarCenter + labelR * Math.cos(angle);
+                    const ly = radarCenter + labelR * Math.sin(angle);
+                    return (
+                      <text
+                        key={s.label}
+                        x={lx}
+                        y={ly + 4}
+                        fill="#fef08a"
+                        fontSize="9"
+                        fontWeight="bold"
+                        fontFamily="monospace"
+                        textAnchor="middle"
+                      >
+                        {s.label}
+                      </text>
+                    );
+                  })}
                 </svg>
+              </div>
+
+              {/* 6 Stats Breakdown Pill Row */}
+              <div className="mt-3 grid grid-cols-6 gap-1.5 font-mono-custom text-center">
+                {stats.map((s) => (
+                  <div key={s.label} className="rounded-lg border border-[#1C3A2E] bg-black/40 p-1.5">
+                    <span className="block text-[9px] text-[#8FA39A]">{s.label}</span>
+                    <span className="block text-sm font-black text-white">{s.val}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* SEPOLIA PASSPORT STATUS */}
-            <div className="flex items-center justify-between rounded-xl border border-[#d4af37]/40 bg-[#0A1813] px-4 py-3">
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={18} className="text-[#35D399]" />
-                <div>
-                  <p className="text-xs font-bold text-[#E8F2EC]">
-                    {legend.mint ? `Token #${legend.mint.tokenId}` : 'Unminted Card Snapshot'}
-                  </p>
-                  <p className="text-[10px] text-[#8FA39A]">Ethereum Sepolia ERC-721 Passport</p>
+            {/* PLAYSTYLE SIGNATURES */}
+            <div className="rounded-2xl border border-[#1C3A2E] bg-[#0A1813] p-4 font-mono-custom text-xs">
+              <div className="flex items-center gap-1.5 text-[#35D399]">
+                <Zap size={14} />
+                <span className="font-bold uppercase tracking-wider">PlayStyle+ Traits</span>
+              </div>
+              <div className="mt-2.5 grid grid-cols-2 gap-2">
+                <div className="rounded-lg border border-primary/30 bg-primary/10 p-2">
+                  <p className="text-[10px] font-bold text-[#fef08a]">Finesse Shot+</p>
+                  <p className="text-[9px] text-[#8FA39A] mt-0.5">Curve & accuracy on curling shots</p>
+                </div>
+                <div className="rounded-lg border border-primary/30 bg-primary/10 p-2">
+                  <p className="text-[10px] font-bold text-[#35D399]">Rapid Speed+</p>
+                  <p className="text-[9px] text-[#8FA39A] mt-0.5">Explosive sprint burst in final third</p>
                 </div>
               </div>
-              <span className="rounded bg-[#35D399]/20 px-2 py-0.5 font-mono-custom text-[10px] font-bold text-[#35D399]">
-                VERIFIED
-              </span>
             </div>
           </div>
         </div>
@@ -478,5 +446,3 @@ export function PS5InspectModal({ isOpen, onClose, legend }: UHDInspectModalProp
     </div>
   );
 }
-
-export { PS5InspectModal as UHDInspectModal };
