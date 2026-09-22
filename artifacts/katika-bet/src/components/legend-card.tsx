@@ -239,14 +239,14 @@ export function LegendCard({
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-[#f59e0b] shadow-[0_0_8px_#f59e0b]" />
             <p className="font-mono-custom text-[11px] font-black tracking-[.25em] text-[#f4c172]">
-              HOTD KNIGHT SHIELD
+              KNIGHT HEATER SHIELD
             </p>
           </div>
           <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setPhotoModalOpen(true)}
-              className="inline-flex items-center gap-1 rounded-full border border-[#fef08a]/60 bg-[#fef08a]/15 px-2.5 py-0.5 font-mono-custom text-[10px] font-bold text-[#fef08a] transition-colors hover:bg-[#fef08a]/25 shadow-[0_0_10px_rgba(254,240,138,0.2)]"
+              className="inline-flex items-center gap-1 rounded-full border border-[#f4c172]/60 bg-[#f4c172]/15 px-2.5 py-0.5 font-mono-custom text-[10px] font-bold text-[#f4c172] transition-colors hover:bg-[#f4c172]/25 shadow-[0_0_10px_rgba(244,193,114,0.2)]"
               title="Upload your photo or change athlete"
             >
               <Camera size={11} />

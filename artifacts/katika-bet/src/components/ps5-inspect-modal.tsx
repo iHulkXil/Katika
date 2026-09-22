@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Award,
   Star,
-  Flame,
 } from 'lucide-react';
 import type { LegendCardData } from './legend-card';
 import {
@@ -17,6 +16,7 @@ import {
   type AthleteArchetype,
   kit,
 } from './legend-avatar';
+import { TotyCard } from './toty-card';
 
 interface FUTInspectModalProps {
   isOpen: boolean;
@@ -93,7 +93,7 @@ export function PS5InspectModal({ isOpen, onClose, legend }: FUTInspectModalProp
     knight: {
       border: 'linear-gradient(135deg, #4b5563 0%, #1f2428 25%, #374151 50%, #111417 75%, #4b5563 100%)',
       bg: 'linear-gradient(180deg, #2b180d 0%, #1c0f07 35%, #0f0703 75%, #070301 100%)',
-      title: 'HOTD KNIGHT',
+      title: 'ROYAL KNIGHT',
       accentColor: '#f4c172',
     },
     icon: {
@@ -148,7 +148,7 @@ export function PS5InspectModal({ isOpen, onClose, legend }: FUTInspectModalProp
             <div className="mb-4 flex items-center gap-2">
               <span className="font-mono-custom text-[10px] uppercase text-[#8FA39A]">Card Edition:</span>
               {[
-                { id: 'knight', label: 'HOTD Knight' },
+                { id: 'knight', label: 'Knight Shield' },
                 { id: 'icon', label: 'Icon Gold' },
                 { id: 'toty', label: 'TOTY Blue' },
               ].map((tier) => (
@@ -167,126 +167,151 @@ export function PS5InspectModal({ isOpen, onClose, legend }: FUTInspectModalProp
               ))}
             </div>
 
-            {/* THE FUT SHIELD CARD */}
-            <div
-              className="relative w-[300px] h-[450px] p-[3px] select-none"
-              style={{
-                clipPath: futShieldClip,
-                background: editionStyles.border,
-                boxShadow: '0 20px 50px rgba(0,0,0,0.85), 0 0 35px rgba(212,175,55,0.3)',
-              }}
-            >
+            {/* THE CARD: KNIGHT WOODEN SHIELD OR FUT SHIELD */}
+            {cardEdition === 'knight' ? (
+              <div className="relative flex w-full items-center justify-center py-1">
+                <TotyCard
+                  legend={{
+                    ...(legend || {
+                      name: 'HAALAND',
+                      position: 'ST',
+                      pace: 96,
+                      shooting: 96,
+                      passing: 80,
+                      dribbling: 88,
+                      defending: 60,
+                      physical: 94,
+                    }),
+                    name: legend?.name || 'HAALAND',
+                    position: legend?.position || 'ST',
+                    photoUrl: activePhoto,
+                    nationFlag: selectedArchetype.nation.flag,
+                  }}
+                  overall={overall}
+                  interactive={true}
+                />
+              </div>
+            ) : (
               <div
-                className="relative h-full w-full overflow-hidden p-3"
+                className="relative w-[300px] h-[450px] p-[3px] select-none"
                 style={{
                   clipPath: futShieldClip,
-                  background: editionStyles.bg,
+                  background: editionStyles.border,
+                  boxShadow: '0 20px 50px rgba(0,0,0,0.85), 0 0 35px rgba(212,175,55,0.3)',
                 }}
               >
-                {/* Sunburst Radial Ray Background */}
                 <div
-                  className="pointer-events-none absolute inset-0 opacity-45"
+                  className="relative h-full w-full overflow-hidden p-3"
                   style={{
-                    background:
-                      'radial-gradient(circle at 65% 30%, rgba(254,240,138,0.35) 0%, rgba(53,211,153,0.18) 45%, transparent 75%)',
+                    clipPath: futShieldClip,
+                    background: editionStyles.bg,
                   }}
-                />
+                >
+                  {/* Sunburst Radial Ray Background */}
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-45"
+                    style={{
+                      background:
+                        'radial-gradient(circle at 65% 30%, rgba(254,240,138,0.35) 0%, rgba(53,211,153,0.18) 45%, transparent 75%)',
+                    }}
+                  />
 
-                {/* Top Strip Watermark */}
-                <div className="absolute right-4 top-2 z-10 flex items-center gap-1 opacity-70">
-                  <Star size={10} className="fill-[#fef08a] text-[#fef08a]" />
-                  <span className="font-mono-custom text-[8px] font-black uppercase tracking-widest text-[#fef08a]">
-                    {editionStyles.title}
-                  </span>
-                  <Star size={10} className="fill-[#fef08a] text-[#fef08a]" />
-                </div>
+                  {/* Top Strip Watermark */}
+                  <div className="absolute right-4 top-2 z-10 flex items-center gap-1 opacity-70">
+                    <Star size={10} className="fill-[#fef08a] text-[#fef08a]" />
+                    <span className="font-mono-custom text-[8px] font-black uppercase tracking-widest text-[#fef08a]">
+                      {editionStyles.title}
+                    </span>
+                    <Star size={10} className="fill-[#fef08a] text-[#fef08a]" />
+                  </div>
 
-                {/* UPPER HALF: RATINGS BLOCK + REAL FOOTBALLER CUTOUT */}
-                <div className="relative z-20 mt-1 flex h-[215px] w-full">
-                  {/* Left Ratings Column */}
-                  <div className="flex w-16 flex-col items-center pt-2 text-center">
-                    <span className="font-mono-custom text-4xl font-black leading-none tracking-tighter text-[#fef08a] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-                      {overall}
-                    </span>
-                    <span className="mt-0.5 font-mono-custom text-sm font-black tracking-wider text-[#E8F2EC]">
-                      {legend.position}
-                    </span>
-                    <div className="my-1.5 h-[1px] w-7 bg-gradient-to-r from-transparent via-[#fef08a]/80 to-transparent" />
-                    <div className="text-xl">{selectedArchetype.nation.flag}</div>
-                    <div className="my-1.5 h-[1px] w-7 bg-gradient-to-r from-transparent via-[#fef08a]/80 to-transparent" />
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#fef08a]/60 bg-[#d4af37]/20 shadow-inner">
-                      <span className="font-mono-custom text-[9px] font-black text-[#fef08a]">KTK</span>
+                  {/* UPPER HALF: RATINGS BLOCK + REAL FOOTBALLER CUTOUT */}
+                  <div className="relative z-20 mt-1 flex h-[215px] w-full">
+                    {/* Left Ratings Column */}
+                    <div className="flex w-16 flex-col items-center pt-2 text-center">
+                      <span className="font-mono-custom text-4xl font-black leading-none tracking-tighter text-[#fef08a] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                        {overall}
+                      </span>
+                      <span className="mt-0.5 font-mono-custom text-sm font-black tracking-wider text-[#E8F2EC]">
+                        {legend?.position || 'ST'}
+                      </span>
+                      <div className="my-1.5 h-[1px] w-7 bg-gradient-to-r from-transparent via-[#fef08a]/80 to-transparent" />
+                      <div className="text-xl">{selectedArchetype.nation.flag}</div>
+                      <div className="my-1.5 h-[1px] w-7 bg-gradient-to-r from-transparent via-[#fef08a]/80 to-transparent" />
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#fef08a]/60 bg-[#d4af37]/20 shadow-inner">
+                        <span className="font-mono-custom text-[9px] font-black text-[#fef08a]">KTK</span>
+                      </div>
+                    </div>
+
+                    {/* Real Football Player Photo Cutout (NO ROBOT!) */}
+                    <div className="relative flex-1">
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(254,240,138,0.25)_0%,rgba(53,211,153,0.1)_45%,transparent_70%)]" />
+                      <img
+                        src={activePhoto}
+                        alt={legend?.name || 'Player'}
+                        referrerPolicy="no-referrer"
+                        crossOrigin="anonymous"
+                        className="absolute inset-0 h-full w-full object-contain object-bottom scale-110 drop-shadow-[0_12px_16px_rgba(0,0,0,0.85)]"
+                      />
+                      <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#081f16] to-transparent" />
                     </div>
                   </div>
 
-                  {/* Real Football Player Photo Cutout (NO ROBOT!) */}
-                  <div className="relative flex-1">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(254,240,138,0.25)_0%,rgba(53,211,153,0.1)_45%,transparent_70%)]" />
-                    <img
-                      src={activePhoto}
-                      alt={legend.name}
-                      referrerPolicy="no-referrer"
-                      crossOrigin="anonymous"
-                      className="absolute inset-0 h-full w-full object-contain object-bottom scale-110 drop-shadow-[0_12px_16px_rgba(0,0,0,0.85)]"
-                    />
-                    <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#081f16] to-transparent" />
-                  </div>
-                </div>
-
-                {/* Name Banner Ribbon */}
-                <div className="relative z-30 mt-1">
-                  <div className="flex h-8 items-center justify-center rounded-lg border border-[#fef08a]/70 bg-gradient-to-r from-[#854d0e] via-[#fef08a] to-[#854d0e] px-2 shadow">
-                    <span className="truncate font-mono-custom text-xs font-black uppercase tracking-wider text-[#140b02]">
-                      {legend.name}
-                    </span>
-                  </div>
-                </div>
-
-                {/* The 6 Core FUT Stats */}
-                <div className="relative z-30 mt-2.5 rounded-xl border border-[#d4af37]/30 bg-black/45 px-3 py-1.5 backdrop-blur-sm">
-                  <div className="grid grid-cols-2 divide-x divide-[#fef08a]/20">
-                    <div className="space-y-0.5 pr-2 font-mono-custom">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-black text-white">{legend.pace}</span>
-                        <span className="font-bold text-[#fef08a]">PAC</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-black text-white">{legend.shooting}</span>
-                        <span className="font-bold text-[#fef08a]">SHO</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-black text-white">{legend.passing}</span>
-                        <span className="font-bold text-[#fef08a]">PAS</span>
-                      </div>
+                  {/* Name Banner Ribbon */}
+                  <div className="relative z-30 mt-1">
+                    <div className="flex h-8 items-center justify-center rounded-lg border border-[#fef08a]/70 bg-gradient-to-r from-[#854d0e] via-[#fef08a] to-[#854d0e] px-2 shadow">
+                      <span className="truncate font-mono-custom text-xs font-black uppercase tracking-wider text-[#140b02]">
+                        {legend?.name || 'HAALAND'}
+                      </span>
                     </div>
-                    <div className="space-y-0.5 pl-2 font-mono-custom">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-black text-white">{legend.dribbling}</span>
-                        <span className="font-bold text-[#fef08a]">DRI</span>
+                  </div>
+
+                  {/* The 6 Core FUT Stats */}
+                  <div className="relative z-30 mt-2.5 rounded-xl border border-[#d4af37]/30 bg-black/45 px-3 py-1.5 backdrop-blur-sm">
+                    <div className="grid grid-cols-2 divide-x divide-[#fef08a]/20">
+                      <div className="space-y-0.5 pr-2 font-mono-custom">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-black text-white">{legend?.pace ?? 96}</span>
+                          <span className="font-bold text-[#fef08a]">PAC</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-black text-white">{legend?.shooting ?? 96}</span>
+                          <span className="font-bold text-[#fef08a]">SHO</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-black text-white">{legend?.passing ?? 80}</span>
+                          <span className="font-bold text-[#fef08a]">PAS</span>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-black text-white">{legend.defending}</span>
-                        <span className="font-bold text-[#fef08a]">DEF</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-black text-white">{legend.physical}</span>
-                        <span className="font-bold text-[#fef08a]">PHY</span>
+                      <div className="space-y-0.5 pl-2 font-mono-custom">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-black text-white">{legend?.dribbling ?? 88}</span>
+                          <span className="font-bold text-[#fef08a]">DRI</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-black text-white">{legend?.defending ?? 60}</span>
+                          <span className="font-bold text-[#fef08a]">DEF</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-black text-white">{legend?.physical ?? 94}</span>
+                          <span className="font-bold text-[#fef08a]">PHY</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Bottom Chemistry & Allocation Tip */}
-                <div className="relative z-30 mt-2 flex flex-col items-center justify-center font-mono-custom text-center">
-                  <div className="flex items-center gap-1.5 text-[9px] font-bold text-[#35D399]">
-                    <span>HUNTER</span>
-                    <span className="flex gap-0.5">◆◆◆</span>
-                    <span className="text-[#8FA39A]">·</span>
-                    <span className="text-[#f3d37a]">330 KTK</span>
+                  {/* Bottom Chemistry & Allocation Tip */}
+                  <div className="relative z-30 mt-2 flex flex-col items-center justify-center font-mono-custom text-center">
+                    <div className="flex items-center gap-1.5 text-[9px] font-bold text-[#35D399]">
+                      <span>HUNTER</span>
+                      <span className="flex gap-0.5">◆◆◆</span>
+                      <span className="text-[#8FA39A]">·</span>
+                      <span className="text-[#f3d37a]">330 KTK</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* RIGHT 6 COLS: ATTRIBUTE RADAR & ATHLETE CUTOUT SELECTOR */}
