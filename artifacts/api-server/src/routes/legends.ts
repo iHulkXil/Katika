@@ -51,6 +51,7 @@ export type MintRecord = {
 };
 
 const mintStore = new Map<string, MintRecord>();
+const photoStore = new Map<string, { photoUrl?: string; nationFlag?: string }>();
 
 export function toLegend(row: {
   name: string; position: string; pace: number; shooting: number; passing: number;
@@ -61,6 +62,10 @@ export function toLegend(row: {
 }, privyUserId?: string) {
   const ovr = Math.round((row.pace + row.shooting + row.passing + row.dribbling + row.defending + row.physical) / 6);
   const mint = row.mint ?? (privyUserId ? mintStore.get(privyUserId) ?? null : null);
+  const storedPhoto = privyUserId ? photoStore.get(privyUserId) : null;
+  const photoUrl = (mint as any)?.photoUrl ?? storedPhoto?.photoUrl ?? (mint as any)?.snapshot?.photoUrl ?? null;
+  const nationFlag = (mint as any)?.nationFlag ?? storedPhoto?.nationFlag ?? null;
+
   return {
     name: row.name,
     position: row.position,
@@ -81,6 +86,8 @@ export function toLegend(row: {
     rolloverBaseU0: row.rolloverBaseU0,
     rolloverTargetR: row.rolloverTargetR,
     mint,
+    photoUrl: photoUrl ?? undefined,
+    nationFlag: nationFlag ?? undefined,
   };
 }
 
@@ -307,6 +314,15 @@ router.put("/legends/me", async (req, res) => {
     }).from(gameBetsTable).where(eq(gameBetsTable.privyUserId, identity.privyUserId));
     const wagered = Number(volumeRows[0]?.volume ?? 0);
 
+    const photoUrl = typeof body.photoUrl === 'string' && body.photoUrl ? body.photoUrl : undefined;
+    const nationFlag = typeof body.nationFlag === 'string' && body.nationFlag ? body.nationFlag : undefined;
+    if (identity.privyUserId && (photoUrl || nationFlag)) {
+      photoStore.set(identity.privyUserId, {
+        photoUrl: photoUrl ?? photoStore.get(identity.privyUserId)?.photoUrl,
+        nationFlag: nationFlag ?? photoStore.get(identity.privyUserId)?.nationFlag,
+      });
+    }
+
     if (isFirstSave) {
       if (needed > KTK_FIRST_CAP) {
         return res.status(400).json({
@@ -318,6 +334,7 @@ router.put("/legends/me", async (req, res) => {
 
       const u0 = KTK_GRANT - needed;
       const targetR = u0 * 10;
+      const existingMint = (existing[0]?.mint as Record<string, any>) ?? {};
       const values = {
         privyUserId: identity.privyUserId,
         name,
@@ -330,6 +347,11 @@ router.put("/legends/me", async (req, res) => {
         rolloverBaseU0: u0,
         rolloverTargetR: targetR,
         profileComplete: true,
+        mint: {
+          ...existingMint,
+          ...(photoUrl ? { photoUrl } : {}),
+          ...(nationFlag ? { nationFlag } : {}),
+        },
         updatedAt: new Date(),
       };
 
@@ -390,6 +412,7 @@ router.put("/legends/me", async (req, res) => {
     const nextBoughtWallet = bankBought - newFromBought;
     const nextPlayable = nextGrantWallet + nextBoughtWallet;
 
+    const existingMint = (legend.mint as Record<string, any>) ?? {};
     const updateValues = {
       name,
       position,
@@ -399,6 +422,11 @@ router.put("/legends/me", async (req, res) => {
       allocatedFromGrant: newFromGrant,
       allocatedFromBought: newFromBought,
       profileComplete: true,
+      mint: {
+        ...existingMint,
+        ...(photoUrl ? { photoUrl } : {}),
+        ...(nationFlag ? { nationFlag } : {}),
+      },
       updatedAt: new Date(),
     };
 

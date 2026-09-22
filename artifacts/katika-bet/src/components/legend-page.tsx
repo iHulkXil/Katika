@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'wouter';
 import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { LegendCard } from '@/components/legend-card';
 import { SepoliaMintModal, type MintRecord } from '@/components/sepolia-mint-modal';
 import { ARCHETYPES } from '@/components/legend-avatar';
-import { Sparkles, ShieldCheck, Trophy, ArrowRight } from 'lucide-react';
+import { ProfilePhotoUpload } from '@/components/profile-photo-upload';
+import { extractUserProfilePicture } from '@/lib/avatar-upload';
+import { Sparkles, ShieldCheck, Trophy, ArrowRight, Camera, Upload, Check } from 'lucide-react';
 
 const POSITIONS = ['ST', 'CF', 'LW', 'RW', 'CAM', 'CM', 'CDM', 'LB', 'RB', 'CB', 'GK'];
 const STATS = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical'] as const;
@@ -37,7 +39,7 @@ type Legend = {
 };
 
 export function LegendPage() {
-  const { ready, authenticated, login, getAccessToken } = usePrivy();
+  const { ready, authenticated, user, login, getAccessToken } = usePrivy();
   const { serverUser } = useServerSession();
   const [legend, setLegend] = useState<Legend>({
     name: 'K. Ronaldo',
@@ -56,6 +58,9 @@ export function LegendPage() {
   });
   const [status, setStatus] = useState<string | null>(null);
   const [mintModalOpen, setMintModalOpen] = useState(false);
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
+
+  const detectedSocialPhoto = useMemo(() => extractUserProfilePicture(user), [user]);
 
   const load = async () => {
     const token = await getAccessToken();
@@ -63,12 +68,26 @@ export function LegendPage() {
     const response = await fetch('/api/legends/me', { headers: { Authorization: `Bearer ${token}` } });
     if (!response.ok) return;
     const body = await response.json();
-    if (body) setLegend(body as Legend);
+    if (body) {
+      const socialPic = user ? extractUserProfilePicture(user) : null;
+      setLegend((prev) => ({
+        ...body,
+        photoUrl: body.photoUrl || socialPic || prev.photoUrl || ARCHETYPES[0].photoUrl,
+        nationFlag: body.nationFlag || prev.nationFlag || ARCHETYPES[0].nation.flag,
+      } as Legend));
+    }
   };
 
   useEffect(() => {
     if (ready && authenticated) void load();
   }, [ready, authenticated]);
+
+  // Auto-suggest social photo on initial load if current is default
+  useEffect(() => {
+    if (detectedSocialPhoto && (!legend.photoUrl || legend.photoUrl === ARCHETYPES[0].photoUrl)) {
+      setLegend((prev) => ({ ...prev, photoUrl: detectedSocialPhoto }));
+    }
+  }, [detectedSocialPhoto]);
 
   const save = async () => {
     setStatus('Saving...');
@@ -156,6 +175,13 @@ export function LegendPage() {
           }}
           playable={estPlayable}
           onRefresh={load}
+          onPhotoChange={(newUrl, newFlag) =>
+            setLegend((prev) => ({
+              ...prev,
+              photoUrl: newUrl,
+              ...(newFlag ? { nationFlag: newFlag } : {}),
+            }))
+          }
         />
       </div>
 
@@ -194,7 +220,74 @@ export function LegendPage() {
         ))}
       </div>
 
-      <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Athlete Cutout & Nation</p>
+      <div className="mt-5 flex items-center justify-between">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Athlete Photo & Identity</p>
+        <button
+          type="button"
+          onClick={() => setPhotoModalOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[#fef08a]/60 bg-[#fef08a]/10 px-3 py-1 font-mono-custom text-[11px] font-bold text-[#fef08a] transition-all hover:bg-[#fef08a]/20"
+        >
+          <Camera size={12} />
+          <span>Upload Custom Photo</span>
+        </button>
+      </div>
+
+      {/* Social PFP Quick Suggestion Banner */}
+      {detectedSocialPhoto && legend.photoUrl !== detectedSocialPhoto && (
+        <div className="mt-2 flex items-center justify-between rounded-xl border border-[#35D399]/40 bg-[#35D399]/10 p-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <img
+              src={detectedSocialPhoto}
+              alt="Social Avatar"
+              className="h-7 w-7 rounded-full object-cover border border-[#35D399]"
+            />
+            <p className="truncate text-xs text-[#E8F2EC]">
+              Linked profile photo detected from your account
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLegend((prev) => ({ ...prev, photoUrl: detectedSocialPhoto }))}
+            className="shrink-0 rounded-lg bg-[#35D399] px-2.5 py-1 font-mono-custom text-[10px] font-bold text-[#062018] hover:bg-[#35D399]/90"
+          >
+            Use My Photo
+          </button>
+        </div>
+      )}
+
+      {/* Upload/Active Photo Bar */}
+      <div className="mt-2.5 flex items-center gap-3 rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] p-3">
+        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-[#fef08a]/40 bg-black/50 shadow-inner">
+          <img
+            src={legend.photoUrl || ARCHETYPES[0].photoUrl}
+            alt={legend.name}
+            referrerPolicy="no-referrer"
+            crossOrigin="anonymous"
+            className="h-full w-full object-cover object-top"
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-mono-custom text-xs font-bold text-[#E8F2EC]">Active Card Visual</span>
+            <span className="rounded bg-[#fef08a]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#fef08a]">
+              {ARCHETYPES.some((a) => a.photoUrl === legend.photoUrl) ? 'Preset Athlete' : 'Custom Upload'}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[10px] text-[#8FA39A]">
+            Upload your personal portrait or select from iconic legends below.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setPhotoModalOpen(true)}
+          className="shrink-0 inline-flex items-center gap-1 rounded-xl border border-[#1C3A2E] bg-white/5 px-3 py-2 text-xs font-medium text-[#E8F2EC] hover:bg-white/10"
+        >
+          <Upload size={12} />
+          Change
+        </button>
+      </div>
+
+      <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8FA39A]">Iconic Presets</p>
       <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
         {ARCHETYPES.map((arch) => {
           const isSelected = (legend.photoUrl || ARCHETYPES[0].photoUrl) === arch.photoUrl;
@@ -325,6 +418,19 @@ export function LegendPage() {
         onClose={() => setMintModalOpen(false)}
         legend={legend}
         onMintSuccess={() => void load()}
+      />
+
+      <ProfilePhotoUpload
+        isOpen={photoModalOpen}
+        onClose={() => setPhotoModalOpen(false)}
+        onSelectPhoto={(newUrl, newFlag) => {
+          setLegend((prev) => ({
+            ...prev,
+            photoUrl: newUrl,
+            ...(newFlag ? { nationFlag: newFlag } : {}),
+          }));
+        }}
+        currentPhotoUrl={legend.photoUrl}
       />
     </div>
   );

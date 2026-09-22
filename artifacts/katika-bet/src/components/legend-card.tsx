@@ -5,7 +5,9 @@ import { useServerSession } from '@/components/server-session';
 import { LegendAvatar, ARCHETYPES, kit } from '@/components/legend-avatar';
 import { SepoliaMintModal, type MintRecord } from '@/components/sepolia-mint-modal';
 import { PS5InspectModal } from '@/components/ps5-inspect-modal';
-import { ShieldCheck, Sparkles, RotateCw, ZoomIn, Award, Star } from 'lucide-react';
+import { TotyCard } from '@/components/toty-card';
+import { ProfilePhotoUpload } from '@/components/profile-photo-upload';
+import { ShieldCheck, Sparkles, RotateCw, ZoomIn, Award, Star, Camera } from 'lucide-react';
 
 export { type MintRecord };
 
@@ -75,18 +77,43 @@ export function LegendCard({
   playable,
   variant = 'full',
   onRefresh,
+  onPhotoChange,
 }: {
   legend: LegendCardData | null;
   playable?: number;
   variant?: 'full' | 'compact' | 'ghost';
   onRefresh?: () => void;
+  onPhotoChange?: (url: string, flag?: string) => void;
 }) {
+  const { getAccessToken } = usePrivy();
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [mintModalOpen, setMintModalOpen] = useState(false);
   const [inspectModalOpen, setInspectModalOpen] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const [rot, setRot] = useState({ x: 0, y: 0, glareX: 50, glareY: 50 });
-  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handlePhotoSelect = async (photoUrl: string, flag?: string) => {
+    setPhotoModalOpen(false);
+    if (onPhotoChange) {
+      onPhotoChange(photoUrl, flag);
+      return;
+    }
+    try {
+      const token = await getAccessToken();
+      if (!token || !legend) return;
+      await fetch('/api/legends/me', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...legend,
+          photoUrl,
+          ...(flag ? { nationFlag: flag } : {}),
+        }),
+      });
+      onRefresh?.();
+    } catch {
+      // Ignored
+    }
+  };
 
   const overall = useMemo(() => {
     if (!legend) return 75;
@@ -108,37 +135,15 @@ export function LegendCard({
   const matchedArchetype = useMemo(() => {
     if (!legend) return ARCHETYPES[0];
     const pos = legend.position || 'ST';
-    if (pos === 'GK') return ARCHETYPES[4];
-    if (pos === 'CB' || pos === 'LB' || pos === 'RB') return ARCHETYPES[2];
-    if (pos === 'CDM' || pos === 'CM' || pos === 'CAM') return ARCHETYPES[1];
-    if (pos === 'RW' || pos === 'LW') return ARCHETYPES[3];
+    if (pos === 'GK') return ARCHETYPES[5] || ARCHETYPES[0];
+    if (pos === 'CB' || pos === 'LB' || pos === 'RB') return ARCHETYPES[3] || ARCHETYPES[0];
+    if (pos === 'CDM' || pos === 'CM' || pos === 'CAM') return ARCHETYPES[2] || ARCHETYPES[0];
+    if (pos === 'RW' || pos === 'LW') return ARCHETYPES[4] || ARCHETYPES[0];
     return ARCHETYPES[0];
   }, [legend]);
 
   const activeFlag = legend?.nationFlag || matchedArchetype.nation.flag;
   const activePhoto = legend?.photoUrl || matchedArchetype.photoUrl;
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'touch') return;
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const px = (e.clientX - rect.left) / rect.width;
-    const py = (e.clientY - rect.top) / rect.height;
-    // Smooth responsive tilt
-    const rx = (py - 0.5) * -18;
-    const ry = (px - 0.5) * 18;
-    setRot({
-      x: rx,
-      y: ry,
-      glareX: px * 100,
-      glareY: py * 100,
-    });
-  };
-
-  const handlePointerLeave = () => {
-    setIsHovered(false);
-    setRot({ x: 0, y: 0, glareX: 50, glareY: 50 });
-  };
 
   if (!legend || !legend.profileComplete || variant === 'ghost') {
     return (
@@ -226,9 +231,6 @@ export function LegendCard({
     );
   }
 
-  // Authentic FUT Shield Polygon
-  const futShieldClip = 'polygon(7% 0%, 93% 0%, 100% 5%, 100% 83%, 50% 100%, 0% 83%, 0% 5%)';
-
   return (
     <>
       <div className="relative mx-auto flex max-w-[340px] flex-col items-center">
@@ -237,15 +239,24 @@ export function LegendCard({
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-[#fef08a] shadow-[0_0_8px_#fef08a]" />
             <p className="font-mono-custom text-[11px] font-black tracking-[.25em] text-[#fef08a]">
-              FUT ULTIMATE CARD
+              TOTY ULTIMATE CARD
             </p>
           </div>
           <div className="flex items-center gap-1.5">
             <button
               type="button"
+              onClick={() => setPhotoModalOpen(true)}
+              className="inline-flex items-center gap-1 rounded-full border border-[#fef08a]/60 bg-[#fef08a]/15 px-2.5 py-0.5 font-mono-custom text-[10px] font-bold text-[#fef08a] transition-colors hover:bg-[#fef08a]/25 shadow-[0_0_10px_rgba(254,240,138,0.2)]"
+              title="Upload your photo or change athlete"
+            >
+              <Camera size={11} />
+              <span>Photo</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setInspectModalOpen(true)}
               className="inline-flex items-center gap-1 rounded-full border border-[#35D399]/60 bg-[#35D399]/15 px-2.5 py-0.5 font-mono-custom text-[10px] font-bold text-[#35D399] transition-colors hover:bg-[#35D399]/25 shadow-[0_0_12px_rgba(53,211,153,0.25)]"
-              title="Inspect FUT player showcase & attributes"
+              title="Inspect player showcase & attributes"
             >
               <ZoomIn size={12} />
               <span>Inspect</span>
@@ -281,298 +292,25 @@ export function LegendCard({
           </div>
         </div>
 
-        {/* 3D TILT WRAPPER */}
-        <div
-          className="group relative select-none w-[320px] h-[480px]"
-          style={{ perspective: '1200px', touchAction: 'pan-y' }}
-          onPointerEnter={(e) => {
-            if (e.pointerType !== 'touch') setIsHovered(true);
-          }}
-          onPointerMove={handlePointerMove}
-          onPointerLeave={handlePointerLeave}
-        >
-          <div
-            ref={cardRef}
-            className="relative h-full w-full transition-transform duration-200 ease-out"
-            style={{
-              transformStyle: 'preserve-3d',
-              transform: isFlipped
-                ? `rotateY(180deg) rotateX(${rot.x * 0.3}deg)`
-                : `rotateX(${rot.x}deg) rotateY(${rot.y}deg) scale3d(${isHovered ? 1.02 : 1}, ${isHovered ? 1.02 : 1}, 1)`,
-              transition: isHovered ? 'transform 0.08s ease-out' : 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)',
-            }}
-          >
-            {/* ======================================================== */}
-            {/* FRONT FACE: AUTHENTIC EA SPORTS FC / FUT SHIELD CARD */}
-            {/* ======================================================== */}
-            <div
-              className="absolute inset-0 select-none p-[3px]"
-              style={{
-                backfaceVisibility: 'hidden',
-                clipPath: futShieldClip,
-                background: 'linear-gradient(135deg, #FFE57F 0%, #D4AF37 25%, #8A6410 50%, #D4AF37 75%, #FFE57F 100%)',
-                boxShadow: '0 15px 35px rgba(0,0,0,0.8), 0 0 25px rgba(212,175,55,0.35)',
-              }}
-            >
-              {/* Inner Shield Frame */}
-              <div
-                className="relative h-full w-full overflow-hidden p-3"
-                style={{
-                  clipPath: futShieldClip,
-                  background: 'linear-gradient(180deg, #133a2a 0%, #0a2117 35%, #05130e 75%, #020906 100%)',
-                }}
-              >
-                {/* Sunburst Radial Ray Background (FUT Icon Style) */}
-                <div
-                  className="pointer-events-none absolute inset-0 opacity-40"
-                  style={{
-                    background:
-                      'radial-gradient(circle at 65% 30%, rgba(254,240,138,0.35) 0%, rgba(53,211,153,0.18) 45%, transparent 75%)',
-                  }}
-                />
-
-                {/* Subtle Prismatic Rainbow Glare Sweep */}
-                <div
-                  className="pointer-events-none absolute inset-0 z-40 transition-opacity duration-200"
-                  style={{
-                    opacity: isHovered ? 0.75 : 0.25,
-                    background: `radial-gradient(circle at ${rot.glareX}% ${rot.glareY}%, rgba(255,255,255,0.65) 0%, rgba(254,240,138,0.3) 25%, rgba(53,211,153,0.2) 50%, transparent 75%)`,
-                    mixBlendMode: 'color-dodge',
-                  }}
-                />
-
-                {/* Top Strip Watermark */}
-                <div className="absolute right-4 top-2 z-10 flex items-center gap-1 opacity-60">
-                  <Star size={10} className="fill-[#fef08a] text-[#fef08a]" />
-                  <span className="font-mono-custom text-[8px] font-black uppercase tracking-widest text-[#fef08a]">
-                    KATIKA ICON
-                  </span>
-                  <Star size={10} className="fill-[#fef08a] text-[#fef08a]" />
-                </div>
-
-                {/* ==================================================== */}
-                {/* UPPER HALF: RATINGS BLOCK (LEFT) + REAL PLAYER (RIGHT) */}
-                {/* ==================================================== */}
-                <div className="relative z-20 mt-1 flex h-[230px] w-full">
-                  {/* LEFT RATINGS COLUMN */}
-                  <div className="flex w-20 flex-col items-center pt-2 text-center">
-                    {/* Big Bold OVR Rating */}
-                    <span className="font-mono-custom text-4xl font-black leading-none tracking-tighter text-[#fef08a] drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-                      {overall}
-                    </span>
-
-                    {/* Position */}
-                    <span className="mt-0.5 font-mono-custom text-base font-black tracking-wider text-[#E8F2EC] drop-shadow">
-                      {legend.position}
-                    </span>
-
-                    {/* Gold Divider Line */}
-                    <div className="my-2 h-[1px] w-8 bg-gradient-to-r from-transparent via-[#fef08a]/80 to-transparent" />
-
-                    {/* Nation Flag */}
-                    <div
-                      className="text-2xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
-                      title={matchedArchetype.nation.name}
-                    >
-                      {activeFlag}
-                    </div>
-
-                    {/* Gold Divider Line */}
-                    <div className="my-2 h-[1px] w-8 bg-gradient-to-r from-transparent via-[#fef08a]/80 to-transparent" />
-
-                    {/* Club Monogram Crest */}
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#fef08a]/60 bg-gradient-to-br from-[#d4af37]/30 to-[#8a6410]/30 shadow-inner">
-                      <span className="font-mono-custom text-[10px] font-black text-[#fef08a]">
-                        KTK
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* RIGHT: REAL FOOTBALLER CUTOUT (NO ROBOT!) */}
-                  <div className="relative flex-1">
-                    {/* Stadium Flare behind player */}
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(254,240,138,0.25)_0%,rgba(53,211,153,0.1)_45%,transparent_70%)]" />
-
-                    {/* Real Football Player Photo Cutout */}
-                    <img
-                      src={activePhoto}
-                      alt={legend.name}
-                      referrerPolicy="no-referrer"
-                      crossOrigin="anonymous"
-                      className="absolute inset-0 h-full w-full object-contain object-bottom scale-110 drop-shadow-[0_12px_16px_rgba(0,0,0,0.85)] transition-transform duration-300 group-hover:scale-115"
-                    />
-
-                    {/* Soft bottom fade so player integrates smoothly into name banner */}
-                    <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[#081f16] to-transparent" />
-                  </div>
-                </div>
-
-                {/* ==================================================== */}
-                {/* NAME BANNER RIBBON (FUT GOLD BAR) */}
-                {/* ==================================================== */}
-                <div className="relative z-30 mt-1">
-                  <div className="flex h-9 items-center justify-center rounded-lg border border-[#fef08a]/70 bg-gradient-to-r from-[#854d0e] via-[#fef08a] to-[#854d0e] px-2 shadow-[0_4px_10px_rgba(0,0,0,0.6)]">
-                    <span className="truncate font-mono-custom text-sm font-black uppercase tracking-wider text-[#140b02] drop-shadow-sm">
-                      {legend.name}
-                    </span>
-                  </div>
-                </div>
-
-                {/* ==================================================== */}
-                {/* THE 6 CORE FUT STATS MATRIX (2 COLUMNS OF 3 STATS) */}
-                {/* ==================================================== */}
-                <div className="relative z-30 mt-3 rounded-xl border border-[#d4af37]/30 bg-black/40 px-3 py-2 backdrop-blur-sm">
-                  <div className="grid grid-cols-2 divide-x divide-[#fef08a]/20">
-                    {/* LEFT COLUMN: PAC, SHO, PAS */}
-                    <div className="space-y-1 pr-2 font-mono-custom">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-sm font-black text-white">{legend.pace}</span>
-                        <span className="font-bold text-[#fef08a]">PAC</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-sm font-black text-white">{legend.shooting}</span>
-                        <span className="font-bold text-[#fef08a]">SHO</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-sm font-black text-white">{legend.passing}</span>
-                        <span className="font-bold text-[#fef08a]">PAS</span>
-                      </div>
-                    </div>
-
-                    {/* RIGHT COLUMN: DRI, DEF, PHY */}
-                    <div className="space-y-1 pl-2 font-mono-custom">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-sm font-black text-white">{legend.dribbling}</span>
-                        <span className="font-bold text-[#fef08a]">DRI</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-sm font-black text-white">{legend.defending}</span>
-                        <span className="font-bold text-[#fef08a]">DEF</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-sm font-black text-white">{legend.physical}</span>
-                        <span className="font-bold text-[#fef08a]">PHY</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ==================================================== */}
-                {/* BOTTOM SHIELD TIP: CHEMISTRY / TOKEN ALLOCATION */}
-                {/* ==================================================== */}
-                <div className="relative z-30 mt-2 flex flex-col items-center justify-center text-center font-mono-custom">
-                  {/* Chemistry Style with 3 Diamonds */}
-                  <div className="flex items-center gap-1.5 text-[9px] font-bold text-[#35D399]">
-                    <span>HUNTER</span>
-                    <span className="flex gap-0.5 text-[#35D399]">◆◆◆</span>
-                    <span className="text-[#8FA39A]">·</span>
-                    <span className="text-[#f3d37a]">{cardAlloc} KTK</span>
-                  </div>
-
-                  {/* Mint Status Pill */}
-                  <div className="mt-1 flex items-center gap-1 text-[8px] uppercase tracking-wider text-[#8FA39A]">
-                    {isMinted ? (
-                      <span className="text-[#35D399] font-bold">
-                        ERC-721 #{legend.mint?.tokenId} VERIFIED
-                      </span>
-                    ) : (
-                      <span>READY FOR SEPOLIA MINT</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ======================================================== */}
-            {/* BACK FACE: AUTHENTIC FUT PASSPORT & ON-CHAIN CREDENTIAL */}
-            {/* ======================================================== */}
-            <div
-              className="absolute inset-0 select-none p-[3px]"
-              style={{
-                backfaceVisibility: 'hidden',
-                transform: 'rotateY(180deg)',
-                clipPath: futShieldClip,
-                background: 'linear-gradient(135deg, #FFE57F 0%, #D4AF37 25%, #8A6410 50%, #D4AF37 75%, #FFE57F 100%)',
-                boxShadow: '0 15px 35px rgba(0,0,0,0.8)',
-              }}
-            >
-              <div
-                className="relative h-full w-full overflow-hidden p-4 font-mono-custom text-xs"
-                style={{
-                  clipPath: futShieldClip,
-                  background: 'linear-gradient(180deg, #0d261c 0%, #061711 40%, #020906 100%)',
-                }}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-[#fef08a]/30 pb-2">
-                  <div className="flex items-center gap-1.5">
-                    <ShieldCheck size={14} className="text-[#35D399]" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[#fef08a]">
-                      SEPOLIA PASSPORT
-                    </span>
-                  </div>
-                  <span className="text-[9px] text-[#35D399]">ON-CHAIN</span>
-                </div>
-
-                {/* Identity Box */}
-                <div className="mt-3 rounded-lg border border-[#fef08a]/30 bg-black/50 p-2.5">
-                  <p className="text-[9px] uppercase text-[#8FA39A]">Athlete Identity</p>
-                  <p className="text-sm font-bold text-white mt-0.5">
-                    {legend.name} ({legend.position})
-                  </p>
-                  <p className="text-[10px] text-[#fef08a] mt-0.5">
-                    {activeFlag} {matchedArchetype.nation.name} · {overall} OVR
-                  </p>
-                </div>
-
-                {/* Contract & Token Metadata */}
-                <div className="mt-2.5 grid grid-cols-2 gap-2">
-                  <div className="rounded-lg border border-border/60 bg-black/50 p-2">
-                    <p className="text-[8px] uppercase text-[#8FA39A]">Contract</p>
-                    <p className="truncate text-[10px] font-semibold text-[#f3d37a]">0x600f...3e9B</p>
-                    <p className="text-[8px] text-[#8FA39A]">Sepolia ERC-721</p>
-                  </div>
-                  <div className="rounded-lg border border-border/60 bg-black/50 p-2">
-                    <p className="text-[8px] uppercase text-[#8FA39A]">Token Status</p>
-                    <p className="text-[10px] font-semibold text-[#35D399]">
-                      {isMinted ? `#${legend.mint?.tokenId}` : 'Ready to Mint'}
-                    </p>
-                    <p className="text-[8px] text-[#8FA39A]">Dynamic Metadata</p>
-                  </div>
-                </div>
-
-                {/* Rollover & Proof */}
-                <div className="mt-2.5 rounded-lg border border-border/60 bg-black/50 p-2.5">
-                  <p className="text-[9px] uppercase text-[#8FA39A]">Card Allocation</p>
-                  <p className="text-xs font-bold text-[#fef08a] mt-0.5">{cardAlloc} KTK Stack</p>
-                  {typeof playable === 'number' && !Number.isNaN(playable) ? (
-                    <p className="text-[10px] text-[#35D399] mt-0.5">
-                      Playable Roll: {playable.toLocaleString()} KTK
-                    </p>
-                  ) : null}
-                  <p className="mt-1.5 text-[9px] text-[#8FA39A] leading-relaxed">
-                    Card stats evolve through live casino play. Provenance verified on Ethereum Sepolia.
-                  </p>
-                </div>
-
-                {/* Quick Flip Action */}
-                <div className="mt-3 text-center">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsFlipped(false);
-                    }}
-                    className="inline-flex items-center gap-1 rounded-full border border-[#fef08a]/60 bg-[#fef08a]/15 px-3 py-1 text-[10px] font-bold text-[#fef08a] hover:bg-[#fef08a]/25"
-                  >
-                    <RotateCw size={10} /> Back to Front
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* AUTHENTIC TOTY CARD WITH 3D CRYSTALS & METALLIC GOLD FRAME */}
+        <TotyCard
+          legend={legend}
+          overall={overall}
+          playable={playable}
+          isFlipped={isFlipped}
+          onFlip={() => setIsFlipped((prev) => !prev)}
+          onInspect={() => setInspectModalOpen(true)}
+          onMint={() => setMintModalOpen(true)}
+          onUploadClick={() => setPhotoModalOpen(true)}
+        />
       </div>
+
+      <ProfilePhotoUpload
+        isOpen={photoModalOpen}
+        onClose={() => setPhotoModalOpen(false)}
+        onSelectPhoto={handlePhotoSelect}
+        currentPhotoUrl={legend.photoUrl}
+      />
 
       <SepoliaMintModal
         isOpen={mintModalOpen}

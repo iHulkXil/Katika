@@ -35,6 +35,20 @@ export type AthleteArchetype = {
 
 export const ARCHETYPES: AthleteArchetype[] = [
   {
+    id: 'nordic_striker',
+    name: 'Nordic Striker',
+    title: 'TOTY Goal Phenom',
+    photoUrl: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=600&q=80',
+    nation: { name: 'Norway', flag: '🇳🇴' },
+    skinTone: '#fce4ce',
+    shadowTone: '#c79774',
+    highlightTone: '#fff3e8',
+    hairColor: '#f4de8d',
+    hairStyle: 'crop',
+    irisColor: '#3b82f6',
+    beard: 'none',
+  },
+  {
     id: 'striker_apex',
     name: 'Apex Finisher',
     title: 'Clinical Goal Machine',
