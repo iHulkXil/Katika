@@ -237,9 +237,9 @@ export function LegendCard({
         {/* Quick Action Navigation Bar */}
         <div className="mb-3 flex w-full items-center justify-between px-2">
           <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-[#fef08a] shadow-[0_0_8px_#fef08a]" />
-            <p className="font-mono-custom text-[11px] font-black tracking-[.25em] text-[#fef08a]">
-              TOTY ULTIMATE CARD
+            <span className="h-2 w-2 rounded-full bg-[#f59e0b] shadow-[0_0_8px_#f59e0b]" />
+            <p className="font-mono-custom text-[11px] font-black tracking-[.25em] text-[#f4c172]">
+              HOTD KNIGHT SHIELD
             </p>
           </div>
           <div className="flex items-center gap-1.5">

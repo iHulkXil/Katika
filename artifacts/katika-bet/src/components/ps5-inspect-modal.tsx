@@ -25,7 +25,7 @@ interface FUTInspectModalProps {
 }
 
 export function PS5InspectModal({ isOpen, onClose, legend }: FUTInspectModalProps) {
-  const [cardEdition, setCardEdition] = useState<'icon' | 'toty' | 'emerald'>('icon');
+  const [cardEdition, setCardEdition] = useState<'knight' | 'icon' | 'toty'>('knight');
   const [selectedArchetype, setSelectedArchetype] = useState<AthleteArchetype>(ARCHETYPES[0]);
   const [activePhoto, setActivePhoto] = useState<string>(ARCHETYPES[0].photoUrl);
 
@@ -60,7 +60,8 @@ export function PS5InspectModal({ isOpen, onClose, legend }: FUTInspectModalProp
   if (!isOpen || !legend) return null;
 
   const kitInfo = kit(legend.position || 'ST');
-  const futShieldClip = 'polygon(7% 0%, 93% 0%, 100% 5%, 100% 83%, 50% 100%, 0% 83%, 0% 5%)';
+  const futShieldClip =
+    'polygon(50% 0.8%, 64.4% 0.8%, 73.6% 1.2%, 82.2% 2.4%, 84.0% 3.7%, 89.6% 6.9%, 93.3% 10.6%, 96.3% 15.5%, 95.1% 17.1%, 97.5% 20.8%, 97.5% 51.0%, 96.3% 56.1%, 97.5% 61.2%, 97.5% 72.7%, 94.5% 77.6%, 87.7% 84.1%, 74.8% 90.6%, 60.7% 95.5%, 54.0% 97.6%, 50.0% 99.6%, 46.0% 97.6%, 39.3% 95.5%, 25.2% 90.6%, 12.3% 84.1%, 5.5% 77.6%, 2.5% 72.7%, 2.5% 61.2%, 3.7% 56.1%, 2.5% 51.0%, 2.5% 20.8%, 4.9% 17.1%, 3.7% 15.5%, 6.7% 10.6%, 10.4% 6.9%, 16.0% 3.7%, 17.8% 2.4%, 26.4% 1.2%, 35.6% 0.8%)';
 
   // Calculate Hexagon radar vertices
   const stats = [
@@ -89,6 +90,12 @@ export function PS5InspectModal({ isOpen, onClose, legend }: FUTInspectModalProp
 
   // Card themes
   const editionStyles = {
+    knight: {
+      border: 'linear-gradient(135deg, #4b5563 0%, #1f2428 25%, #374151 50%, #111417 75%, #4b5563 100%)',
+      bg: 'linear-gradient(180deg, #2b180d 0%, #1c0f07 35%, #0f0703 75%, #070301 100%)',
+      title: 'HOTD KNIGHT',
+      accentColor: '#f4c172',
+    },
     icon: {
       border: 'linear-gradient(135deg, #FFE57F 0%, #D4AF37 25%, #8A6410 50%, #D4AF37 75%, #FFE57F 100%)',
       bg: 'linear-gradient(180deg, #133a2a 0%, #0a2117 35%, #05130e 75%, #020906 100%)',
@@ -100,12 +107,6 @@ export function PS5InspectModal({ isOpen, onClose, legend }: FUTInspectModalProp
       bg: 'linear-gradient(180deg, #081d38 0%, #051024 35%, #020712 100%)',
       title: 'TEAM OF THE YEAR',
       accentColor: '#38bdf8',
-    },
-    emerald: {
-      border: 'linear-gradient(135deg, #34d399 0%, #059669 40%, #047857 70%, #6ee7b7 100%)',
-      bg: 'linear-gradient(180deg, #062b1e 0%, #041912 40%, #010a07 100%)',
-      title: 'EMERALD ELITE',
-      accentColor: '#34d399',
     },
   }[cardEdition];
 
@@ -147,9 +148,9 @@ export function PS5InspectModal({ isOpen, onClose, legend }: FUTInspectModalProp
             <div className="mb-4 flex items-center gap-2">
               <span className="font-mono-custom text-[10px] uppercase text-[#8FA39A]">Card Edition:</span>
               {[
+                { id: 'knight', label: 'HOTD Knight' },
                 { id: 'icon', label: 'Icon Gold' },
                 { id: 'toty', label: 'TOTY Blue' },
-                { id: 'emerald', label: 'Emerald' },
               ].map((tier) => (
                 <button
                   key={tier.id}
