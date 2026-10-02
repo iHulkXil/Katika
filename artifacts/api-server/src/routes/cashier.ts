@@ -50,8 +50,15 @@ export const CASHIER_PACKAGES: CashierPackage[] = [
 let stripeClient: any = null;
 async function getStripe() {
   if (!stripeClient && process.env.STRIPE_SECRET_KEY) {
-    const { default: Stripe } = await import("stripe");
-    stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY);
+    try {
+      const stripeModule = await import("stripe").catch(() => null);
+      if (stripeModule) {
+        const StripeConstructor = stripeModule.default || stripeModule;
+        stripeClient = new StripeConstructor(process.env.STRIPE_SECRET_KEY);
+      }
+    } catch {
+      stripeClient = null;
+    }
   }
   return stripeClient;
 }
