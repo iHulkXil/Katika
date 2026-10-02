@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -9,6 +9,7 @@ import { BetHistory } from '@/components/bet-history';
 import { DicePage } from '@/components/dice-page';
 import { CoinFlipPage } from '@/components/coinflip-page';
 import { PoolGamePage } from '@/components/pool-game';
+import { TelegramTapper } from '@/components/telegram-tapper';
 import { PlayPage } from '@/components/play-page';
 import { LegendPage } from '@/components/legend-page';
 import { LeaderboardPage } from '@/components/leaderboard-page';
@@ -72,17 +73,51 @@ function GameTile({ game }: { game: Game }) {
 }
 
 function Home() {
+  const [tab, setTab] = useState<'tap' | 'casino'>('tap');
+
   return (
     <div className="px-3 pt-3">
-      <HomeLegendHero />
-      <div className="mt-6 flex items-end justify-between px-0.5">
-        <div>
-          <span className="font-mono-custom text-[10px] uppercase tracking-[.18em] text-[#35D399]">Live Tables</span>
-          <h2 className="text-lg font-bold text-[#E8F2EC]">Casino Floor</h2>
-        </div>
-        <Link href="/games" className="text-xs font-semibold text-[#8FA39A] hover:text-[#35D399]">View all →</Link>
+      {/* Telegram Tap to Earn Switcher */}
+      <div className="mb-3 flex items-center justify-between rounded-2xl border border-[#d4af37]/40 bg-[#0E1A16] p-1 shadow-md">
+        <button
+          type="button"
+          onClick={() => setTab('tap')}
+          className={`flex-1 rounded-xl py-2 font-mono-custom text-xs font-black transition-all ${
+            tab === 'tap'
+              ? 'border border-[#fef08a] bg-[#fef08a]/20 text-[#fef08a] shadow-[0_0_12px_rgba(254,240,138,0.25)]'
+              : 'text-[#8FA39A] hover:text-white'
+          }`}
+        >
+          ⚡ KATIKA TAP TO EARN
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('casino')}
+          className={`flex-1 rounded-xl py-2 font-mono-custom text-xs font-black transition-all ${
+            tab === 'casino'
+              ? 'border border-[#35D399] bg-[#35D399]/20 text-[#35D399] shadow-[0_0_12px_rgba(53,211,153,0.25)]'
+              : 'text-[#8FA39A] hover:text-white'
+          }`}
+        >
+          🎰 CASINO &amp; POOL
+        </button>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2.5">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
+
+      {tab === 'tap' ? (
+        <TelegramTapper />
+      ) : (
+        <>
+          <HomeLegendHero />
+          <div className="mt-6 flex items-end justify-between px-0.5">
+            <div>
+              <span className="font-mono-custom text-[10px] uppercase tracking-[.18em] text-[#35D399]">Live Tables</span>
+              <h2 className="text-lg font-bold text-[#E8F2EC]">Casino Floor</h2>
+            </div>
+            <Link href="/games" className="text-xs font-semibold text-[#8FA39A] hover:text-[#35D399]">View all →</Link>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2.5">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
+        </>
+      )}
     </div>
   );
 }
@@ -149,6 +184,7 @@ function MenuPage() {
     <div className="px-3 pt-3">
       <h1 className="text-2xl font-semibold">Kit</h1>
       <DemoNotice>$KTK is off-chain test credit.</DemoNotice>
+      <MenuRow href="/tap" icon={Zap} label="⚡ Katika Tap to Earn" />
       <MenuRow href="/legend" icon={Shield} label="My legend" />
       <MenuRow href="/pvp" icon={Swords} label="PvP Arena (Pool, Ludo)" />
       <MenuRow href="/games/pool" icon={Trophy} label="8-Ball Pool" />
@@ -190,6 +226,8 @@ function Router() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/dashboard" component={Home} />
+        <Route path="/tap" component={TelegramTapper} />
+        <Route path="/swap" component={TelegramTapper} />
         <Route path="/play" component={PlayPage} />
         <Route path="/legend" component={LegendPage} />
 

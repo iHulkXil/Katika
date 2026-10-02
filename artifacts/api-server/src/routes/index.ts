@@ -11,6 +11,7 @@ import cashierRouter from "./cashier";
 import kchipRouter from "./kchip";
 import walletRouter from "./wallet";
 import legendsRouter from "./legends";
+import tapRouter from "./tap";
 
 const router: IRouter = Router();
 router.use(healthRouter);
@@ -25,4 +26,5 @@ router.use(minesRouter);
 router.use(rouletteRouter);
 router.use(pvpRouter);
 router.use(cashierRouter);
+router.use(tapRouter);
 export default router;

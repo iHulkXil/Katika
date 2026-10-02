@@ -11,37 +11,44 @@ import {
   Swords,
   UserRound,
   WalletCards,
+  Zap,
+  Trophy,
+  Users,
+  Shield,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 
 export function Brand() {
   return (
-    <Link href="/" className="flex items-center gap-2">
-      <span className="grid h-7 w-7 place-items-center rounded-md bg-[#35D399] text-sm font-bold text-[#062018]">K</span>
+    <Link href="/tap" className="flex items-center gap-2">
+      <span className="grid h-7 w-7 place-items-center rounded-md bg-gradient-to-br from-[#fef08a] via-[#eab308] to-[#854d0e] text-[10px] font-black text-[#062018] shadow-[0_0_10px_rgba(254,240,138,0.3)]">
+        KTK
+      </span>
       <span className="text-[15px] font-semibold tracking-[-.04em]">
-        Katika<span className="text-[#35D399]">.</span>Bet
+        Katika<span className="text-[#fef08a]">.</span>Bet
       </span>
     </Link>
   );
 }
 
 const chips = [
-  { href: '/', label: 'House' },
-  { href: '/pvp', label: 'PvP' },
-  { href: '/play', label: 'Play' },
-  { href: '/legend', label: 'Legend' },
-  { href: '/games', label: 'Casino' },
-  { href: '/cashier', label: 'Cashier' },
-  { href: '/wallet', label: 'Wallet' },
-  { href: '/kit', label: 'Kit' },
+  { href: '/tap', label: '⚡ Katika Tap' },
+  { href: '/games/pool', label: '🎱 8-Ball Pool' },
+  { href: '/pvp', label: '🎲 Club Ludo' },
+  { href: '/games', label: '🎰 Casino' },
+  { href: '/legend', label: '🛡️ Legend Card' },
+  { href: '/cashier', label: '💳 Cashier' },
+  { href: '/kit', label: '⚙️ Kit' },
 ];
 
 const bottom = [
-  { href: '/', label: 'House', icon: HomeIcon },
-  { href: '/pvp', label: 'PvP', icon: Swords },
-  { href: '/play', label: 'Play', icon: Play },
-  { href: '/cashier', label: 'Cashier', icon: CreditCard },
+  { href: '/tap', label: 'Tap', icon: Zap },
+  { href: '/games/pool', label: 'Pool', icon: Trophy },
+  { href: '/pvp', label: 'Ludo', icon: Users },
+  { href: '/games', label: 'Casino', icon: Play },
+  { href: '/legend', label: 'Legend', icon: Shield },
   { href: '/profile', label: 'Profile', icon: UserRound },
 ];
 
