@@ -25,7 +25,7 @@ interface FUTInspectModalProps {
 }
 
 export function PS5InspectModal({ isOpen, onClose, legend }: FUTInspectModalProps) {
-  const [cardEdition, setCardEdition] = useState<'knight' | 'icon' | 'toty'>('knight');
+  const [cardEdition, setCardEdition] = useState<'emerald' | 'icon' | 'toty'>('emerald');
   const [selectedArchetype, setSelectedArchetype] = useState<AthleteArchetype>(ARCHETYPES[0]);
   const [activePhoto, setActivePhoto] = useState<string>(ARCHETYPES[0].photoUrl);
 
@@ -90,11 +90,11 @@ export function PS5InspectModal({ isOpen, onClose, legend }: FUTInspectModalProp
 
   // Card themes
   const editionStyles = {
-    knight: {
-      border: 'linear-gradient(135deg, #4b5563 0%, #1f2428 25%, #374151 50%, #111417 75%, #4b5563 100%)',
-      bg: 'linear-gradient(180deg, #2b180d 0%, #1c0f07 35%, #0f0703 75%, #070301 100%)',
-      title: 'ROYAL KNIGHT',
-      accentColor: '#f4c172',
+    emerald: {
+      border: 'linear-gradient(135deg, #fef08a 0%, #ca8a04 25%, #854d0e 50%, #eab308 75%, #fef9c3 100%)',
+      bg: 'radial-gradient(circle at 50% 25%, #065f46 0%, #044332 40%, #022c22 75%, #011913 100%)',
+      title: 'KATIKA ELITE · FC FIT',
+      accentColor: '#fef08a',
     },
     icon: {
       border: 'linear-gradient(135deg, #FFE57F 0%, #D4AF37 25%, #8A6410 50%, #D4AF37 75%, #FFE57F 100%)',
@@ -148,7 +148,7 @@ export function PS5InspectModal({ isOpen, onClose, legend }: FUTInspectModalProp
             <div className="mb-4 flex items-center gap-2">
               <span className="font-mono-custom text-[10px] uppercase text-[#8FA39A]">Card Edition:</span>
               {[
-                { id: 'knight', label: 'Knight Shield' },
+                { id: 'emerald', label: 'Emerald Elite' },
                 { id: 'icon', label: 'Icon Gold' },
                 { id: 'toty', label: 'TOTY Blue' },
               ].map((tier) => (
@@ -167,8 +167,8 @@ export function PS5InspectModal({ isOpen, onClose, legend }: FUTInspectModalProp
               ))}
             </div>
 
-            {/* THE CARD: KNIGHT WOODEN SHIELD OR FUT SHIELD */}
-            {cardEdition === 'knight' ? (
+            {/* THE CARD: EMERALD ELITE OR FUT SHIELD */}
+            {cardEdition === 'emerald' ? (
               <div className="relative flex w-full items-center justify-center py-1">
                 <TotyCard
                   legend={{

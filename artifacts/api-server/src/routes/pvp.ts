@@ -347,7 +347,7 @@ async function handleCreateMatch(req: any, res: any) {
   try {
     const identity = await authenticateRequest(req);
     const gameRaw = req.body?.game;
-    const game = gameRaw === "21" ? "21" : gameRaw === "ludo" ? "ludo" : "four";
+    const game = gameRaw === "ludo" ? "ludo" : "pool";
     const mode = req.body?.mode === "challenge" ? "challenge" : "queue";
     const stake = Number(req.body?.stake ?? 10);
 
@@ -397,15 +397,12 @@ async function handleCreateMatch(req: any, res: any) {
         await useStaminaSlot(identity.privyUserId);
 
         let initialBoard: any;
-        if (game === "21") {
-          const creatorCard = await getLegendProfile(available.creatorId);
-          const creatorStats = extractLegendStats(creatorCard);
-          const opponentStats = extractLegendStats(card);
-          initialBoard = deal21Match(available.creatorId, identity.privyUserId, stake, creatorStats, opponentStats);
-        } else if (game === "four") {
-          initialBoard = createInitialFourBoard();
-        } else {
+        if (game === "pool") {
+          initialBoard = { phase: "aim", ballsPotted: [], ruleset: "8ball_standard" };
+        } else if (game === "ludo") {
           initialBoard = createInitialLudoBoard();
+        } else {
+          initialBoard = { phase: "aim" };
         }
 
         const updated = await db
@@ -434,12 +431,12 @@ async function handleCreateMatch(req: any, res: any) {
 
     const matchId = `pvp_${game}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     let initialBoard: any;
-    if (game === "21") {
-      initialBoard = { phase: "deal" };
-    } else if (game === "four") {
-      initialBoard = createInitialFourBoard();
-    } else {
+    if (game === "pool") {
+      initialBoard = { phase: "aim", ballsPotted: [], ruleset: "8ball_standard" };
+    } else if (game === "ludo") {
       initialBoard = createInitialLudoBoard();
+    } else {
+      initialBoard = { phase: "aim" };
     }
 
     const created = await db
@@ -447,7 +444,7 @@ async function handleCreateMatch(req: any, res: any) {
       .values({
         id: matchId,
         game,
-        ruleset: game === "21" ? "katika_21_v1" : game === "four" ? "four_v1" : "ludo_quick_v1",
+        ruleset: game === "pool" ? "katika_pool_v1" : "ludo_quick_v1",
         creatorId: identity.privyUserId,
         opponentId: null,
         stake,

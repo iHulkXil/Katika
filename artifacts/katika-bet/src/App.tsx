@@ -8,15 +8,12 @@ import { ConnectedWalletStatus, WalletAuthButton } from '@/components/wallet-aut
 import { BetHistory } from '@/components/bet-history';
 import { DicePage } from '@/components/dice-page';
 import { CoinFlipPage } from '@/components/coinflip-page';
-import { MinesPage } from '@/components/mines-page';
-import { RoulettePage } from '@/components/roulette-page';
+import { PoolGamePage } from '@/components/pool-game';
 import { PlayPage } from '@/components/play-page';
 import { LegendPage } from '@/components/legend-page';
 import { LeaderboardPage } from '@/components/leaderboard-page';
 import { CashierPage } from '@/components/cashier-page';
 import { PvPLobby } from '@/components/pvp-lobby';
-import { PvP21Page } from '@/components/pvp-twentyone';
-import { ClubFourPage } from '@/components/club-four';
 import { ClubLudoPage } from '@/components/club-ludo';
 import { HomeLegendHero, LegendCard, useLegend } from '@/components/legend-card';
 import { AuthGate } from '@/components/auth-gate';
@@ -47,13 +44,10 @@ type Game = {
   icon: ReactNode;
 };
 const games: Game[] = [
-  { name: 'Katika 21', description: 'Closest to 21 • Stat-Gated Double & Split', badge: 'PvP Cards', payout: '4% Pot Rake', href: '/pvp', icon: <Layers /> },
-  { name: 'Connect Four', description: '7×6 Gravity Grid • 4-in-a-row', badge: 'PvP Grid', payout: '4% Pot Rake', href: '/pvp', icon: <Gamepad2 /> },
-  { name: 'Ludo Quick', description: '2 Tokens Home • Captures & Safe Tiles', badge: 'PvP Race', payout: '4% Pot Rake', href: '/pvp', icon: <Users /> },
+  { name: 'Katika Pool', description: '8-Ball Billiards • Solids vs Stripes', badge: 'PvP Pool', payout: '4% Pot Rake', href: '/games/pool', icon: <Trophy /> },
+  { name: 'Club Ludo', description: '2 Tokens Home • Captures & Safe Tiles', badge: 'PvP Race', payout: '4% Pot Rake', href: '/pvp', icon: <Users /> },
   { name: 'Dice', description: '3D Precision Roller', badge: '1-100', payout: '94% RTP', href: '/games/dice', icon: <Dices /> },
   { name: 'Coin Flip', description: '3D Katika Gold Coin', badge: '50/50', payout: '1.88× Fixed', href: '/games/coinflip', icon: <CircleDollarSign /> },
-  { name: 'Mines Vault', description: '5×5 Diamond Grid', badge: 'Custom', payout: 'Cash Out', href: '/games/mines', icon: <Bomb /> },
-  { name: 'Roulette', description: '3D European Wheel', badge: '0-36', payout: 'Up to 34.78×', href: '/games/roulette', icon: <Ticket /> },
 ];
 
 function GameTile({ game }: { game: Game }) {
@@ -156,15 +150,15 @@ function MenuPage() {
       <h1 className="text-2xl font-semibold">Kit</h1>
       <DemoNotice>$KTK is off-chain test credit.</DemoNotice>
       <MenuRow href="/legend" icon={Shield} label="My legend" />
-      <MenuRow href="/pvp" icon={Swords} label="PvP Arena (21, Four, Ludo)" />
+      <MenuRow href="/pvp" icon={Swords} label="PvP Arena (Pool, Ludo)" />
+      <MenuRow href="/games/pool" icon={Trophy} label="8-Ball Pool" />
+      <MenuRow href="/pvp" icon={Users} label="Club Ludo" />
       <MenuRow href="/cashier" icon={CreditCard} label="Cashier & Top Up" />
       <MenuRow href="/leaderboard" icon={Trophy} label="Leaderboard (OVR)" />
       <MenuRow href="/play" icon={Play} label="Play floor" />
-      <MenuRow href="/games" icon={Grid2X2} label="Casino" />
+      <MenuRow href="/games" icon={Grid2X2} label="Casino Tables" />
       <MenuRow href="/games/dice" icon={Dices} label="Dice" />
       <MenuRow href="/games/coinflip" icon={CircleDollarSign} label="Coin Flip" />
-      <MenuRow href="/games/mines" icon={Gem} label="Mines" />
-      <MenuRow href="/games/roulette" icon={Ticket} label="Roulette" />
       <MenuRow href="/wallet" icon={WalletCards} label="Wallet" />
       <MenuRow href="/profile" icon={UserRound} label="Profile" />
     </div>
@@ -202,24 +196,28 @@ function Router() {
         {/* Redirects for legacy routes /clash and /club */}
         <Route path="/clash">{() => <RedirectTo to="/pvp" />}</Route>
         <Route path="/club">{() => <RedirectTo to="/pvp" />}</Route>
-        <Route path="/club/four/:id">{(params) => <RedirectTo to={`/pvp/four/${params.id}`} />}</Route>
+        <Route path="/club/four/:id">{() => <RedirectTo to="/pvp" />}</Route>
         <Route path="/club/ludo/:id">{(params) => <RedirectTo to={`/pvp/ludo/${params.id}`} />}</Route>
 
         {/* PvP Floor & Games */}
         <Route path="/pvp" component={PvPLobby} />
-        <Route path="/pvp/21/:id" component={PvP21Page} />
-        <Route path="/pvp/four/:id" component={ClubFourPage} />
+        <Route path="/pvp/pool/:id" component={PoolGamePage} />
+        <Route path="/pvp/pool" component={PoolGamePage} />
         <Route path="/pvp/ludo/:id" component={ClubLudoPage} />
+        <Route path="/pvp/21/:id">{() => <RedirectTo to="/pvp" />}</Route>
+        <Route path="/pvp/four/:id">{() => <RedirectTo to="/pvp" />}</Route>
+
+        <Route path="/games/pool" component={PoolGamePage} />
+        <Route path="/games/dice" component={DicePage} />
+        <Route path="/games/coinflip" component={CoinFlipPage} />
+        <Route path="/games/mines">{() => <RedirectTo to="/games" />}</Route>
+        <Route path="/games/roulette">{() => <RedirectTo to="/games" />}</Route>
+        <Route path="/games" component={Games} />
 
         <Route path="/cashier" component={CashierPage} />
         <Route path="/leaderboard" component={LeaderboardPage} />
         <Route path="/menu" component={MenuPage} />
         <Route path="/kit" component={MenuPage} />
-        <Route path="/games/dice" component={DicePage} />
-        <Route path="/games/coinflip" component={CoinFlipPage} />
-        <Route path="/games/mines" component={MinesPage} />
-        <Route path="/games/roulette" component={RoulettePage} />
-        <Route path="/games" component={Games} />
         <Route path="/wallet" component={Wallet} />
         <Route path="/rewards" component={RewardsPage} />
         <Route path="/profile" component={Profile} />

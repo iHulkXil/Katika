@@ -36,19 +36,27 @@ export function PlayPage() {
         <span className="font-mono-custom text-xs text-[#35D399]">4% Pot Rake</span>
       </div>
 
-      <div className="mt-2.5">
-        <Link href="/pvp" className="block group rounded-2xl border border-[#35D399]/40 bg-gradient-to-br from-[#12241E] to-[#0A1612] p-4 transition-all hover:border-[#35D399] hover:shadow-[0_0_20px_rgba(53,211,153,0.15)]">
+      <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+        <Link href="/games/pool" className="block group rounded-2xl border border-[#35D399]/40 bg-gradient-to-br from-[#12241E] to-[#0A1612] p-4 transition-all hover:border-[#35D399] hover:shadow-[0_0_20px_rgba(53,211,153,0.15)]">
           <div className="flex items-center justify-between">
-            <span className="font-mono-custom text-[10px] font-bold text-[#35D399]">1V1 ARENA</span>
+            <span className="font-mono-custom text-[10px] font-bold text-[#fef08a]">8-BALL</span>
             <span className="rounded bg-[#35D399]/20 px-2 py-0.5 font-mono-custom text-[9px] font-bold text-[#35D399]">4% RAKE</span>
           </div>
-          <h3 className="mt-1 text-base font-bold text-[#E8F2EC] group-hover:text-[#35D399]">PvP Arena</h3>
-          <p className="mt-0.5 text-xs text-[#8FA39A]">Katika 21 (Stat-Gated BJ) • Connect Four • Ludo Quick</p>
+          <h3 className="mt-1 text-base font-bold text-[#E8F2EC] group-hover:text-[#35D399]">Katika Pool</h3>
+          <p className="mt-0.5 text-xs text-[#8FA39A]">Billiards Arena · Solids vs Stripes</p>
+        </Link>
+        <Link href="/pvp" className="block group rounded-2xl border border-[#1C3A2E] bg-gradient-to-br from-[#0E1A16] to-[#07110E] p-4 transition-all hover:border-[#35D399] hover:shadow-[0_0_20px_rgba(53,211,153,0.15)]">
+          <div className="flex items-center justify-between">
+            <span className="font-mono-custom text-[10px] font-bold text-cyan-400">RACE</span>
+            <span className="rounded bg-cyan-950/40 px-2 py-0.5 font-mono-custom text-[9px] font-bold text-cyan-400">4% RAKE</span>
+          </div>
+          <h3 className="mt-1 text-base font-bold text-[#E8F2EC] group-hover:text-[#35D399]">Club Ludo</h3>
+          <p className="mt-0.5 text-xs text-[#8FA39A]">2 Tokens Home · Captures & Blocks</p>
         </Link>
       </div>
 
       <div className="mt-5 flex items-center justify-between px-1">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-[#E8F2EC]">Casino Tables</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-[#E8F2EC]">Classic House Tables</h2>
         <Link href="/leaderboard" className="text-xs text-[#35D399] hover:underline">
           View Leaderboard →
         </Link>
@@ -58,22 +66,12 @@ export function PlayPage() {
         <Link href="/games/dice" className="group rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] p-3.5 transition-all hover:border-[#35D399]/50">
           <span className="font-mono-custom text-[10px] text-[#35D399]">1–100</span>
           <h3 className="mt-1 text-base font-semibold group-hover:text-[#35D399]">Dice</h3>
-          <p className="mt-0.5 text-xs text-[#8FA39A]">Over/Under roll</p>
+          <p className="mt-0.5 text-xs text-[#8FA39A]">Over/Under precision roll</p>
         </Link>
         <Link href="/games/coinflip" className="group rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] p-3.5 transition-all hover:border-[#35D399]/50">
           <span className="font-mono-custom text-[10px] text-[#35D399]">1.98×</span>
           <h3 className="mt-1 text-base font-semibold group-hover:text-[#35D399]">Coin Flip</h3>
-          <p className="mt-0.5 text-xs text-[#8FA39A]">Heads or tails</p>
-        </Link>
-        <Link href="/games/mines" className="group rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] p-3.5 transition-all hover:border-[#35D399]/50">
-          <span className="font-mono-custom text-[10px] text-[#35D399]">Dynamic</span>
-          <h3 className="mt-1 text-base font-semibold group-hover:text-[#35D399]">Mines</h3>
-          <p className="mt-0.5 text-xs text-[#8FA39A]">Open gems &amp; cash out</p>
-        </Link>
-        <Link href="/games/roulette" className="group rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] p-3.5 transition-all hover:border-[#35D399]/50">
-          <span className="font-mono-custom text-[10px] text-[#35D399]">36:1</span>
-          <h3 className="mt-1 text-base font-semibold group-hover:text-[#35D399]">Roulette</h3>
-          <p className="mt-0.5 text-xs text-[#8FA39A]">European wheel</p>
+          <p className="mt-0.5 text-xs text-[#8FA39A]">3D Katika gold coin</p>
         </Link>
       </div>
 

@@ -22,7 +22,7 @@ export function PvPLobby() {
   const { serverUser } = useServerSession();
   const { legend } = useLegend();
 
-  const [selectedGame, setSelectedGame] = useState<'21' | 'four' | 'ludo'>('21');
+  const [selectedGame, setSelectedGame] = useState<'pool' | 'ludo'>('pool');
   const [mode, setMode] = useState<'queue' | 'challenge'>('queue');
   const [stake, setStake] = useState<number>(10);
   const [loading, setLoading] = useState(false);
@@ -81,10 +81,8 @@ export function PvPLobby() {
       }
 
       const matchId = data.match.id;
-      if (selectedGame === '21') {
-        setLocation(`/pvp/21/${matchId}`);
-      } else if (selectedGame === 'four') {
-        setLocation(`/pvp/four/${matchId}`);
+      if (selectedGame === 'pool') {
+        setLocation(`/pvp/pool/${matchId}`);
       } else {
         setLocation(`/pvp/ludo/${matchId}`);
       }
@@ -115,86 +113,56 @@ export function PvPLobby() {
       </p>
 
       {/* Game Selector Tabs */}
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2.5">
         <button
           type="button"
-          onClick={() => setSelectedGame('21')}
-          className={`rounded-2xl border p-3 text-left transition-all ${
-            selectedGame === '21'
-              ? 'border-[#35D399] bg-[#0E1A16] shadow-[0_0_15px_rgba(53,211,153,0.15)]'
+          onClick={() => setSelectedGame('pool')}
+          className={`rounded-2xl border p-3.5 text-left transition-all ${
+            selectedGame === 'pool'
+              ? 'border-[#35D399] bg-[#0E1A16] shadow-[0_0_15px_rgba(53,211,153,0.2)]'
               : 'border-[#1C3A2E] bg-[#07110E] hover:border-[#1C3A2E]/80'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="font-mono-custom text-sm font-bold text-[#f3d37a]">21</span>
-            <span className="rounded bg-[#35D399]/20 px-1.5 py-0.5 font-mono-custom text-[9px] text-[#35D399]">
-              Cards
+            <span className="font-mono-custom text-sm font-bold text-[#fef08a]">8-BALL</span>
+            <span className="rounded bg-[#35D399]/20 px-1.5 py-0.5 font-mono-custom text-[9px] font-bold text-[#35D399]">
+              Billiards
             </span>
           </div>
-          <h3 className="mt-1 text-xs font-bold text-[#E8F2EC]">Katika 21</h3>
-          <p className="mt-0.5 text-[10px] text-[#8FA39A]">Closest to 21</p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setSelectedGame('four')}
-          className={`rounded-2xl border p-3 text-left transition-all ${
-            selectedGame === 'four'
-              ? 'border-[#35D399] bg-[#0E1A16] shadow-[0_0_15px_rgba(53,211,153,0.15)]'
-              : 'border-[#1C3A2E] bg-[#07110E] hover:border-[#1C3A2E]/80'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="font-mono-custom text-sm font-bold text-red-400">7×6</span>
-            <span className="rounded bg-red-950/40 px-1.5 py-0.5 font-mono-custom text-[9px] text-red-400">
-              Grid
-            </span>
-          </div>
-          <h3 className="mt-1 text-xs font-bold text-[#E8F2EC]">Connect Four</h3>
-          <p className="mt-0.5 text-[10px] text-[#8FA39A]">First to 4-in-a-row</p>
+          <h3 className="mt-1.5 text-sm font-bold text-[#E8F2EC]">Katika Pool</h3>
+          <p className="mt-0.5 text-[11px] text-[#8FA39A]">Solids vs Stripes · 8-Ball Wager</p>
         </button>
 
         <button
           type="button"
           onClick={() => setSelectedGame('ludo')}
-          className={`rounded-2xl border p-3 text-left transition-all ${
+          className={`rounded-2xl border p-3.5 text-left transition-all ${
             selectedGame === 'ludo'
-              ? 'border-[#35D399] bg-[#0E1A16] shadow-[0_0_15px_rgba(53,211,153,0.15)]'
+              ? 'border-[#35D399] bg-[#0E1A16] shadow-[0_0_15px_rgba(53,211,153,0.2)]'
               : 'border-[#1C3A2E] bg-[#07110E] hover:border-[#1C3A2E]/80'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="font-mono-custom text-sm font-bold text-cyan-400">2T</span>
-            <span className="rounded bg-cyan-950/40 px-1.5 py-0.5 font-mono-custom text-[9px] text-cyan-400">
+            <span className="font-mono-custom text-sm font-bold text-cyan-400">2T HOME</span>
+            <span className="rounded bg-cyan-950/40 px-1.5 py-0.5 font-mono-custom text-[9px] font-bold text-cyan-400">
               Race
             </span>
           </div>
-          <h3 className="mt-1 text-xs font-bold text-[#E8F2EC]">Ludo Quick</h3>
-          <p className="mt-0.5 text-[10px] text-[#8FA39A]">Fast 2-player sprint</p>
+          <h3 className="mt-1.5 text-sm font-bold text-[#E8F2EC]">Club Ludo</h3>
+          <p className="mt-0.5 text-[11px] text-[#8FA39A]">Sprint to Home · Captures & Blocks</p>
         </button>
       </div>
 
       {/* Game Details Banner */}
       <div className="mt-3 rounded-xl border border-[#1C3A2E] bg-[#0A1612] p-3">
-        {selectedGame === '21' && (
+        {selectedGame === 'pool' && (
           <div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#f3d37a]">
-              <Sparkles size={14} />
-              <span>Katika 21: Stat-Gated Actions</span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#fef08a]">
+              <Trophy size={14} />
+              <span>Katika 8-Ball Pool: Realistic Billiards Arena</span>
             </div>
             <p className="mt-1 text-[11px] text-[#8FA39A] leading-relaxed">
-              Standard 52-card deck dealt server-side. Beat your opponent’s total without exceeding 21. Strictly higher stats unlock <strong>SHO Double</strong>, <strong>PAS Split</strong>, <strong>DRI Glance</strong>, <strong>PAC Clock speed</strong>, and <strong>DEF Soak</strong> (50% loss protection).
-            </p>
-          </div>
-        )}
-        {selectedGame === 'four' && (
-          <div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-red-400">
-              <Gamepad2 size={14} />
-              <span>Connect Four: 7×6 Classic Rules</span>
-            </div>
-            <p className="mt-1 text-[11px] text-[#8FA39A] leading-relaxed">
-              Creator plays Red and drops first. 15s timer per move. Timeout drops leftmost open column. Connect 4 horizontally, vertically, or diagonally to win. Full board = draw refund with zero rake.
+              Standard 8-ball rules on emerald baize cloth. Aim with precision laser guides and control stroke power. Sink your assigned set (Solids or Stripes) and pocket the 8-ball clean to win the pot! 4% house rake.
             </p>
           </div>
         )}
