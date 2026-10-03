@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Background Radial Sheen -->
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#14532d" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#022c22" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Metallic Lime Green Gradient (Left / Highlights) -->
+    <linearGradient id="limeMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#bef264"/>
+      <stop offset="25%" stop-color="#84cc16"/>
+      <stop offset="60%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+
+    <!-- Deep Emerald Green Gradient (Right / Shadows) -->
+    <linearGradient id="emeraldDeep" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="40%" stop-color="#15803d"/>
+      <stop offset="80%" stop-color="#166534"/>
+      <stop offset="100%" stop-color="#052e16"/>
+    </linearGradient>
+
+    <!-- Brushed Gold/Lime Specular Rim -->
+    <linearGradient id="specularRim" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ecfccb" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#84cc16" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#052e16" stop-opacity="0.8"/>
+    </linearGradient>
+
+    <!-- 3D Shadow Filter -->
+    <filter id="katikaShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000000" flood-opacity="0.85"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#4ade80" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#katikaShadow)">
+    <!-- ==================== CROWN ATOP SHIELD ==================== -->
+    <!-- Crown Left Half (Lighter Lime Tone) -->
+    <path d="M 250 50 L 220 120 L 175 65 L 185 145 L 250 145 Z" fill="url(#limeMetal)" stroke="#a3e635" stroke-width="2"/>
+    <!-- Crown Right Half (Deeper Emerald Tone) -->
+    <path d="M 250 50 L 280 120 L 325 65 L 315 145 L 250 145 Z" fill="url(#emeraldDeep)" stroke="#22c55e" stroke-width="2"/>
+    <!-- Crown Base Band -->
+    <path d="M 175 145 L 325 145 L 320 160 L 180 160 Z" fill="url(#limeMetal)"/>
+
+    <!-- ==================== SHIELD FRAME ==================== -->
+    <!-- Left Shield Outer Arm -->
+    <path d="M 180 125 
+             C 145 150, 130 210, 135 295
+             C 140 360, 185 410, 235 440
+             L 215 460
+             C 160 425, 110 365, 105 285
+             C 100 195, 130 135, 175 110
+             Z" 
+          fill="url(#emeraldDeep)" 
+          stroke="url(#specularRim)" 
+          stroke-width="2"/>
+
+    <!-- Right Shield Outer Arm (with bottom chevron point) -->
+    <path d="M 320 125 
+             C 355 150, 370 210, 365 295
+             C 360 360, 315 410, 265 440
+             L 250 480
+             L 215 450
+             L 235 430
+             L 250 450
+             C 290 415, 335 375, 340 300
+             C 345 220, 325 165, 290 125
+             Z" 
+          fill="url(#limeMetal)" 
+          stroke="url(#specularRim)" 
+          stroke-width="2"/>
+
+    <!-- ==================== CENTRAL 'K' & UPWARD ARROW ==================== -->
+    <!-- Vertical Spine of the 'K' -->
+    <rect x="180" y="180" width="36" height="190" rx="4" fill="url(#limeMetal)" stroke="#84cc16" stroke-width="1.5"/>
+
+    <!-- Left Upper Angle Joint -->
+    <path d="M 216 260 L 275 180 L 315 180 L 245 275 Z" fill="url(#limeMetal)" stroke="#a3e635" stroke-width="1.5"/>
+
+    <!-- Arrow Branch on the Upper Right (Diagonally Upward ↗) -->
+    <g transform="translate(250, 195)">
+      <!-- Arrow Shaft / Diagonal Spine -->
+      <polygon points="15,45 60,-5 45,-15 0,35" fill="url(#limeMetal)"/>
+      <!-- Arrow Head (↗ Pointing to Victory / Upward Growth) -->
+      <polygon points="50,-35 80,-30 75,0 60,-12 40,8 30,-2 50,-22" fill="url(#limeMetal)" stroke="#bef264" stroke-width="2"/>
+    </g>
+
+    <!-- Lower Right Leg of the 'K' -->
+    <path d="M 230 260 L 315 375 L 270 375 L 205 285 Z" fill="url(#emeraldDeep)" stroke="#16a34a" stroke-width="1.5"/>
+  </g>
+</svg>

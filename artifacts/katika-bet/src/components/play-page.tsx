@@ -69,9 +69,19 @@ export function PlayPage() {
           <p className="mt-0.5 text-xs text-[#8FA39A]">Over/Under precision roll</p>
         </Link>
         <Link href="/games/coinflip" className="group rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] p-3.5 transition-all hover:border-[#35D399]/50">
-          <span className="font-mono-custom text-[10px] text-[#35D399]">1.98×</span>
+          <span className="font-mono-custom text-[10px] text-[#35D399]">1.88×</span>
           <h3 className="mt-1 text-base font-semibold group-hover:text-[#35D399]">Coin Flip</h3>
           <p className="mt-0.5 text-xs text-[#8FA39A]">3D Katika gold coin</p>
+        </Link>
+        <Link href="/games/mines" className="group rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] p-3.5 transition-all hover:border-[#35D399]/50">
+          <span className="font-mono-custom text-[10px] text-[#35D399]">5×5 Grid</span>
+          <h3 className="mt-1 text-base font-semibold group-hover:text-[#35D399]">Mines Vault</h3>
+          <p className="mt-0.5 text-xs text-[#8FA39A]">Uncover gems &amp; cash out</p>
+        </Link>
+        <Link href="/games/roulette" className="group rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] p-3.5 transition-all hover:border-[#35D399]/50">
+          <span className="font-mono-custom text-[10px] text-[#35D399]">European</span>
+          <h3 className="mt-1 text-base font-semibold group-hover:text-[#35D399]">Roulette</h3>
+          <p className="mt-0.5 text-xs text-[#8FA39A]">Single zero 0-36 wheel</p>
         </Link>
       </div>
 

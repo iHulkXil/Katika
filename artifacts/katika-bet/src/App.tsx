@@ -8,6 +8,8 @@ import { ConnectedWalletStatus, WalletAuthButton } from '@/components/wallet-aut
 import { BetHistory } from '@/components/bet-history';
 import { DicePage } from '@/components/dice-page';
 import { CoinFlipPage } from '@/components/coinflip-page';
+import { MinesPage } from '@/components/mines-page';
+import { RoulettePage } from '@/components/roulette-page';
 import { PoolGamePage } from '@/components/pool-game';
 import { TelegramTapper } from '@/components/telegram-tapper';
 import { PlayPage } from '@/components/play-page';
@@ -16,6 +18,7 @@ import { LeaderboardPage } from '@/components/leaderboard-page';
 import { CashierPage } from '@/components/cashier-page';
 import { PvPLobby } from '@/components/pvp-lobby';
 import { ClubLudoPage } from '@/components/club-ludo';
+import { ProfilePage } from '@/components/profile-page';
 import { HomeLegendHero, LegendCard, useLegend } from '@/components/legend-card';
 import { AuthGate } from '@/components/auth-gate';
 import { DemoNotice, LayoutShell, MenuRow } from '@/components/layout-shell';
@@ -45,10 +48,10 @@ type Game = {
   icon: ReactNode;
 };
 const games: Game[] = [
-  { name: 'Katika Pool', description: '8-Ball Billiards • Solids vs Stripes', badge: 'PvP Pool', payout: '4% Pot Rake', href: '/games/pool', icon: <Trophy /> },
-  { name: 'Club Ludo', description: '2 Tokens Home • Captures & Safe Tiles', badge: 'PvP Race', payout: '4% Pot Rake', href: '/pvp', icon: <Users /> },
-  { name: 'Dice', description: '3D Precision Roller', badge: '1-100', payout: '94% RTP', href: '/games/dice', icon: <Dices /> },
+  { name: 'Dice Table', description: 'Over/Under Precision Roller', badge: '1-100', payout: '94% RTP', href: '/games/dice', icon: <Dices /> },
   { name: 'Coin Flip', description: '3D Katika Gold Coin', badge: '50/50', payout: '1.88× Fixed', href: '/games/coinflip', icon: <CircleDollarSign /> },
+  { name: 'Mines Vault', description: '5×5 Diamond Grid • Cash Out Anytime', badge: '1-24 Mines', payout: 'Up to 24×', href: '/games/mines', icon: <Bomb /> },
+  { name: 'Roulette', description: 'European Single Zero • Street & Straight Bets', badge: '0-36 Wheel', payout: '97.3% RTP', href: '/games/roulette', icon: <CircleDollarSign /> },
 ];
 
 function GameTile({ game }: { game: Game }) {
@@ -73,53 +76,7 @@ function GameTile({ game }: { game: Game }) {
 }
 
 function Home() {
-  const [tab, setTab] = useState<'tap' | 'casino'>('tap');
-
-  return (
-    <div className="px-3 pt-3">
-      {/* Telegram Tap to Earn Switcher */}
-      <div className="mb-3 flex items-center justify-between rounded-2xl border border-[#d4af37]/40 bg-[#0E1A16] p-1 shadow-md">
-        <button
-          type="button"
-          onClick={() => setTab('tap')}
-          className={`flex-1 rounded-xl py-2 font-mono-custom text-xs font-black transition-all ${
-            tab === 'tap'
-              ? 'border border-[#fef08a] bg-[#fef08a]/20 text-[#fef08a] shadow-[0_0_12px_rgba(254,240,138,0.25)]'
-              : 'text-[#8FA39A] hover:text-white'
-          }`}
-        >
-          ⚡ KATIKA TAP TO EARN
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('casino')}
-          className={`flex-1 rounded-xl py-2 font-mono-custom text-xs font-black transition-all ${
-            tab === 'casino'
-              ? 'border border-[#35D399] bg-[#35D399]/20 text-[#35D399] shadow-[0_0_12px_rgba(53,211,153,0.25)]'
-              : 'text-[#8FA39A] hover:text-white'
-          }`}
-        >
-          🎰 CASINO &amp; POOL
-        </button>
-      </div>
-
-      {tab === 'tap' ? (
-        <TelegramTapper />
-      ) : (
-        <>
-          <HomeLegendHero />
-          <div className="mt-6 flex items-end justify-between px-0.5">
-            <div>
-              <span className="font-mono-custom text-[10px] uppercase tracking-[.18em] text-[#35D399]">Live Tables</span>
-              <h2 className="text-lg font-bold text-[#E8F2EC]">Casino Floor</h2>
-            </div>
-            <Link href="/games" className="text-xs font-semibold text-[#8FA39A] hover:text-[#35D399]">View all →</Link>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2.5">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
-        </>
-      )}
-    </div>
-  );
+  return <TelegramTapper defaultTab="tap" />;
 }
 
 function Games() {
@@ -127,11 +84,11 @@ function Games() {
     <div className="px-3 pt-3 pb-8">
       <div className="flex items-center justify-between">
         <div>
-          <span className="font-mono-custom text-[10px] uppercase tracking-[.18em] text-[#35D399]">Off-Chain Ledger</span>
+          <span className="font-mono-custom text-[10px] uppercase tracking-[.18em] text-[#35D399]">Classic House</span>
           <h1 className="text-xl font-bold tracking-tight text-[#E8F2EC]">Casino Floor</h1>
         </div>
         <span className="rounded-full border border-[#1C3A2E] bg-[#0E1A16] px-2.5 py-1 font-mono-custom text-[11px] text-[#8FA39A]">
-          4 Live Games
+          4 Live Tables
         </span>
       </div>
       <p className="mt-1 text-xs text-[#8FA39A]">All tables settle instantly in $KTK off-chain credits with verified RNG.</p>
@@ -148,55 +105,6 @@ function Wallet() {
       <div className="mt-4"><ConnectedWalletStatus /></div>
       <h2 className="mt-6 text-sm font-semibold uppercase tracking-[.16em] text-secondary">Bet history</h2>
       <BetHistory />
-    </div>
-  );
-}
-
-function DemoAction({ label }: { label: string }) {
-  const { toast } = useToast();
-  return <button type="button" onClick={() => toast({ title: `Use Wallet to ${label.toLowerCase()} $KTK` })} className="rounded-xl border border-border bg-card px-3 py-3 text-sm font-semibold">{label}</button>;
-}
-
-function Profile() {
-  const { user, authenticated } = usePrivy();
-  const { logout } = useLogout();
-  const { serverUser, loading } = useServerSession();
-  const { legend } = useLegend();
-  const name = user?.email?.address ?? user?.google?.email ?? user?.wallet?.address?.slice(0, 8) ?? 'Guest';
-  return (
-    <div className="px-3 pt-3">
-      <LegendCard legend={legend} playable={serverUser?.demoCredits} variant={legend?.profileComplete ? 'full' : 'ghost'} />
-      <div className="mt-4 rounded-2xl border border-border bg-card p-4">
-        <p className="text-sm text-muted-foreground">{authenticated ? name : 'Not signed in'}</p>
-        <p className="mt-2 font-mono-custom text-2xl">{loading && !serverUser ? '...' : (serverUser?.demoCredits ?? 0)} $KTK</p>
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <Link href="/wallet" className="rounded-xl bg-primary py-3 text-center text-sm font-semibold text-primary-foreground">Wallet</Link>
-          <DemoAction label="Withdraw" />
-        </div>
-      </div>
-      {authenticated ? <button type="button" onClick={() => void logout()} className="mt-6 w-full rounded-xl bg-accent py-3 text-sm font-semibold">Logout</button> : <div className="mt-6"><WalletAuthButton /></div>}
-    </div>
-  );
-}
-
-function MenuPage() {
-  return (
-    <div className="px-3 pt-3">
-      <h1 className="text-2xl font-semibold">Kit</h1>
-      <DemoNotice>$KTK is off-chain test credit.</DemoNotice>
-      <MenuRow href="/tap" icon={Zap} label="⚡ Katika Tap to Earn" />
-      <MenuRow href="/legend" icon={Shield} label="My legend" />
-      <MenuRow href="/pvp" icon={Swords} label="PvP Arena (Pool, Ludo)" />
-      <MenuRow href="/games/pool" icon={Trophy} label="8-Ball Pool" />
-      <MenuRow href="/pvp" icon={Users} label="Club Ludo" />
-      <MenuRow href="/cashier" icon={CreditCard} label="Cashier & Top Up" />
-      <MenuRow href="/leaderboard" icon={Trophy} label="Leaderboard (OVR)" />
-      <MenuRow href="/play" icon={Play} label="Play floor" />
-      <MenuRow href="/games" icon={Grid2X2} label="Casino Tables" />
-      <MenuRow href="/games/dice" icon={Dices} label="Dice" />
-      <MenuRow href="/games/coinflip" icon={CircleDollarSign} label="Coin Flip" />
-      <MenuRow href="/wallet" icon={WalletCards} label="Wallet" />
-      <MenuRow href="/profile" icon={UserRound} label="Profile" />
     </div>
   );
 }
@@ -226,10 +134,10 @@ function Router() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/dashboard" component={Home} />
-        <Route path="/tap" component={TelegramTapper} />
-        <Route path="/swap" component={TelegramTapper} />
+        <Route path="/tap">{() => <TelegramTapper defaultTab="tap" />}</Route>
+        <Route path="/swap">{() => <TelegramTapper defaultTab="swap" />}</Route>
+        <Route path="/legend">{() => <TelegramTapper defaultTab="legend" />}</Route>
         <Route path="/play" component={PlayPage} />
-        <Route path="/legend" component={LegendPage} />
 
         {/* Redirects for legacy routes /clash and /club */}
         <Route path="/clash">{() => <RedirectTo to="/pvp" />}</Route>
@@ -237,28 +145,30 @@ function Router() {
         <Route path="/club/four/:id">{() => <RedirectTo to="/pvp" />}</Route>
         <Route path="/club/ludo/:id">{(params) => <RedirectTo to={`/pvp/ludo/${params.id}`} />}</Route>
 
-        {/* PvP Floor & Games */}
+        {/* PvP Floor & Games (Pool & Ludo) */}
         <Route path="/pvp" component={PvPLobby} />
         <Route path="/pvp/pool/:id" component={PoolGamePage} />
         <Route path="/pvp/pool" component={PoolGamePage} />
         <Route path="/pvp/ludo/:id" component={ClubLudoPage} />
         <Route path="/pvp/21/:id">{() => <RedirectTo to="/pvp" />}</Route>
         <Route path="/pvp/four/:id">{() => <RedirectTo to="/pvp" />}</Route>
-
         <Route path="/games/pool" component={PoolGamePage} />
+
+        {/* Classic Casino Tables */}
         <Route path="/games/dice" component={DicePage} />
         <Route path="/games/coinflip" component={CoinFlipPage} />
-        <Route path="/games/mines">{() => <RedirectTo to="/games" />}</Route>
-        <Route path="/games/roulette">{() => <RedirectTo to="/games" />}</Route>
+        <Route path="/games/mines" component={MinesPage} />
+        <Route path="/games/roulette" component={RoulettePage} />
         <Route path="/games" component={Games} />
 
+        {/* Profile, Kits, Cashier & Wallet */}
         <Route path="/cashier" component={CashierPage} />
         <Route path="/leaderboard" component={LeaderboardPage} />
-        <Route path="/menu" component={MenuPage} />
-        <Route path="/kit" component={MenuPage} />
+        <Route path="/profile" component={ProfilePage} />
+        <Route path="/kit" component={ProfilePage} />
+        <Route path="/menu" component={ProfilePage} />
         <Route path="/wallet" component={Wallet} />
         <Route path="/rewards" component={RewardsPage} />
-        <Route path="/profile" component={Profile} />
         <Route component={NotFoundPage} />
       </Switch>
     </ErrorRouted>

@@ -1,3 +1,40 @@
-<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <rect width="500" height="500" rx="100" fill="#07110E"/>
+  <defs>
+    <linearGradient id="limeMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#bef264"/>
+      <stop offset="25%" stop-color="#84cc16"/>
+      <stop offset="60%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <linearGradient id="emeraldDeep" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="40%" stop-color="#15803d"/>
+      <stop offset="80%" stop-color="#166534"/>
+      <stop offset="100%" stop-color="#052e16"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.8"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <!-- Crown -->
+    <path d="M 250 50 L 220 120 L 175 65 L 185 145 L 250 145 Z" fill="url(#limeMetal)"/>
+    <path d="M 250 50 L 280 120 L 325 65 L 315 145 L 250 145 Z" fill="url(#emeraldDeep)"/>
+    <path d="M 175 145 L 325 145 L 320 160 L 180 160 Z" fill="url(#limeMetal)"/>
+    <!-- Shield -->
+    <path d="M 180 125 C 145 150, 130 210, 135 295 C 140 360, 185 410, 235 440 L 215 460 C 160 425, 110 365, 105 285 C 100 195, 130 135, 175 110 Z" fill="url(#emeraldDeep)"/>
+    <path d="M 320 125 C 355 150, 370 210, 365 295 C 360 360, 315 410, 265 440 L 250 480 L 215 450 L 235 430 L 250 450 C 290 415, 335 375, 340 300 C 345 220, 325 165, 290 125 Z" fill="url(#limeMetal)"/>
+    <!-- K Stem -->
+    <rect x="180" y="180" width="36" height="190" rx="4" fill="url(#limeMetal)"/>
+    <!-- K Upper Joint -->
+    <path d="M 216 260 L 275 180 L 315 180 L 245 275 Z" fill="url(#limeMetal)"/>
+    <!-- Arrow Head (↗) -->
+    <g transform="translate(250, 195)">
+      <polygon points="15,45 60,-5 45,-15 0,35" fill="url(#limeMetal)"/>
+      <polygon points="50,-35 80,-30 75,0 60,-12 40,8 30,-2 50,-22" fill="url(#limeMetal)"/>
+    </g>
+    <!-- K Lower Leg -->
+    <path d="M 230 260 L 315 375 L 270 375 L 205 285 Z" fill="url(#emeraldDeep)"/>
+  </g>
 </svg>

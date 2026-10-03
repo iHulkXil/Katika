@@ -5,6 +5,8 @@ import { useServerSession } from '@/components/server-session';
 import { getTelegramUser, isTelegramWebApp, initTelegramWebApp, triggerHaptic } from '@/lib/telegram';
 import { usePrivy } from '@privy-io/react-auth';
 import { useToast } from '@/hooks/use-toast';
+import { KatikaLogo } from '@/components/katika-logo';
+import { LegendPage } from '@/components/legend-page';
 import {
   Zap,
   RotateCw,
@@ -34,7 +36,11 @@ interface FloatingNumber {
   value: number;
 }
 
-export function TelegramTapper() {
+interface TelegramTapperProps {
+  defaultTab?: 'tap' | 'legend' | 'swap' | 'boost' | 'tasks';
+}
+
+export function TelegramTapper({ defaultTab = 'tap' }: TelegramTapperProps) {
   const {
     state,
     offlineBonus,
@@ -53,7 +59,7 @@ export function TelegramTapper() {
   const { getAccessToken } = usePrivy();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'tap' | 'swap' | 'boost' | 'tasks'>('tap');
+  const [activeTab, setActiveTab] = useState<'tap' | 'legend' | 'swap' | 'boost' | 'tasks'>(defaultTab);
   const [floatingNumbers, setFloatingNumbers] = useState<FloatingNumber[]>([]);
   const [coinTilt, setCoinTilt] = useState({ x: 0, y: 0 });
   const [isPressing, setIsPressing] = useState(false);
@@ -264,11 +270,12 @@ export function TelegramTapper() {
       )}
 
       {/* ============================================================= */}
-      {/* TAB NAVIGATION: TAP | SWAP | BOOST | TASKS                    */}
+      {/* TAB NAVIGATION: TAP | LEGEND | SWAP | BOOST | TASKS           */}
       {/* ============================================================= */}
-      <div className="mt-3 grid grid-cols-4 gap-1.5 rounded-xl border border-[#1C3A2E] bg-[#0E1A16] p-1">
+      <div className="mt-3 grid grid-cols-5 gap-1 rounded-xl border border-[#1C3A2E] bg-[#0E1A16] p-1">
         {[
           { id: 'tap', label: 'Tap', icon: Zap },
+          { id: 'legend', label: 'Legend', icon: Shield },
           { id: 'swap', label: 'Swap', icon: ArrowRightLeft },
           { id: 'boost', label: 'Boost', icon: Flame },
           { id: 'tasks', label: 'Quests', icon: Trophy },
@@ -280,13 +287,13 @@ export function TelegramTapper() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center justify-center gap-1.5 rounded-lg py-2 font-mono-custom text-xs font-bold transition-all ${
+              className={`flex flex-col sm:flex-row items-center justify-center gap-1 rounded-lg py-1.5 px-0.5 font-mono-custom text-[11px] font-bold transition-all ${
                 isActive
                   ? 'border border-[#fef08a] bg-[#fef08a]/20 text-[#fef08a] shadow-[0_0_10px_rgba(254,240,138,0.2)]'
                   : 'text-[#8FA39A] hover:text-white'
               }`}
             >
-              <Icon size={14} />
+              <Icon size={13} />
               <span>{tab.label}</span>
             </button>
           );
@@ -368,7 +375,7 @@ export function TelegramTapper() {
                       }}
                     />
 
-                    {/* FRONT AVATAR: CUSTOM GRAPHIC SLOT OR KATIKA MEDALLION */}
+                    {/* FRONT AVATAR: CUSTOM GRAPHIC SLOT OR OFFICIAL KATIKA CREST */}
                     {customAvatarUrl ? (
                       <img
                         src={customAvatarUrl}
@@ -377,10 +384,10 @@ export function TelegramTapper() {
                       />
                     ) : (
                       <div className="flex flex-col items-center justify-center p-4 text-center">
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-[#fef08a] bg-gradient-to-br from-[#fef08a] via-[#eab308] to-[#854d0e] shadow-[0_0_20px_rgba(254,240,138,0.5)]">
-                          <Trophy className="h-9 w-9 text-black" />
+                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-[#35D399]/40 bg-gradient-to-br from-[#064e3b] to-[#022c22] p-2 shadow-[0_0_20px_rgba(53,211,153,0.3)]">
+                          <KatikaLogo className="h-full w-full" />
                         </div>
-                        <span className="mt-3 font-mono-custom text-sm font-black tracking-widest text-[#fef08a]">
+                        <span className="mt-2.5 font-mono-custom text-sm font-black tracking-widest text-[#fef08a]">
                           KATIKA
                         </span>
                         <span className="font-mono-custom text-[9px] font-bold uppercase tracking-wider text-[#35D399]">
@@ -388,7 +395,7 @@ export function TelegramTapper() {
                         </span>
                         <div className="mt-1 flex items-center gap-1 text-[9px] text-[#c7d9d0]">
                           <Award size={10} className="text-[#fef08a]" />
-                          <span>FRONT AVATAR SLOT</span>
+                          <span>OFFICIAL CREST</span>
                         </div>
                       </div>
                     )}
@@ -460,6 +467,15 @@ export function TelegramTapper() {
               Regenerating +{2 + state.regenLevel - 1} energy / sec
             </p>
           </div>
+        </div>
+      )}
+
+      {/* ============================================================= */}
+      {/* TAB: LEGEND CARD (KATIKA ELITE ATHLETE & STAT ALLOCATION)     */}
+      {/* ============================================================= */}
+      {activeTab === 'legend' && (
+        <div className="my-auto w-full pt-1">
+          <LegendPage />
         </div>
       )}
 

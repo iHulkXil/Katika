@@ -157,9 +157,17 @@ export function PvPLobby() {
       <div className="mt-3 rounded-xl border border-[#1C3A2E] bg-[#0A1612] p-3">
         {selectedGame === 'pool' && (
           <div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#fef08a]">
-              <Trophy size={14} />
-              <span>Katika 8-Ball Pool: Realistic Billiards Arena</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-[#fef08a]">
+                <Trophy size={14} />
+                <span>Katika 8-Ball Pool: Realistic Billiards Arena</span>
+              </div>
+              <Link
+                href="/games/pool"
+                className="rounded-lg border border-[#fef08a]/60 bg-[#fef08a]/15 px-2.5 py-1 font-mono-custom text-[10px] font-bold text-[#fef08a] hover:bg-[#fef08a]/25 transition-all"
+              >
+                Solo / AI Practice →
+              </Link>
             </div>
             <p className="mt-1 text-[11px] text-[#8FA39A] leading-relaxed">
               Standard 8-ball rules on emerald baize cloth. Aim with precision laser guides and control stroke power. Sink your assigned set (Solids or Stripes) and pocket the 8-ball clean to win the pot! 4% house rake.

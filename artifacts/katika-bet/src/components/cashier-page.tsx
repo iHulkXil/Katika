@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
+import { KatikaLogo } from '@/components/katika-logo';
 import { CreditCard, Zap, CheckCircle2, ShieldCheck, Sparkles, RefreshCw, ShoppingBag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -124,10 +125,10 @@ export function CashierPage() {
       {/* Header Banner */}
       <div className="rounded-2xl border border-[#35D399]/30 bg-gradient-to-br from-[#0E1A16] via-[#091511] to-[#050C0A] p-4 shadow-lg">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#35D399]/20 text-[#35D399]">
-              <CreditCard size={18} />
-            </span>
+          <div className="flex items-center gap-2.5">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-[#35D399]/20 p-1">
+              <KatikaLogo className="h-full w-full" />
+            </div>
             <div>
               <span className="font-mono-custom text-[10px] font-bold uppercase tracking-widest text-[#35D399]">
                 Secure Cashier

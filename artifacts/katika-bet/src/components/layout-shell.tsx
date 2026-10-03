@@ -5,63 +5,39 @@ import {
   CreditCard,
   Gamepad2,
   Gift,
-  Home as HomeIcon,
   Play,
-  Star,
   Swords,
   UserRound,
-  WalletCards,
   Zap,
-  Trophy,
-  Users,
-  Shield,
-  ArrowRightLeft,
 } from 'lucide-react';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
+import { KatikaLogo } from '@/components/katika-logo';
 
 export function Brand() {
   return (
-    <Link href="/tap" className="flex items-center gap-2">
-      <span className="grid h-7 w-7 place-items-center rounded-md bg-gradient-to-br from-[#fef08a] via-[#eab308] to-[#854d0e] text-[10px] font-black text-[#062018] shadow-[0_0_10px_rgba(254,240,138,0.3)]">
-        KTK
-      </span>
-      <span className="text-[15px] font-semibold tracking-[-.04em]">
-        Katika<span className="text-[#fef08a]">.</span>Bet
+    <Link href="/tap" className="flex items-center gap-2 group">
+      <div className="transition-transform group-hover:scale-105 active:scale-95">
+        <KatikaLogo className="h-8 w-8" />
+      </div>
+      <span className="text-[16px] font-black tracking-[-.03em] text-white">
+        Katika<span className="text-[#35D399]">.</span>Bet
       </span>
     </Link>
   );
 }
 
-const chips = [
-  { href: '/tap', label: '⚡ Katika Tap' },
-  { href: '/games/pool', label: '🎱 8-Ball Pool' },
-  { href: '/pvp', label: '🎲 Club Ludo' },
-  { href: '/games', label: '🎰 Casino' },
-  { href: '/legend', label: '🛡️ Legend Card' },
-  { href: '/cashier', label: '💳 Cashier' },
-  { href: '/kit', label: '⚙️ Kit' },
-];
-
 const bottom = [
   { href: '/tap', label: 'Tap', icon: Zap },
-  { href: '/games/pool', label: 'Pool', icon: Trophy },
-  { href: '/pvp', label: 'Ludo', icon: Users },
-  { href: '/games', label: 'Casino', icon: Play },
-  { href: '/legend', label: 'Legend', icon: Shield },
+  { href: '/pvp', label: 'PvP', icon: Swords },
+  { href: '/games', label: 'Casino', icon: Gamepad2 },
   { href: '/profile', label: 'Profile', icon: UserRound },
 ];
 
-function chipClass(active: boolean) {
-  return active
-    ? 'whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs bg-[#122019] text-[#35D399] ring-1 ring-[#1C3A2E]'
-    : 'whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs text-[#8FA39A]';
-}
-
 function tabClass(active: boolean) {
   return active
-    ? 'flex min-w-[56px] flex-col items-center gap-1 rounded-lg py-1 text-[10px] text-[#35D399]'
-    : 'flex min-w-[56px] flex-col items-center gap-1 rounded-lg py-1 text-[10px] text-[#5C7368]';
+    ? 'flex min-w-[64px] flex-col items-center gap-1 rounded-xl py-1 text-[11px] font-bold text-[#35D399] transition-all'
+    : 'flex min-w-[64px] flex-col items-center gap-1 rounded-xl py-1 text-[11px] font-medium text-[#648074] hover:text-[#9bb2a7] transition-all';
 }
 
 export function LayoutShell({ children }: { children: ReactNode }) {
@@ -74,47 +50,52 @@ export function LayoutShell({ children }: { children: ReactNode }) {
       ? credits.toLocaleString() + ' KTK'
       : error
         ? 'API'
-        : 'KTK';
+        : '0 KTK';
 
   return (
     <div className="min-h-[100dvh] bg-[#07110E] text-[#E8F2EC]">
-      <header className="sticky top-0 z-40 bg-[#07110E]/95 backdrop-blur-md">
+      {/* Sticky Header with Official Brand Logo & Clickable Cashier Balance */}
+      <header className="sticky top-0 z-40 border-b border-[#1C3A2E]/60 bg-[#07110E]/95 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-[520px] items-center justify-between px-3">
           <Brand />
           <div className="flex items-center gap-2">
-            <span className="rounded-full border border-[#35D399]/40 bg-[#0E1A16] px-2.5 py-1 font-mono-custom text-[11px] text-[#35D399]">
-              {label}
-            </span>
+            {/* Clickable Balance navigating to Cashier */}
+            <Link
+              href="/cashier"
+              className="flex items-center gap-1.5 rounded-full border border-[#35D399]/40 bg-[#0E1A16] px-3 py-1 font-mono-custom text-[11px] font-bold text-[#35D399] shadow-sm hover:border-[#35D399] hover:bg-[#35D399]/15 active:scale-95 transition-all"
+              title="Click to open Cashier & Top Up"
+            >
+              <span>{label}</span>
+              <span className="rounded-full bg-[#35D399]/20 px-1 text-[9px] font-black text-[#35D399]">+</span>
+            </Link>
             <WalletAuthButton compact className="hidden sm:flex" />
           </div>
-        </div>
-        <div className="mx-auto flex max-w-[520px] gap-1.5 overflow-x-auto px-3 pb-3">
-          {chips.map((chip) => {
-            const active = chip.href === '/' ? location === '/' : location === chip.href || location.startsWith(chip.href + '/');
-            return (
-              <Link key={chip.href + chip.label} href={chip.href} className={chipClass(active)}>
-                {chip.label}
-              </Link>
-            );
-          })}
         </div>
       </header>
 
       <main className="mx-auto max-w-[520px] pb-24">{children}</main>
 
       <footer className="mx-auto max-w-[520px] px-4 pb-28 text-center text-[11px] text-[#5C7368]">
-        18+ KTK is house credit. No cash value.
+        18+ KTK is gaming test credit. Play responsibly.
       </footer>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#1C3A2E] bg-[#07110E] pb-[max(8px,env(safe-area-inset-bottom))] pt-2">
-        <div className="mx-auto flex max-w-md items-center justify-around">
+      {/* Primary Bottom Navigation (Tap, PvP, Casino, Profile) */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#1C3A2E] bg-[#07110E]/98 backdrop-blur-lg pb-[max(10px,env(safe-area-inset-bottom))] pt-2">
+        <div className="mx-auto flex max-w-md items-center justify-around px-2">
           {bottom.map((item) => {
-            const active = item.href === '/' ? location === '/' : location === item.href || location.startsWith(item.href + '/');
+            const active =
+              item.href === '/tap'
+                ? location === '/tap' || location === '/legend' || location === '/swap' || location === '/'
+                : item.href === '/pvp'
+                  ? location === '/pvp' || location.startsWith('/pvp/') || location.startsWith('/games/pool')
+                  : item.href === '/games'
+                    ? location === '/games' || location.startsWith('/games/dice') || location.startsWith('/games/coinflip') || location.startsWith('/games/mines') || location.startsWith('/games/roulette')
+                    : location === item.href || location.startsWith(item.href + '/') || location === '/cashier' || location === '/wallet' || location === '/kit' || location === '/menu';
             const Icon = item.icon;
             return (
               <Link key={item.href} href={item.href} className={tabClass(active)}>
-                <Icon size={18} />
-                {item.label}
+                <Icon size={20} className={active ? 'scale-110 transition-transform' : ''} />
+                <span>{item.label}</span>
               </Link>
             );
           })}
