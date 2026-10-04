@@ -22,7 +22,7 @@ export function PvPLobby() {
   const { serverUser } = useServerSession();
   const { legend } = useLegend();
 
-  const [selectedGame, setSelectedGame] = useState<'pool' | 'ludo'>('pool');
+  const [selectedGame, setSelectedGame] = useState<'penalty' | 'pool' | 'ludo'>('penalty');
   const [mode, setMode] = useState<'queue' | 'challenge'>('queue');
   const [stake, setStake] = useState<number>(10);
   const [loading, setLoading] = useState(false);
@@ -50,6 +50,12 @@ export function PvPLobby() {
   };
 
   const handleStart = async () => {
+    if (selectedGame === 'penalty') {
+      // Launch 3v3 Penalty Shootout Arena directly
+      setLocation(`/pvp/penalty?stake=${stake}&mode=${mode}`);
+      return;
+    }
+
     if (!serverUser) {
       setError('Please connect your wallet first');
       return;
@@ -112,49 +118,89 @@ export function PvPLobby() {
         Play 1v1 against other players. Settle instant pots in $KTK off-chain credits.
       </p>
 
-      {/* Game Selector Tabs */}
-      <div className="mt-4 grid grid-cols-2 gap-2.5">
+      {/* Game Selector Tabs (Penalty 3v3, Pool, Ludo) */}
+      <div className="mt-4 grid grid-cols-3 gap-2">
         <button
           type="button"
-          onClick={() => setSelectedGame('pool')}
-          className={`rounded-2xl border p-3.5 text-left transition-all ${
-            selectedGame === 'pool'
-              ? 'border-[#35D399] bg-[#0E1A16] shadow-[0_0_15px_rgba(53,211,153,0.2)]'
+          onClick={() => setSelectedGame('penalty')}
+          className={`rounded-2xl border p-2.5 text-left transition-all ${
+            selectedGame === 'penalty'
+              ? 'border-[#35D399] bg-[#0E1A16] shadow-[0_0_15px_rgba(53,211,153,0.25)] ring-1 ring-[#35D399]/40'
               : 'border-[#1C3A2E] bg-[#07110E] hover:border-[#1C3A2E]/80'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="font-mono-custom text-sm font-bold text-[#fef08a]">8-BALL</span>
-            <span className="rounded bg-[#35D399]/20 px-1.5 py-0.5 font-mono-custom text-[9px] font-bold text-[#35D399]">
-              Billiards
+            <span className="font-mono-custom text-xs font-black text-[#35D399]">3v3 CUE</span>
+            <span className="rounded bg-[#35D399]/20 px-1 py-0.5 font-mono-custom text-[8px] font-bold text-[#35D399]">
+              HOT
             </span>
           </div>
-          <h3 className="mt-1.5 text-sm font-bold text-[#E8F2EC]">Katika Pool</h3>
-          <p className="mt-0.5 text-[11px] text-[#8FA39A]">Solids vs Stripes · 8-Ball Wager</p>
+          <h3 className="mt-1 text-xs font-bold text-[#E8F2EC] flex items-center gap-1">
+            <span>⚽ Shootout</span>
+          </h3>
+          <p className="mt-0.5 text-[9px] text-[#8FA39A] truncate">3v3 Shoot &amp; Save</p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSelectedGame('pool')}
+          className={`rounded-2xl border p-2.5 text-left transition-all ${
+            selectedGame === 'pool'
+              ? 'border-[#fef08a] bg-[#0E1A16] shadow-[0_0_15px_rgba(254,240,138,0.2)] ring-1 ring-[#fef08a]/40'
+              : 'border-[#1C3A2E] bg-[#07110E] hover:border-[#1C3A2E]/80'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="font-mono-custom text-xs font-bold text-[#fef08a]">8-BALL</span>
+            <span className="rounded bg-[#fef08a]/20 px-1 py-0.5 font-mono-custom text-[8px] font-bold text-[#fef08a]">
+              Table
+            </span>
+          </div>
+          <h3 className="mt-1 text-xs font-bold text-[#E8F2EC]">Katika Pool</h3>
+          <p className="mt-0.5 text-[9px] text-[#8FA39A] truncate">Solids vs Stripes</p>
         </button>
 
         <button
           type="button"
           onClick={() => setSelectedGame('ludo')}
-          className={`rounded-2xl border p-3.5 text-left transition-all ${
+          className={`rounded-2xl border p-2.5 text-left transition-all ${
             selectedGame === 'ludo'
-              ? 'border-[#35D399] bg-[#0E1A16] shadow-[0_0_15px_rgba(53,211,153,0.2)]'
+              ? 'border-cyan-400 bg-[#0E1A16] shadow-[0_0_15px_rgba(34,211,238,0.2)] ring-1 ring-cyan-400/40'
               : 'border-[#1C3A2E] bg-[#07110E] hover:border-[#1C3A2E]/80'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="font-mono-custom text-sm font-bold text-cyan-400">2T HOME</span>
-            <span className="rounded bg-cyan-950/40 px-1.5 py-0.5 font-mono-custom text-[9px] font-bold text-cyan-400">
-              Race
+            <span className="font-mono-custom text-xs font-bold text-cyan-400">2T HOME</span>
+            <span className="rounded bg-cyan-950/40 px-1 py-0.5 font-mono-custom text-[8px] font-bold text-cyan-400">
+              Board
             </span>
           </div>
-          <h3 className="mt-1.5 text-sm font-bold text-[#E8F2EC]">Club Ludo</h3>
-          <p className="mt-0.5 text-[11px] text-[#8FA39A]">Sprint to Home · Captures & Blocks</p>
+          <h3 className="mt-1 text-xs font-bold text-[#E8F2EC]">Club Ludo</h3>
+          <p className="mt-0.5 text-[9px] text-[#8FA39A] truncate">2-Token Sprint</p>
         </button>
       </div>
 
       {/* Game Details Banner */}
       <div className="mt-3 rounded-xl border border-[#1C3A2E] bg-[#0A1612] p-3">
+        {selectedGame === 'penalty' && (
+          <div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-[#35D399]">
+                <Swords size={14} className="text-[#35D399]" />
+                <span>3v3 Penalty Shootout: Multiplayer Squad Matchmaking</span>
+              </div>
+              <Link
+                href="/pvp/penalty"
+                className="rounded-lg border border-[#35D399]/60 bg-[#35D399]/15 px-2.5 py-1 font-mono-custom text-[10px] font-bold text-[#35D399] hover:bg-[#35D399]/25 transition-all"
+              >
+                Enter Stadium Queue →
+              </Link>
+            </div>
+            <p className="mt-1 text-[11px] text-[#8FA39A] leading-relaxed">
+              Join cue with 6 players. Teams take turns shooting and saving in a 3v3 shootout! Strictly 3 directions (Left, Centre, Right). Procedural power (75–124 km/h), varied pitch elevations (low, mid, high, panenka), and dynamic player motions. 4% pot rake.
+            </p>
+          </div>
+        )}
         {selectedGame === 'pool' && (
           <div>
             <div className="flex items-center justify-between">

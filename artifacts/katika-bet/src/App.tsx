@@ -18,6 +18,7 @@ import { LeaderboardPage } from '@/components/leaderboard-page';
 import { CashierPage } from '@/components/cashier-page';
 import { PvPLobby } from '@/components/pvp-lobby';
 import { ClubLudoPage } from '@/components/club-ludo';
+import { PenaltyShootoutPage } from '@/components/penalty-shootout';
 import { ProfilePage } from '@/components/profile-page';
 import { HomeLegendHero, LegendCard, useLegend } from '@/components/legend-card';
 import { AuthGate } from '@/components/auth-gate';
@@ -145,8 +146,11 @@ function Router() {
         <Route path="/club/four/:id">{() => <RedirectTo to="/pvp" />}</Route>
         <Route path="/club/ludo/:id">{(params) => <RedirectTo to={`/pvp/ludo/${params.id}`} />}</Route>
 
-        {/* PvP Floor & Games (Pool & Ludo) */}
+        {/* PvP Floor & Games (Penalty Shootout, Pool & Ludo) */}
         <Route path="/pvp" component={PvPLobby} />
+        <Route path="/pvp/penalty/:id" component={PenaltyShootoutPage} />
+        <Route path="/pvp/penalty" component={PenaltyShootoutPage} />
+        <Route path="/games/penalty" component={PenaltyShootoutPage} />
         <Route path="/pvp/pool/:id" component={PoolGamePage} />
         <Route path="/pvp/pool" component={PoolGamePage} />
         <Route path="/pvp/ludo/:id" component={ClubLudoPage} />
