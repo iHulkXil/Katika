@@ -10,6 +10,12 @@ Rules are frozen. Do not change resolveShot while restyling.
 - Power is cosmetic (82-118 km/h) plus pitch low/mid/high/panenka. It does not change the score.
 - Keeper control-all stays.
 
-Visual target (browser, not a PS4):
-- Night stadium, four floodlights, stand + crowd blocks, broadcast camera that slides to the goal on flight.
-- Do not replace the sculpted players with a new ruleset.
+## Models (2026-10-05)
+
+Scrap `/models/generic-striker.glb` and `/models/generic-keeper.glb`.
+
+Presets must load:
+- Striker: `https://threejs.org/examples/models/gltf/Soldier.glb`
+- Keeper: `https://threejs.org/examples/models/gltf/Xbot.glb`
+
+Rigged humanoids, free three.js examples. Not FIFA likenesses. Hide the capsule bodies when these load. A soccer-kit GLB can replace either URL later if it is yours to ship.
