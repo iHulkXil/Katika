@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useLocation, useRoute, Link } from 'wouter';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { useServerSession } from '@/components/server-session';
 import { useLegend } from '@/components/legend-card';
 import { useToast } from '@/hooks/use-toast';
@@ -542,6 +543,244 @@ function createSoccerBallTexture(): THREE.CanvasTexture {
 }
 
 // =============================================================================
+// SKELETAL RIGGING & PROCEDURAL MOTION ENGINE FOR ANY .GLB HUMANOID
+// =============================================================================
+interface HumanoidBones {
+  hips?: THREE.Bone;
+  spine?: THREE.Bone;
+  chest?: THREE.Bone;
+  neck?: THREE.Bone;
+  head?: THREE.Bone;
+  leftUpLeg?: THREE.Bone;
+  leftLeg?: THREE.Bone;
+  leftFoot?: THREE.Bone;
+  rightUpLeg?: THREE.Bone;
+  rightLeg?: THREE.Bone;
+  rightFoot?: THREE.Bone;
+  leftArm?: THREE.Bone;
+  leftForeArm?: THREE.Bone;
+  leftHand?: THREE.Bone;
+  rightArm?: THREE.Bone;
+  rightForeArm?: THREE.Bone;
+  rightHand?: THREE.Bone;
+}
+
+interface RigController {
+  bones: HumanoidBones;
+  restRotations: Map<THREE.Bone, THREE.Quaternion>;
+  initialHipsY: number;
+  mixer?: THREE.AnimationMixer;
+}
+
+function extractHumanoidBones(root: THREE.Object3D): HumanoidBones {
+  const bones: HumanoidBones = {};
+  root.traverse((child) => {
+    if ((child as THREE.Bone).isBone) {
+      const name = child.name.toLowerCase().replace(/[:_]/g, '');
+      if (name.includes('hips') || name.includes('pelvis')) bones.hips = child as THREE.Bone;
+      else if (name.includes('spine1') || name.includes('spine2') || name.includes('chest')) bones.chest = child as THREE.Bone;
+      else if (name.includes('spine')) bones.spine = child as THREE.Bone;
+      else if (name.includes('neck')) bones.neck = child as THREE.Bone;
+      else if (name.includes('head') && !name.includes('top')) bones.head = child as THREE.Bone;
+      else if (name.includes('leftupleg') || name.includes('leftthigh') || name.includes('uplegl')) bones.leftUpLeg = child as THREE.Bone;
+      else if (name.includes('leftleg') || name.includes('leftcalf') || name.includes('legl')) bones.leftLeg = child as THREE.Bone;
+      else if (name.includes('leftfoot') || name.includes('footl')) bones.leftFoot = child as THREE.Bone;
+      else if (name.includes('rightupleg') || name.includes('rightthigh') || name.includes('uplegr')) bones.rightUpLeg = child as THREE.Bone;
+      else if (name.includes('rightleg') || name.includes('rightcalf') || name.includes('legr')) bones.rightLeg = child as THREE.Bone;
+      else if (name.includes('rightfoot') || name.includes('footr')) bones.rightFoot = child as THREE.Bone;
+      else if (name.includes('leftarm') || name.includes('arml')) bones.leftArm = child as THREE.Bone;
+      else if (name.includes('leftforearm') || name.includes('forearml')) bones.leftForeArm = child as THREE.Bone;
+      else if (name.includes('lefthand') || name.includes('handl')) bones.leftHand = child as THREE.Bone;
+      else if (name.includes('rightarm') || name.includes('armr')) bones.rightArm = child as THREE.Bone;
+      else if (name.includes('rightforearm') || name.includes('forearmr')) bones.rightForeArm = child as THREE.Bone;
+      else if (name.includes('righthand') || name.includes('handr')) bones.rightHand = child as THREE.Bone;
+    }
+  });
+  return bones;
+}
+
+function createRigController(root: THREE.Object3D, animations?: THREE.AnimationClip[]): RigController {
+  const bones = extractHumanoidBones(root);
+  const restRotations = new Map<THREE.Bone, THREE.Quaternion>();
+  root.traverse((child) => {
+    if ((child as THREE.Bone).isBone) {
+      restRotations.set(child as THREE.Bone, child.quaternion.clone());
+    }
+  });
+
+  let mixer: THREE.AnimationMixer | undefined;
+  if (animations && animations.length > 0) {
+    mixer = new THREE.AnimationMixer(root);
+    const runOrKickClip = animations.find((a) => /run|kick|sprint|shoot|dance|idle/i.test(a.name)) || animations[0];
+    if (runOrKickClip) {
+      const action = mixer.clipAction(runOrKickClip);
+      action.play();
+    }
+  }
+
+  return {
+    bones,
+    restRotations,
+    initialHipsY: bones.hips ? bones.hips.position.y : 0,
+    mixer,
+  };
+}
+
+function applyStrikerMotion(
+  rig: RigController | null,
+  matchState: string,
+  anim: { runup: number; scored: boolean },
+  elapsed: number,
+  delta: number
+) {
+  if (!rig) return;
+  if (rig.mixer) rig.mixer.update(delta);
+
+  // Restore rest bind pose before applying kinematics
+  rig.restRotations.forEach((q, bone) => bone.quaternion.copy(q));
+  const b = rig.bones;
+
+  if (matchState === 'runup') {
+    const runupT = Math.min(1, anim.runup);
+    if (runupT < 0.68) {
+      // Sprint stride cycling: high knee lift and opposite arm swing
+      const stride = Math.sin(runupT * Math.PI * 7.5);
+      b.leftUpLeg?.rotateX(stride * 0.95);
+      b.rightUpLeg?.rotateX(-stride * 0.95);
+      b.leftLeg?.rotateX(Math.max(0, -stride) * 1.25);
+      b.rightLeg?.rotateX(Math.max(0, stride) * 1.25);
+
+      b.leftArm?.rotateZ(0.85);
+      b.leftArm?.rotateX(-stride * 0.95);
+      b.leftForeArm?.rotateX(-0.85);
+
+      b.rightArm?.rotateZ(-0.85);
+      b.rightArm?.rotateX(stride * 0.95);
+      b.rightForeArm?.rotateX(-0.85);
+
+      b.spine?.rotateX(0.24);
+      if (b.hips) {
+        b.hips.position.y = rig.initialHipsY + Math.abs(Math.sin(runupT * Math.PI * 7.5)) * 0.05;
+      }
+    } else {
+      // Wind-up & Strike through soccer ball
+      const kickPhase = (runupT - 0.68) / 0.32;
+      b.leftUpLeg?.rotateX(-0.22);
+      b.leftLeg?.rotateX(0.35);
+
+      if (kickPhase < 0.35) {
+        // Wind-back phase
+        const w = kickPhase / 0.35;
+        b.rightUpLeg?.rotateX(-1.15 * w);
+        b.rightLeg?.rotateX(1.45 * w);
+      } else {
+        // Whip kicking leg through ball
+        const f = (kickPhase - 0.35) / 0.65;
+        b.rightUpLeg?.rotateX(-1.15 + f * 2.3);
+        b.rightLeg?.rotateX(1.45 * (1 - f));
+      }
+
+      b.spine?.rotateX(-0.12 + kickPhase * 0.3);
+      b.spine?.rotateY(-0.25 * kickPhase);
+      b.leftArm?.rotateZ(1.35);
+      b.leftArm?.rotateX(0.5);
+      b.rightArm?.rotateZ(-1.25);
+      b.rightArm?.rotateX(-0.6);
+    }
+  } else if (matchState === 'shot_result' && anim.scored) {
+    // Goal celebration: arms thrust high in victory!
+    b.leftArm?.rotateZ(2.65);
+    b.leftArm?.rotateX(0.2);
+    b.rightArm?.rotateZ(-2.65);
+    b.rightArm?.rotateX(0.2);
+    b.spine?.rotateX(-0.18);
+    b.head?.rotateX(-0.22);
+  } else if (matchState === 'shot_result' && !anim.scored) {
+    // Miss/Save reaction: hands on head in disbelief
+    b.leftArm?.rotateZ(1.2);
+    b.leftArm?.rotateX(-1.1);
+    b.rightArm?.rotateZ(-1.2);
+    b.rightArm?.rotateX(-1.1);
+    b.head?.rotateX(0.35);
+  } else {
+    // Natural athletic ready stance with relaxed side-hung arms and breathing
+    b.leftArm?.rotateZ(1.25);
+    b.leftArm?.rotateX(0.1);
+    b.rightArm?.rotateZ(-1.25);
+    b.rightArm?.rotateX(0.1);
+    b.leftForeArm?.rotateX(-0.25);
+    b.rightForeArm?.rotateX(-0.25);
+
+    b.leftUpLeg?.rotateX(-0.06);
+    b.rightUpLeg?.rotateX(0.06);
+
+    const breathe = Math.sin(elapsed * 2.5);
+    b.spine?.rotateX(breathe * 0.03);
+    b.head?.rotateX(-0.05 + breathe * 0.015);
+    if (b.hips) {
+      b.hips.rotation.y = Math.sin(elapsed * 1.5) * 0.03;
+    }
+  }
+}
+
+function applyKeeperMotion(
+  rig: RigController | null,
+  matchState: string,
+  anim: { keeperT: number; diveDir: string },
+  elapsed: number,
+  delta: number
+) {
+  if (!rig) return;
+  if (rig.mixer) rig.mixer.update(delta);
+
+  rig.restRotations.forEach((q, bone) => bone.quaternion.copy(q));
+  const b = rig.bones;
+
+  if (matchState === 'ball_flight' || matchState === 'shot_result') {
+    const diveT = Math.min(1, anim.keeperT);
+    if (anim.diveDir === 'left') {
+      b.leftArm?.rotateZ(2.35 * diveT);
+      b.rightArm?.rotateZ(2.0 * diveT);
+      b.leftUpLeg?.rotateZ(-0.45 * diveT);
+      b.rightUpLeg?.rotateZ(-0.25 * diveT);
+      b.spine?.rotateZ(0.35 * diveT);
+    } else if (anim.diveDir === 'right') {
+      b.leftArm?.rotateZ(-2.0 * diveT);
+      b.rightArm?.rotateZ(-2.35 * diveT);
+      b.leftUpLeg?.rotateZ(0.25 * diveT);
+      b.rightUpLeg?.rotateZ(0.45 * diveT);
+      b.spine?.rotateZ(-0.35 * diveT);
+    } else {
+      b.leftArm?.rotateZ(1.4);
+      b.rightArm?.rotateZ(-1.4);
+      b.leftUpLeg?.rotateZ(0.35);
+      b.rightUpLeg?.rotateZ(-0.35);
+    }
+  } else {
+    // Alert ready crouch on goal line with wide arms and foot-shuffling
+    b.leftUpLeg?.rotateX(-0.35);
+    b.rightUpLeg?.rotateX(-0.35);
+    b.leftLeg?.rotateX(0.55);
+    b.rightLeg?.rotateX(0.55);
+
+    b.leftArm?.rotateZ(0.7);
+    b.leftArm?.rotateX(-0.4);
+    b.rightArm?.rotateZ(-0.7);
+    b.rightArm?.rotateX(-0.4);
+    b.leftForeArm?.rotateX(-0.55);
+    b.rightForeArm?.rotateX(-0.55);
+
+    b.spine?.rotateX(0.2);
+
+    const hop = Math.abs(Math.sin(elapsed * 7)) * 0.04;
+    if (b.hips) {
+      b.hips.position.y = rig.initialHipsY + hop;
+    }
+    b.head?.rotateY(Math.sin(elapsed * 3) * 0.08);
+  }
+}
+
+// =============================================================================
 // COMPONENT: 3V3 PENALTY SHOOTOUT (PS3 HD 3D WEBGL ENGINE)
 // =============================================================================
 export function PenaltyShootoutPage() {
@@ -566,6 +805,8 @@ export function PenaltyShootoutPage() {
   // Persistent reference to loaded custom GLTF groups so state changes NEVER drop the model
   const customStrikerModelRef = useRef<THREE.Group | null>(null);
   const customKeeperModelRef = useRef<THREE.Group | null>(null);
+  const strikerRigRef = useRef<RigController | null>(null);
+  const keeperRigRef = useRef<RigController | null>(null);
 
   // Match States
   const [matchState, setMatchState] = useState<
@@ -882,7 +1123,12 @@ export function PenaltyShootoutPage() {
   // UNIVERSAL GLTF / GLB MODEL LOADER (PERSISTENT & AUTO-NORMALIZED)
   // =============================================================================
   const applyCustomGLTF = useCallback(
-    (gltfScene: THREE.Group, modelName: string, target: 'striker' | 'keeper' | 'both') => {
+    (
+      gltfScene: THREE.Group,
+      modelName: string,
+      target: 'striker' | 'keeper' | 'both',
+      animations?: THREE.AnimationClip[]
+    ) => {
       // 1. Calculate Bounding Box to auto-scale to realistic 1.85m human height
       const bbox = new THREE.Box3().setFromObject(gltfScene);
       const size = new THREE.Vector3();
@@ -908,10 +1154,12 @@ export function PenaltyShootoutPage() {
       });
 
       if (target === 'striker' || target === 'both') {
-        const strikerClone = gltfScene.clone(true);
+        // Deep skeletal clone to preserve SkinnedMesh bone bindings
+        const strikerClone = (SkeletonUtils.clone(gltfScene) as unknown) as THREE.Group;
         strikerClone.position.set(-0.48, -bottomY, 0.55);
         strikerClone.rotation.y = Math.PI; // Face towards the goal net
         customStrikerModelRef.current = strikerClone;
+        strikerRigRef.current = createRigController(strikerClone, animations);
 
         if (threeRef.current) {
           threeRef.current.strikerGroup.visible = false;
@@ -920,10 +1168,11 @@ export function PenaltyShootoutPage() {
       }
 
       if (target === 'keeper' || target === 'both') {
-        const keeperClone = gltfScene.clone(true);
+        const keeperClone = (SkeletonUtils.clone(gltfScene) as unknown) as THREE.Group;
         keeperClone.position.set(0, -bottomY, -7.05);
         keeperClone.rotation.y = 0; // Face towards the pitch and striker
         customKeeperModelRef.current = keeperClone;
+        keeperRigRef.current = createRigController(keeperClone, animations);
 
         if (threeRef.current) {
           threeRef.current.keeperGroup.visible = false;
@@ -933,8 +1182,8 @@ export function PenaltyShootoutPage() {
 
       setCustomModelLoaded(modelName);
       toast({
-        title: 'PS3 3D Model Loaded!',
-        description: `Successfully applied ${modelName} to ${target.toUpperCase()}!`,
+        title: 'PS3 3D Model Loaded & Animated!',
+        description: `Successfully applied and rigged ${modelName} to ${target.toUpperCase()}!`,
       });
     },
     [toast]
@@ -951,10 +1200,15 @@ export function PenaltyShootoutPage() {
           '/models/generic-striker.glb',
           (gltf) => {
             setIsLoadingGlb(false);
-            applyCustomGLTF(gltf.scene, 'Generic Striker (.GLB)', preset === 'both' ? 'both' : 'striker');
+            applyCustomGLTF(
+              gltf.scene,
+              'Generic Striker (.GLB)',
+              preset === 'both' ? 'both' : 'striker',
+              gltf.animations
+            );
             if (preset === 'both') {
               loader.load('/models/generic-keeper.glb', (gltfK) => {
-                applyCustomGLTF(gltfK.scene, 'Generic Striker + Keeper (.GLB)', 'keeper');
+                applyCustomGLTF(gltfK.scene, 'Generic Striker + Keeper (.GLB)', 'keeper', gltfK.animations);
               });
             }
           },
@@ -969,7 +1223,7 @@ export function PenaltyShootoutPage() {
           '/models/generic-keeper.glb',
           (gltf) => {
             setIsLoadingGlb(false);
-            applyCustomGLTF(gltf.scene, 'Generic Keeper (.GLB)', 'keeper');
+            applyCustomGLTF(gltf.scene, 'Generic Keeper (.GLB)', 'keeper', gltf.animations);
           },
           undefined,
           (err) => {
@@ -999,7 +1253,7 @@ export function PenaltyShootoutPage() {
       url,
       (gltf) => {
         setIsLoadingGlb(false);
-        applyCustomGLTF(gltf.scene, file.name, customModelTarget);
+        applyCustomGLTF(gltf.scene, file.name, customModelTarget, gltf.animations);
       },
       undefined,
       (err) => {
@@ -1024,7 +1278,7 @@ export function PenaltyShootoutPage() {
       (gltf) => {
         setIsLoadingGlb(false);
         const name = glbUrlInput.split('/').pop()?.split('?')[0] || 'Remote 3D Model';
-        applyCustomGLTF(gltf.scene, name, customModelTarget);
+        applyCustomGLTF(gltf.scene, name, customModelTarget, gltf.animations);
       },
       undefined,
       (err) => {
@@ -1052,6 +1306,8 @@ export function PenaltyShootoutPage() {
     }
     customStrikerModelRef.current = null;
     customKeeperModelRef.current = null;
+    strikerRigRef.current = null;
+    keeperRigRef.current = null;
     setCustomModelLoaded(null);
     toast({
       title: 'Restored Built-in PS3 Models',
@@ -1540,6 +1796,10 @@ export function PenaltyShootoutPage() {
         targetRightMesh.rotation.z += delta * 1.5;
       }
 
+      // Update custom GLB skeletal bone kinematics & animations
+      applyStrikerMotion(strikerRigRef.current, matchState, anim, elapsed, delta);
+      applyKeeperMotion(keeperRigRef.current, matchState, anim, elapsed, delta);
+
       // GOALKEEPER 3D MOTIONS & DIVES
       if (matchState === 'ball_flight' || matchState === 'shot_result') {
         const diveT = Math.min(1, anim.keeperT);
@@ -1563,7 +1823,7 @@ export function PenaltyShootoutPage() {
 
         if (customKeeperModelRef.current) {
           customKeeperModelRef.current.position.x = targetX;
-          customKeeperModelRef.current.rotation.z = diveAngle;
+          customKeeperModelRef.current.rotation.z = diveAngle * 0.8;
         }
       } else {
         const kIdle = Math.sin(elapsed * 6) * 0.03;
@@ -1574,7 +1834,6 @@ export function PenaltyShootoutPage() {
         keeperArmR.rotation.z = 0.2 - Math.sin(elapsed * 4) * 0.05;
 
         if (customKeeperModelRef.current) {
-          customKeeperModelRef.current.position.y = kIdle;
           customKeeperModelRef.current.position.x = 0;
           customKeeperModelRef.current.rotation.z = 0;
         }
