@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useLocation, useRoute, Link } from 'wouter';
+import * as THREE from 'three';
 import { useServerSession } from '@/components/server-session';
 import { useLegend } from '@/components/legend-card';
 import { useToast } from '@/hooks/use-toast';
@@ -31,7 +32,7 @@ import {
 } from 'lucide-react';
 
 // =============================================================================
-// PROCEDURAL AUDIO SYNTHESIZER (EA FC STADIUM TRAINING AUDIO)
+// PROCEDURAL AUDIO SYNTHESIZER
 // =============================================================================
 class PenaltyAudio {
   private ctx: AudioContext | null = null;
@@ -115,8 +116,6 @@ class PenaltyAudio {
     if (!this.ctx) return;
     try {
       const t = this.ctx.currentTime;
-
-      // 1. Net rustle
       const bufferSize = this.ctx.sampleRate * 0.45;
       const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
       const data = buffer.getChannelData(0);
@@ -136,7 +135,6 @@ class PenaltyAudio {
       netGain.connect(this.ctx.destination);
       noise.start(t);
 
-      // 2. Crowd cheer
       const crowdBuffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 1.1, this.ctx.sampleRate);
       const crowdData = crowdBuffer.getChannelData(0);
       for (let i = 0; i < crowdBuffer.length; i++) {
@@ -250,9 +248,6 @@ const audio = new PenaltyAudio();
 export type ShotDirection = 'left' | 'centre' | 'right';
 export type DiveDirection = 'left' | 'centre' | 'right';
 export type PitchElevation = 'low' | 'mid' | 'high' | 'panenka';
-export type RunupStyle = 'sprint_blast' | 'stutter_step' | 'curved_approach' | 'panenka_chip';
-export type KickStyle = 'power_laces' | 'finesse_curl' | 'chipped_dink';
-export type KeeperMotion = 'top_corner_leap' | 'ground_sweep' | 'reflex_parry' | 'wrong_footed' | 'crossbar_tipper';
 
 export interface SquadPlayer {
   id: string;
@@ -274,22 +269,8 @@ export interface ShotResult {
   scored: boolean;
   powerKmH: number;
   pitchElevation: PitchElevation;
-  runupStyle: RunupStyle;
-  kickStyle: KickStyle;
-  keeperMotion: KeeperMotion;
   composureQuality: 'green' | 'yellow' | 'red';
   message: string;
-}
-
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  size: number;
-  color: string;
-  alpha: number;
-  life: number;
 }
 
 export function PenaltyShootoutPage() {
@@ -316,7 +297,7 @@ export function PenaltyShootoutPage() {
 
   // 3 vs 3 Turns
   const [currentRound, setCurrentRound] = useState<number>(1);
-  const [currentKickerSlot, setCurrentKickerSlot] = useState<number>(0); // 0, 1, 2
+  const [currentKickerSlot, setCurrentKickerSlot] = useState<number>(0);
   const [attackingTeam, setAttackingTeam] = useState<'A' | 'B'>('A');
 
   // Scores & Indicators
@@ -354,12 +335,30 @@ export function PenaltyShootoutPage() {
   const isUserTurnToShoot = attackingTeam === 'A' && currentShooter.isUser;
   const isUserTurnToSave = attackingTeam === 'B' && (keeperControlAll || currentKeeper.isUser);
 
-  // Canvas & Physics References
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animFrameRef = useRef<number | null>(null);
-  const particlesRef = useRef<Particle[]>([]);
+  // WebGL Container & Three.js References
+  const containerRef = useRef<HTMLDivElement>(null);
+  const threeRef = useRef<{
+    scene: THREE.Scene;
+    camera: THREE.PerspectiveCamera;
+    renderer: THREE.WebGLRenderer;
+    strikerGroup: THREE.Group;
+    strikerLegR: THREE.Group;
+    strikerLegL: THREE.Group;
+    strikerArmR: THREE.Group;
+    strikerArmL: THREE.Group;
+    keeperGroup: THREE.Group;
+    keeperBody: THREE.Group;
+    keeperArmL: THREE.Group;
+    keeperArmR: THREE.Group;
+    ballMesh: THREE.Mesh;
+    composureMesh: THREE.Mesh;
+    targetLeftMesh: THREE.Group;
+    targetCentreMesh: THREE.Group;
+    targetRightMesh: THREE.Group;
+    netMesh: THREE.LineSegments;
+  } | null>(null);
 
-  // Animation Progress & Physics
+  // Animation Progress & Physics State
   const animProgressRef = useRef<{
     runup: number;
     ballT: number;
@@ -367,16 +366,11 @@ export function PenaltyShootoutPage() {
     netRipple: number;
     ballSpin: number;
     composureRadius: number;
-    composureColor: string;
     shotDir: ShotDirection;
     diveDir: DiveDirection;
     pitchElevation: PitchElevation;
     powerKmH: number;
-    runupStyle: RunupStyle;
-    kickStyle: KickStyle;
-    keeperMotion: KeeperMotion;
     scored: boolean;
-    flashRing: number;
   }>({
     runup: 0,
     ballT: 0,
@@ -384,16 +378,11 @@ export function PenaltyShootoutPage() {
     netRipple: 0,
     ballSpin: 0,
     composureRadius: 36,
-    composureColor: '#ef4444',
     shotDir: 'centre',
     diveDir: 'centre',
     pitchElevation: 'mid',
     powerKmH: 95,
-    runupStyle: 'sprint_blast',
-    kickStyle: 'power_laces',
-    keeperMotion: 'reflex_parry',
     scored: false,
-    flashRing: 0,
   });
 
   const toggleSound = () => {
@@ -464,25 +453,7 @@ export function PenaltyShootoutPage() {
     setActiveShotData(null);
     setMatchState('aiming');
     audio.playWhistle();
-    setBannerNotice('FC 26 TRAINING ARENA · ROUND 1 OF 3');
-  };
-
-  // Spawn visual particles
-  const spawnParticles = (x: number, y: number, color: string, count = 12, speed = 3) => {
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const spd = (0.5 + Math.random()) * speed;
-      particlesRef.current.push({
-        x,
-        y,
-        vx: Math.cos(angle) * spd,
-        vy: Math.sin(angle) * spd - 1,
-        size: 1.5 + Math.random() * 2.5,
-        color,
-        alpha: 1,
-        life: 0.9,
-      });
-    }
+    setBannerNotice('FC 26 3D PRACTICE ARENA · ROUND 1 OF 3');
   };
 
   // Execute Shot Resolution
@@ -492,22 +463,6 @@ export function PenaltyShootoutPage() {
     const elevations: PitchElevation[] = ['low', 'mid', 'high', 'panenka'];
     const randomElevation = elevations[Math.floor(Math.random() * elevations.length)];
 
-    const runupStyles: RunupStyle[] = ['sprint_blast', 'stutter_step', 'curved_approach', 'panenka_chip'];
-    const randomRunup = runupStyles[Math.floor(Math.random() * runupStyles.length)];
-
-    const kickStyles: KickStyle[] = ['power_laces', 'finesse_curl', 'chipped_dink'];
-    const randomKick = kickStyles[Math.floor(Math.random() * kickStyles.length)];
-
-    const keeperMotions: KeeperMotion[] = [
-      'top_corner_leap',
-      'ground_sweep',
-      'reflex_parry',
-      'wrong_footed',
-      'crossbar_tipper',
-    ];
-    const randomKeeperMotion = keeperMotions[Math.floor(Math.random() * keeperMotions.length)];
-
-    // Evaluate FC Composure Circle timing at moment of strike
     const r = animProgressRef.current.composureRadius;
     const compQuality: 'green' | 'yellow' | 'red' = r < 18 ? 'green' : r < 28 ? 'yellow' : 'red';
 
@@ -517,16 +472,16 @@ export function PenaltyShootoutPage() {
     if (shooterChoice !== keeperChoice) {
       isGoal = true;
       message = compQuality === 'green'
-        ? `PERFECT TIMED FINISH! Clinical strike buried in the ${shooterChoice} net!`
-        : `GOAL! Keeper wrong-footed, strike tucked into the ${shooterChoice}!`;
+        ? `PERFECT TIMED FINISH! Clinical 3D strike buried in the ${shooterChoice} net!`
+        : `GOAL! Courtois wrong-footed, strike tucked cleanly into the ${shooterChoice}!`;
     } else {
       const topCornerBullet = randomElevation === 'high' && randomPower >= 110;
       if (topCornerBullet) {
         isGoal = true;
-        message = `UNSTOPPABLE! ${randomPower} km/h rocket into the top corner past the keeper's gloves!`;
+        message = `UNSTOPPABLE! ${randomPower} km/h bullet sniped past the keeper's fingertips!`;
       } else {
         isGoal = false;
-        message = `SAVED! Courtois guessed ${keeperChoice} and made a brilliant reflex save!`;
+        message = `SAVED! Courtois anticipated ${keeperChoice} and made a spectacular diving block!`;
       }
     }
 
@@ -541,9 +496,6 @@ export function PenaltyShootoutPage() {
       scored: isGoal,
       powerKmH: randomPower,
       pitchElevation: randomElevation,
-      runupStyle: randomRunup,
-      kickStyle: randomKick,
-      keeperMotion: randomKeeperMotion,
       composureQuality: compQuality,
       message,
     };
@@ -553,9 +505,6 @@ export function PenaltyShootoutPage() {
     animProgressRef.current.diveDir = keeperChoice;
     animProgressRef.current.pitchElevation = randomElevation;
     animProgressRef.current.powerKmH = randomPower;
-    animProgressRef.current.runupStyle = randomRunup;
-    animProgressRef.current.kickStyle = randomKick;
-    animProgressRef.current.keeperMotion = randomKeeperMotion;
     animProgressRef.current.scored = isGoal;
     animProgressRef.current.runup = 0;
     animProgressRef.current.ballT = 0;
@@ -568,29 +517,16 @@ export function PenaltyShootoutPage() {
     setTimeout(() => {
       audio.playKick(randomPower / 120);
       setMatchState('ball_flight');
-
-      const canvas = canvasRef.current;
-      if (canvas) {
-        spawnParticles(canvas.width / 2 + 10, canvas.height * 0.76, '#4ade80', 14, 2.5);
-      }
     }, 420);
 
     // Goal or Save Resolution
     setTimeout(() => {
-      const canvas = canvasRef.current;
       if (isGoal) {
         audio.playGoal();
         setBannerNotice(`⚽ GOAL! ${randomPower} KM/H · ${shooterChoice.toUpperCase()}`);
-        if (canvas) {
-          spawnParticles(canvas.width / 2, canvas.height * 0.44, '#fde047', 18, 3.5);
-        }
       } else {
         audio.playSave();
         setBannerNotice(`🧤 SAVED! ${currentKeeper.name} BLOCKS`);
-        animProgressRef.current.flashRing = 1.0;
-        if (canvas) {
-          spawnParticles(canvas.width / 2, canvas.height * 0.46, '#38bdf8', 16, 3);
-        }
       }
       setMatchState('shot_result');
 
@@ -675,7 +611,7 @@ export function PenaltyShootoutPage() {
     }
   };
 
-  // AI Spectate turn
+  // AI Spectate
   useEffect(() => {
     if (matchState === 'aiming' && !isUserTurnToShoot && !isUserTurnToSave) {
       const timer = setTimeout(() => {
@@ -689,632 +625,538 @@ export function PenaltyShootoutPage() {
   }, [matchState, isUserTurnToShoot, isUserTurnToSave, resolveShot]);
 
   // =============================================================================
-  // CANVAS RENDERING ENGINE (EXACT EA FC 26 TRAINING ARENA GRAPHICS FROM VIDEO)
+  // PS3-ERA 3D WEBGL ENGINE (THREE.JS RUNTIME)
   // =============================================================================
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const container = containerRef.current;
+    if (!container) return;
 
-    let running = true;
+    // 1. SCENE SETUP
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xbfe3f7); // Pale daylight sky from video
+    scene.fog = new THREE.Fog(0xbfe3f7, 18, 48);
 
-    const render = () => {
-      if (!running) return;
+    // 2. CAMERA SETUP (Third-person elevated behind striker)
+    const aspect = container.clientWidth / container.clientHeight;
+    const camera = new THREE.PerspectiveCamera(46, aspect, 0.1, 100);
+    camera.position.set(0, 1.85, 4.8);
+    camera.lookAt(0, 1.25, -6.5);
 
-      const w = canvas.width;
-      const h = canvas.height;
-      const now = Date.now();
+    // 3. WEBGL RENDERER (PBR / Soft Shadows)
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.innerHTML = '';
+    container.appendChild(renderer.domElement);
+
+    // 4. DAYLIGHT OUTDOOR SUN LIGHTING
+    const ambientLight = new THREE.HemisphereLight(0xffffff, 0x446644, 0.95);
+    scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xfffaed, 2.0);
+    sunLight.position.set(-6, 12, 6);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 1024;
+    sunLight.shadow.mapSize.height = 1024;
+    sunLight.shadow.camera.near = 0.5;
+    sunLight.shadow.camera.far = 30;
+    sunLight.shadow.camera.left = -6;
+    sunLight.shadow.camera.right = 6;
+    sunLight.shadow.camera.top = 8;
+    sunLight.shadow.camera.bottom = -4;
+    sunLight.shadow.bias = -0.0005;
+    scene.add(sunLight);
+
+    // 5. NATURAL GREEN CUT-LAWN PITCH WITH REALISTIC STRIPES
+    const pitchGeo = new THREE.PlaneGeometry(36, 40);
+    const canvasTexture = document.createElement('canvas');
+    canvasTexture.width = 512;
+    canvasTexture.height = 512;
+    const pctx = canvasTexture.getContext('2d')!;
+    // Alternating natural lawn stripes
+    for (let i = 0; i < 16; i++) {
+      pctx.fillStyle = i % 2 === 0 ? '#438038' : '#4f9142';
+      pctx.fillRect(0, i * 32, 512, 32);
+    }
+    // Crisp white chalk lines
+    pctx.strokeStyle = '#ffffff';
+    pctx.lineWidth = 6;
+    pctx.strokeRect(32, 32, 448, 448);
+    const turfTexture = new THREE.CanvasTexture(canvasTexture);
+    turfTexture.wrapS = THREE.RepeatWrapping;
+    turfTexture.wrapT = THREE.RepeatWrapping;
+    turfTexture.repeat.set(2, 2);
+
+    const pitchMat = new THREE.MeshStandardMaterial({
+      map: turfTexture,
+      roughness: 0.85,
+      metalness: 0.05,
+    });
+    const pitch = new THREE.Mesh(pitchGeo, pitchMat);
+    pitch.rotation.x = -Math.PI / 2;
+    pitch.position.set(0, 0, -5);
+    pitch.receiveShadow = true;
+    scene.add(pitch);
+
+    // Penalty Spot (White chalk circle)
+    const spotGeo = new THREE.CircleGeometry(0.09, 32);
+    const spotMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const spot = new THREE.Mesh(spotGeo, spotMat);
+    spot.rotation.x = -Math.PI / 2;
+    spot.position.set(0, 0.005, 0);
+    scene.add(spot);
+
+    // Goal Line
+    const lineGeo = new THREE.PlaneGeometry(14, 0.1);
+    const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const goalLine = new THREE.Mesh(lineGeo, lineMat);
+    goalLine.rotation.x = -Math.PI / 2;
+    goalLine.position.set(0, 0.006, -7.2);
+    scene.add(goalLine);
+
+    // 6. CHAINLINK COURT FENCE & RED REBOUNDER BOARDS BEHIND GOAL
+    const fenceMat = new THREE.MeshStandardMaterial({
+      color: 0x334155,
+      wireframe: true,
+      roughness: 0.9,
+    });
+    const fenceGeo = new THREE.PlaneGeometry(28, 6, 28, 8);
+    const fence = new THREE.Mesh(fenceGeo, fenceMat);
+    fence.position.set(0, 3, -11.5);
+    scene.add(fence);
+
+    // Red Training Rebounders (from video)
+    const rebounderMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.6 });
+    const r1 = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.8, 0.05), rebounderMat);
+    r1.position.set(-5.5, 0.9, -11.2);
+    scene.add(r1);
+    const r2 = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.8, 0.05), rebounderMat);
+    r2.position.set(5.5, 0.9, -11.2);
+    scene.add(r2);
+
+    // 7. 3D TUBULAR METALLIC GOALPOSTS
+    const postMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25, metalness: 0.6 });
+    const postRadius = 0.065;
+    const goalWidth = 5.2;
+    const goalHeight = 2.1;
+    const goalZ = -7.2;
+
+    // Left post
+    const postL = new THREE.Mesh(new THREE.CylinderGeometry(postRadius, postRadius, goalHeight, 20), postMat);
+    postL.position.set(-goalWidth / 2, goalHeight / 2, goalZ);
+    postL.castShadow = true;
+    scene.add(postL);
+
+    // Right post
+    const postR = new THREE.Mesh(new THREE.CylinderGeometry(postRadius, postRadius, goalHeight, 20), postMat);
+    postR.position.set(goalWidth / 2, goalHeight / 2, goalZ);
+    postR.castShadow = true;
+    scene.add(postR);
+
+    // Horizontal crossbar
+    const crossbar = new THREE.Mesh(new THREE.CylinderGeometry(postRadius, postRadius, goalWidth, 20), postMat);
+    crossbar.rotation.z = Math.PI / 2;
+    crossbar.position.set(0, goalHeight, goalZ);
+    crossbar.castShadow = true;
+    scene.add(crossbar);
+
+    // 3D Net Mesh
+    const netGeo = new THREE.WireframeGeometry(new THREE.BoxGeometry(goalWidth, goalHeight, 1.6));
+    const netMat = new THREE.LineBasicMaterial({ color: 0x64748b, transparent: true, opacity: 0.5 });
+    const netMesh = new THREE.LineSegments(netGeo, netMat);
+    netMesh.position.set(0, goalHeight / 2, goalZ - 0.8);
+    scene.add(netMesh);
+
+    // 8. SOCCER BALL (3D SHADED SPHERE WITH LEATHER PANELS & SHADOW)
+    const ballRadius = 0.11;
+    const ballGeo = new THREE.SphereGeometry(ballRadius, 32, 32);
+    const ballMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.35,
+      metalness: 0.1,
+    });
+    const ballMesh = new THREE.Mesh(ballGeo, ballMat);
+    ballMesh.position.set(0, ballRadius, 0);
+    ballMesh.castShadow = true;
+    ballMesh.receiveShadow = true;
+    scene.add(ballMesh);
+
+    // 9. FC 26 COMPOSURE RING (3D RING ON TURF AROUND BALL)
+    const compRingGeo = new THREE.RingGeometry(0.18, 0.22, 48);
+    const compRingMat = new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide });
+    const composureMesh = new THREE.Mesh(compRingGeo, compRingMat);
+    composureMesh.rotation.x = -Math.PI / 2;
+    composureMesh.position.set(0, 0.012, 0);
+    scene.add(composureMesh);
+
+    // 10. 3D AIMING TARGET RETICLES IN GOAL (LEFT, CENTRE, RIGHT)
+    const createTargetMesh = (label: string) => {
+      const group = new THREE.Group();
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.24, 0.28, 32),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.7 })
+      );
+      group.add(ring);
+      return group;
+    };
+    const targetLeftMesh = createTargetMesh('L');
+    targetLeftMesh.position.set(-1.8, 1.2, goalZ + 0.1);
+    scene.add(targetLeftMesh);
+
+    const targetCentreMesh = createTargetMesh('C');
+    targetCentreMesh.position.set(0, 1.2, goalZ + 0.1);
+    scene.add(targetCentreMesh);
+
+    const targetRightMesh = createTargetMesh('R');
+    targetRightMesh.position.set(1.8, 1.2, goalZ + 0.1);
+    scene.add(targetRightMesh);
+
+    // 11. PS3 QUALITY 3D CHARACTER: GOALKEEPER (ROYAL BLUE KIT & GLOVES)
+    const keeperGroup = new THREE.Group();
+    keeperGroup.position.set(0, 0, goalZ + 0.15);
+
+    const keeperBody = new THREE.Group();
+    const blueMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.5 }); // Royal blue jersey
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.7 });
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+
+    // Torso
+    const kTorso = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.6, 0.24), blueMat);
+    kTorso.position.y = 1.35;
+    kTorso.castShadow = true;
+    keeperBody.add(kTorso);
+
+    // Head
+    const kHead = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), skinMat);
+    kHead.position.y = 1.76;
+    kHead.castShadow = true;
+    keeperBody.add(kHead);
+
+    // Goalkeeper Arms & Oversized Gloves
+    const keeperArmL = new THREE.Group();
+    keeperArmL.position.set(-0.3, 1.55, 0);
+    const armLMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.45, 12), blueMat);
+    armLMesh.position.y = -0.22;
+    keeperArmL.add(armLMesh);
+    const gloveL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.08), whiteMat);
+    gloveL.position.y = -0.48;
+    keeperArmL.add(gloveL);
+    keeperBody.add(keeperArmL);
+
+    const keeperArmR = new THREE.Group();
+    keeperArmR.position.set(0.3, 1.55, 0);
+    const armRMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.45, 12), blueMat);
+    armRMesh.position.y = -0.22;
+    keeperArmR.add(armRMesh);
+    const gloveR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.08), whiteMat);
+    gloveR.position.y = -0.48;
+    keeperArmR.add(gloveR);
+    keeperBody.add(keeperArmR);
+
+    // Shorts & Legs
+    const kShorts = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.32, 0.25), blueMat);
+    kShorts.position.y = 0.95;
+    kShorts.castShadow = true;
+    keeperBody.add(kShorts);
+
+    const kLegL = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.75, 12), whiteMat);
+    kLegL.position.set(-0.13, 0.42, 0);
+    kLegL.castShadow = true;
+    keeperBody.add(kLegL);
+
+    const kLegR = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.75, 12), whiteMat);
+    kLegR.position.set(0.13, 0.42, 0);
+    kLegR.castShadow = true;
+    keeperBody.add(kLegR);
+
+    keeperGroup.add(keeperBody);
+    scene.add(keeperGroup);
+
+    // 12. PS3 QUALITY 3D CHARACTER: STRIKER (MBAPPÉ YELLOW/LIME TRAINING KIT)
+    const strikerGroup = new THREE.Group();
+    strikerGroup.position.set(-0.48, 0, 0.55);
+
+    const yellowMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.45 }); // Neon yellow/lime
+    const bootMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+
+    // Striker Torso
+    const sTorso = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.58, 0.23), yellowMat);
+    sTorso.position.y = 1.25;
+    sTorso.castShadow = true;
+    strikerGroup.add(sTorso);
+
+    // Number 10 Black Patch
+    const sPatch = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.14), darkMat);
+    sPatch.position.set(0, 1.28, 0.12);
+    strikerGroup.add(sPatch);
+
+    // Head
+    const sHead = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 16), skinMat);
+    sHead.position.y = 1.64;
+    sHead.castShadow = true;
+    strikerGroup.add(sHead);
+
+    // Arms
+    const strikerArmL = new THREE.Group();
+    strikerArmL.position.set(-0.28, 1.45, 0);
+    const sArmL = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.045, 0.45, 12), skinMat);
+    sArmL.position.y = -0.22;
+    strikerArmL.add(sArmL);
+    strikerGroup.add(strikerArmL);
+
+    const strikerArmR = new THREE.Group();
+    strikerArmR.position.set(0.28, 1.45, 0);
+    const sArmR = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.045, 0.45, 12), skinMat);
+    sArmR.position.y = -0.22;
+    strikerArmR.add(sArmR);
+    strikerGroup.add(strikerArmR);
+
+    // Black Shorts
+    const sShorts = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.32, 0.24), darkMat);
+    sShorts.position.y = 0.88;
+    sShorts.castShadow = true;
+    strikerGroup.add(sShorts);
+
+    // Left Leg (Pivot Leg)
+    const strikerLegL = new THREE.Group();
+    strikerLegL.position.set(-0.13, 0.75, 0);
+    const sLegLMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.055, 0.72, 12), skinMat);
+    sLegLMesh.position.y = -0.36;
+    sLegLMesh.castShadow = true;
+    strikerLegL.add(sLegLMesh);
+    const bootL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.18), bootMat);
+    bootL.position.set(0, -0.72, -0.04);
+    strikerLegL.add(bootL);
+    strikerGroup.add(strikerLegL);
+
+    // Right Leg (Kicking Leg with dynamic joint)
+    const strikerLegR = new THREE.Group();
+    strikerLegR.position.set(0.13, 0.75, 0);
+    const sLegRMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.055, 0.72, 12), skinMat);
+    sLegRMesh.position.y = -0.36;
+    sLegRMesh.castShadow = true;
+    strikerLegR.add(sLegRMesh);
+    const bootR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.18), bootMat);
+    bootR.position.set(0, -0.72, -0.04);
+    strikerLegR.add(bootR);
+    strikerGroup.add(strikerLegR);
+
+    scene.add(strikerGroup);
+
+    threeRef.current = {
+      scene,
+      camera,
+      renderer,
+      strikerGroup,
+      strikerLegR,
+      strikerLegL,
+      strikerArmR,
+      strikerArmL,
+      keeperGroup,
+      keeperBody,
+      keeperArmL,
+      keeperArmR,
+      ballMesh,
+      composureMesh,
+      targetLeftMesh,
+      targetCentreMesh,
+      targetRightMesh,
+      netMesh,
+    };
+
+    // 13. REAL-TIME 60FPS 3D RENDER LOOP
+    let animId: number;
+    const clock = new THREE.Clock();
+
+    const animate = () => {
+      animId = requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
       const anim = animProgressRef.current;
 
-      // -------------------------------------------------------------
-      // 1. DAYLIGHT SKY & OUTDOOR LIGHTING (EXACTLY AS IN VIDEO)
-      // -------------------------------------------------------------
-      const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.45);
-      skyGrad.addColorStop(0, '#bae6fd'); // soft pale daylight blue
-      skyGrad.addColorStop(0.6, '#e0f2fe');
-      skyGrad.addColorStop(1, '#f8fafc');
-      ctx.fillStyle = skyGrad;
-      ctx.fillRect(0, 0, w, h);
+      // Pulse FC 26 Composure Ring around the ball
+      const cycle = (elapsed % 1.5) / 1.5;
+      const radius = 0.18 + (Math.sin(cycle * Math.PI * 2) * 0.5 + 0.5) * 0.38;
+      anim.composureRadius = radius * 70; // mapped to pixel scale for logic
+      composureMesh.scale.set(radius * 3.5, radius * 3.5, 1);
 
-      // Distant training facility trees & soft horizon haze
-      ctx.fillStyle = '#94a3b8';
-      ctx.fillRect(0, h * 0.28, w, h * 0.12);
-
-      // Soft green background tree canopy
-      for (let tx = 0; tx < w; tx += 45) {
-        ctx.fillStyle = '#64748b';
-        ctx.beginPath();
-        ctx.arc(tx + 20, h * 0.29, 28, 0, Math.PI);
-        ctx.fill();
+      if (radius < 0.24) {
+        (compRingMat as THREE.MeshBasicMaterial).color.setHex(0x22c55e); // Green
+      } else if (radius < 0.35) {
+        (compRingMat as THREE.MeshBasicMaterial).color.setHex(0xfacc15); // Yellow
+      } else {
+        (compRingMat as THREE.MeshBasicMaterial).color.setHex(0xef4444); // Red
       }
 
-      // -------------------------------------------------------------
-      // 2. TALL OUTDOOR CHAINLINK FENCE & RED REBOUNDERS BEHIND GOAL
-      // -------------------------------------------------------------
-      const fenceY = h * 0.22;
-      const fenceH = h * 0.24;
+      // Hide Composure Ring & Targets when kicking
+      const isAiming = matchState === 'aiming';
+      composureMesh.visible = isAiming;
+      targetLeftMesh.visible = isAiming;
+      targetCentreMesh.visible = isAiming;
+      targetRightMesh.visible = isAiming;
 
-      // Dark steel posts of the court perimeter
-      ctx.fillStyle = '#334155';
-      for (let px = 20; px < w; px += 70) {
-        ctx.fillRect(px, fenceY, 5, fenceH + 20);
+      // Animate Target reticles
+      if (isAiming) {
+        targetLeftMesh.rotation.z += delta * 1.5;
+        targetCentreMesh.rotation.z += delta * 1.5;
+        targetRightMesh.rotation.z += delta * 1.5;
       }
 
-      // Chainlink wire mesh pattern
-      ctx.strokeStyle = 'rgba(71, 85, 105, 0.45)';
-      ctx.lineWidth = 1;
-      for (let fy = fenceY; fy <= fenceY + fenceH; fy += 8) {
-        ctx.beginPath();
-        ctx.moveTo(0, fy);
-        ctx.lineTo(w, fy);
-        ctx.stroke();
-      }
-      for (let fx = 0; fx <= w; fx += 10) {
-        ctx.beginPath();
-        ctx.moveTo(fx, fenceY);
-        ctx.lineTo(fx, fenceY + fenceH);
-        ctx.stroke();
-      }
-
-      // Red Training Rebounder Net Barriers behind goal (seen in video)
-      ctx.fillStyle = '#dc2626';
-      ctx.fillRect(w * 0.08, fenceY + 30, w * 0.22, fenceH - 25);
-      ctx.fillRect(w * 0.70, fenceY + 30, w * 0.22, fenceH - 25);
-      // White training barrier frames
-      ctx.strokeStyle = '#f8fafc';
-      ctx.lineWidth = 2.5;
-      ctx.strokeRect(w * 0.08, fenceY + 30, w * 0.22, fenceH - 25);
-      ctx.strokeRect(w * 0.70, fenceY + 30, w * 0.22, fenceH - 25);
-
-      // Concrete perimeter curb
-      ctx.fillStyle = '#cbd5e1';
-      ctx.fillRect(0, fenceY + fenceH, w, 14);
-
-      // -------------------------------------------------------------
-      // 3. SUNLIT TRAINING PITCH (NATURAL GREEN LAWN WITH CUT STRIPES)
-      // -------------------------------------------------------------
-      const pitchStartY = fenceY + fenceH + 12;
-      const pitchH = h - pitchStartY;
-
-      // Natural grass bands in perspective
-      const bands = 9;
-      for (let b = 0; b < bands; b++) {
-        const y1 = pitchStartY + (b / bands) * pitchH;
-        const y2 = pitchStartY + ((b + 1) / bands) * pitchH;
-        ctx.fillStyle = b % 2 === 0 ? '#427e36' : '#4e8c3f'; // Natural EA FC training grass
-        ctx.fillRect(0, y1, w, y2 - y1);
-      }
-
-      // White Chalk Penalty Box and Goal Lines
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 3;
-
-      const goalLineY = pitchStartY + pitchH * 0.16;
-      ctx.beginPath();
-      ctx.moveTo(w * 0.14, goalLineY);
-      ctx.lineTo(w * 0.86, goalLineY);
-      ctx.stroke();
-
-      // Penalty Spot (Exactly positioned in front of striker)
-      const spotX = w / 2 + 10;
-      const spotY = h * 0.75;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(spotX, spotY, 5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Penalty D-Arc
-      ctx.beginPath();
-      ctx.arc(spotX, spotY - 12, 42, Math.PI * 0.15, Math.PI * 0.85);
-      ctx.stroke();
-
-      // -------------------------------------------------------------
-      // 4. TRAINING GOAL FRAME & HIGH-DEFINITION NET MESH
-      // -------------------------------------------------------------
-      const goalW = w * 0.64;
-      const goalX = (w - goalW) / 2;
-      const crossbarY = goalLineY - 100;
-      const postThickness = 7.5;
-
-      const netBackY = crossbarY + 18;
-      const netBackW = goalW * 0.94;
-      const netBackX = (w - netBackW) / 2;
-
-      // Net ripple when goal scored
-      let netBulgeX = 0;
-      let netBulgeY = 0;
-      if (anim.scored && anim.ballT > 0.72) {
-        anim.netRipple = Math.sin((anim.ballT - 0.72) * Math.PI * 3.6) * 16;
-        if (anim.shotDir === 'left') netBulgeX = -anim.netRipple;
-        if (anim.shotDir === 'right') netBulgeX = anim.netRipple;
-        netBulgeY = -anim.netRipple * 0.5;
-      }
-
-      // Grey/black depth netting (seen in video)
-      ctx.strokeStyle = 'rgba(15, 23, 42, 0.45)';
-      ctx.lineWidth = 1.2;
-
-      // Horizontal net lines
-      for (let ny = crossbarY; ny <= goalLineY; ny += 7) {
-        ctx.beginPath();
-        ctx.moveTo(goalX, ny);
-        ctx.lineTo(goalX + goalW, ny);
-        ctx.stroke();
-      }
-      // Vertical net lines
-      for (let nx = goalX; nx <= goalX + goalW; nx += 9) {
-        ctx.beginPath();
-        ctx.moveTo(nx, crossbarY);
-        ctx.lineTo(nx + netBulgeX * 0.5, goalLineY);
-        ctx.stroke();
-      }
-
-      // Net depth back box
-      ctx.beginPath();
-      ctx.moveTo(goalX, crossbarY);
-      ctx.lineTo(netBackX, netBackY);
-      ctx.lineTo(netBackX + netBackW, netBackY);
-      ctx.lineTo(goalX + goalW, crossbarY);
-      ctx.stroke();
-
-      // Clean White Metallic Goalposts
-      const drawWhitePost = (px: number, py: number, pw: number, ph: number) => {
-        const postGrad = ctx.createLinearGradient(px, py, px + pw, py);
-        postGrad.addColorStop(0, '#e2e8f0');
-        postGrad.addColorStop(0.3, '#ffffff');
-        postGrad.addColorStop(0.7, '#f8fafc');
-        postGrad.addColorStop(1, '#cbd5e1');
-        ctx.fillStyle = postGrad;
-        ctx.fillRect(px, py, pw, ph);
-      };
-
-      drawWhitePost(goalX - postThickness, crossbarY, postThickness, goalLineY - crossbarY);
-      drawWhitePost(goalX + goalW, crossbarY, postThickness, goalLineY - crossbarY);
-
-      const crossGrad = ctx.createLinearGradient(goalX, crossbarY, goalX, crossbarY + postThickness);
-      crossGrad.addColorStop(0, '#ffffff');
-      crossGrad.addColorStop(0.5, '#f8fafc');
-      crossGrad.addColorStop(1, '#cbd5e1');
-      ctx.fillStyle = crossGrad;
-      ctx.fillRect(goalX - postThickness, crossbarY, goalW + postThickness * 2, postThickness);
-
-      // -------------------------------------------------------------
-      // 5. GOALKEEPER IN BLUE KIT (EXACTLY AS IN VIDEO)
-      // -------------------------------------------------------------
-      const keeperBaseX = w / 2;
-      const keeperBaseY = goalLineY;
-
-      let keeperX = keeperBaseX;
-      let keeperY = keeperBaseY - 30;
-      let keeperAngle = 0;
-
+      // -----------------------------------------------------------
+      // REAL-TIME 3D GOALKEEPER MOTIONS & DIVES
+      // -----------------------------------------------------------
       if (matchState === 'ball_flight' || matchState === 'shot_result') {
-        const diveProgress = Math.min(1, anim.keeperT);
-
-        let verticalLift = 18;
-        if (anim.keeperMotion === 'top_corner_leap') verticalLift = 40;
-        if (anim.keeperMotion === 'ground_sweep') verticalLift = 4;
-        if (anim.keeperMotion === 'crossbar_tipper') verticalLift = 34;
+        const diveT = Math.min(1, anim.keeperT);
+        let targetX = 0;
+        let diveAngle = 0;
+        let liftY = 0.35;
 
         if (anim.diveDir === 'left') {
-          keeperX = keeperBaseX - diveProgress * (goalW * 0.42);
-          keeperY = keeperBaseY - 14 - verticalLift * Math.sin(diveProgress * Math.PI);
-          keeperAngle = -0.85 * diveProgress;
+          targetX = -1.9 * diveT;
+          diveAngle = 1.1 * diveT;
         } else if (anim.diveDir === 'right') {
-          keeperX = keeperBaseX + diveProgress * (goalW * 0.42);
-          keeperY = keeperBaseY - 14 - verticalLift * Math.sin(diveProgress * Math.PI);
-          keeperAngle = 0.85 * diveProgress;
-        } else {
-          keeperY = keeperBaseY - 30 - verticalLift * 0.6 * Math.sin(diveProgress * Math.PI);
+          targetX = 1.9 * diveT;
+          diveAngle = -1.1 * diveT;
         }
+
+        keeperGroup.position.x = targetX;
+        keeperBody.rotation.z = diveAngle;
+        keeperBody.position.y = liftY * Math.sin(diveT * Math.PI);
+        keeperArmL.rotation.z = -1.2 * diveT;
+        keeperArmR.rotation.z = 1.2 * diveT;
       } else {
-        // Subtle realistic ready stance weight bouncing
-        const idleBounce = Math.sin(now / 150) * 2.2;
-        keeperY += idleBounce;
+        // Ready stance subtle bounce
+        const kIdle = Math.sin(elapsed * 6) * 0.03;
+        keeperBody.position.y = kIdle;
+        keeperBody.rotation.z = 0;
+        keeperGroup.position.x = 0;
+        keeperArmL.rotation.z = -0.2 + Math.sin(elapsed * 4) * 0.05;
+        keeperArmR.rotation.z = 0.2 - Math.sin(elapsed * 4) * 0.05;
       }
 
-      ctx.save();
-      ctx.translate(keeperX, keeperY);
-      ctx.rotate(keeperAngle);
-
-      // Goalkeeper turf shadow (soft daytime sunlight shadow)
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
-      ctx.beginPath();
-      ctx.ellipse(4, 28, 22, 7, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Blue Jersey (Courtois style from video)
-      const blueJersey = ctx.createLinearGradient(-12, -26, 12, 10);
-      blueJersey.addColorStop(0, '#1d4ed8');
-      blueJersey.addColorStop(0.5, '#2563eb');
-      blueJersey.addColorStop(1, '#1e40af');
-      ctx.fillStyle = blueJersey;
-      ctx.beginPath();
-      ctx.roundRect(-12, -26, 24, 32, 4);
-      ctx.fill();
-
-      // White chest trim
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(-6, -20, 12, 3);
-
-      // Head & Hair
-      ctx.fillStyle = '#b45309';
-      ctx.beginPath();
-      ctx.arc(0, -34, 9, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(-7, -39, 14, 5);
-
-      // Arms & Gloves
-      ctx.fillStyle = '#1d4ed8';
-      ctx.fillRect(-24, -22, 14, 7);
-      ctx.fillRect(10, -22, 14, 7);
-
-      // White/Grey Goalkeeper Gloves
-      ctx.fillStyle = '#f8fafc';
-      ctx.beginPath();
-      ctx.arc(-26, -18, 7, 0, Math.PI * 2);
-      ctx.arc(26, -18, 7, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // Blue Shorts
-      ctx.fillStyle = '#1e3a8a';
-      ctx.fillRect(-10, 6, 9, 16);
-      ctx.fillRect(1, 6, 9, 16);
-
-      // White Socks & Cleats
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(-9, 18, 7, 10);
-      ctx.fillRect(2, 18, 7, 10);
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(-10, 27, 9, 5);
-      ctx.fillRect(1, 27, 9, 5);
-
-      ctx.restore();
-
-      // Save impact flash
-      if (anim.flashRing > 0) {
-        ctx.strokeStyle = `rgba(56, 189, 248, ${anim.flashRing})`;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(keeperX, keeperY, (1 - anim.flashRing) * 45 + 10, 0, Math.PI * 2);
-        ctx.stroke();
-        anim.flashRing -= 0.04;
-      }
-
-      // -------------------------------------------------------------
-      // 6. THE FC 26 COMPOSURE CIRCLE ON GRASS (CENTRAL VIDEO FEATURE!)
-      // -------------------------------------------------------------
-      // The iconic composure ring around the ball expands and contracts!
-      // In video: "Как всегда забивать пенальти с красным кругом в FC 26"
-      if (matchState === 'aiming') {
-        const cycle = (now % 1600) / 1600; // 1.6s pulsing loop
-        // Smooth sine wave from wide (36px) to tight (14px)
-        const radius = 14 + (Math.sin(cycle * Math.PI * 2) * 0.5 + 0.5) * 22;
-        anim.composureRadius = radius;
-
-        // Color shifts: Red when wide -> Yellow/Orange mid -> Green when tight!
-        let ringColor = '#ef4444'; // Red
-        if (radius < 26) ringColor = '#f97316'; // Orange
-        if (radius < 21) ringColor = '#eab308'; // Yellow
-        if (radius < 17) ringColor = '#22c55e'; // Green (Sweet spot!)
-        anim.composureColor = ringColor;
-
-        // Outer glow
-        ctx.save();
-        ctx.shadowColor = ringColor;
-        ctx.shadowBlur = 10;
-        ctx.strokeStyle = ringColor;
-        ctx.lineWidth = 3;
-
-        // Draw Composure Ring on turf around ball
-        ctx.beginPath();
-        ctx.ellipse(spotX, spotY, radius * 1.3, radius * 0.7, 0, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Inner subtle fill
-        ctx.fillStyle = ringColor === '#22c55e' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.12)';
-        ctx.fill();
-        ctx.restore();
-
-        // Controller Icon Prompt beside composure circle (as in video)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.beginPath();
-        ctx.arc(spotX - radius * 1.4 - 10, spotY, 9, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 8px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('⚡', spotX - radius * 1.4 - 10, spotY + 3);
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 8px sans-serif';
-        ctx.fillText('Click / Aim', spotX - radius * 1.4 - 10, spotY + 14);
-      }
-
-      // -------------------------------------------------------------
-      // 7. STRIKER IN NEON YELLOW/LIME KIT (EXACTLY AS IN VIDEO)
-      // -------------------------------------------------------------
-      // In video: Mbappé viewed from behind, positioned just to the left of the ball!
-      let strikerBaseX = spotX - 32;
-      let strikerBaseY = spotY + 28;
-      let legAngle = 0;
-
+      // -----------------------------------------------------------
+      // REAL-TIME 3D STRIKER SKELETAL RUN-UP & KICK
+      // -----------------------------------------------------------
       if (matchState === 'runup' || matchState === 'ball_flight' || matchState === 'shot_result') {
         const runupT = Math.min(1, anim.runup);
-        strikerBaseX = spotX - 32 + runupT * 22;
-        strikerBaseY = spotY + 28 - runupT * 32;
-        legAngle = Math.sin(runupT * Math.PI * 2.8) * 0.9;
+        // Advance striker from start position to beside the ball
+        strikerGroup.position.x = -0.48 + runupT * 0.28;
+        strikerGroup.position.z = 0.55 - runupT * 0.52;
+
+        if (runupT < 0.7) {
+          // Running stride cycle
+          const stride = Math.sin(runupT * Math.PI * 6);
+          strikerLegR.rotation.x = stride * 0.8;
+          strikerLegL.rotation.x = -stride * 0.8;
+          strikerArmR.rotation.x = -stride * 0.6;
+          strikerArmL.rotation.x = stride * 0.6;
+        } else {
+          // Plant left foot, whip right kicking leg back and drive forward
+          const kickCycle = (runupT - 0.7) / 0.3;
+          strikerLegL.rotation.x = 0.1; // planted firmly
+          strikerLegR.rotation.x = -0.9 + kickCycle * 1.8; // leg strikes ball!
+          strikerArmL.rotation.z = -0.4;
+          strikerArmR.rotation.z = 0.4;
+        }
+      } else {
+        // Idle breathing stance
+        strikerGroup.position.set(-0.48, 0, 0.55);
+        strikerLegR.rotation.x = 0;
+        strikerLegL.rotation.x = 0;
+        strikerArmR.rotation.x = 0;
+        strikerArmL.rotation.x = 0;
+        sTorso.position.y = 1.25 + Math.sin(elapsed * 3) * 0.015;
       }
 
-      ctx.save();
-      ctx.translate(strikerBaseX, strikerBaseY);
-
-      // Soft natural daytime shadow
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
-      ctx.beginPath();
-      ctx.ellipse(4, 38, 22, 7, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Neon Lime/Yellow Training Kit (as in video)
-      const strikerJersey = ctx.createLinearGradient(-13, -30, 13, 8);
-      strikerJersey.addColorStop(0, '#facc15'); // Bright yellow/lime
-      strikerJersey.addColorStop(0.6, '#eab308');
-      strikerJersey.addColorStop(1, '#ca8a04');
-      ctx.fillStyle = strikerJersey;
-      ctx.beginPath();
-      ctx.roundRect(-13, -30, 26, 36, 4);
-      ctx.fill();
-
-      // Black shoulder accents & trim (as in video)
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(-13, -30, 6, 8);
-      ctx.fillRect(7, -30, 6, 8);
-
-      // Black Number 10 on back
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 13px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(String(currentShooter.number), 0, -8);
-
-      // Head & Short Haircut (Mbappé style)
-      ctx.fillStyle = '#78350f';
-      ctx.beginPath();
-      ctx.arc(0, -39, 9, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#1e293b';
-      ctx.fillRect(-7, -44, 14, 4);
-
-      // Black Shorts
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(-11, 6, 10, 16);
-      ctx.fillRect(1, 6, 10, 16);
-
-      // Legs & Athletic Cleats with run-up stride
-      ctx.save();
-      ctx.rotate(legAngle);
-      ctx.fillStyle = '#78350f';
-      ctx.fillRect(-7, 20, 6, 15);
-      ctx.fillStyle = '#ffffff'; // White/pink boot
-      ctx.fillRect(-8, 34, 8, 6);
-      ctx.restore();
-
-      ctx.save();
-      ctx.rotate(-legAngle * 0.7);
-      ctx.fillStyle = '#78350f';
-      ctx.fillRect(2, 20, 6, 15);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(2, 34, 8, 6);
-      ctx.restore();
-
-      ctx.restore();
-
-      // -------------------------------------------------------------
-      // 8. SOCCER BALL WITH 3D FLIGHT, SPIN & TURF SHADOW
-      // -------------------------------------------------------------
-      let ballX = spotX;
-      let ballY = spotY;
-      let ballScale = 1.0;
-
+      // -----------------------------------------------------------
+      // REAL-TIME 3D BALL TRAJECTORY & PARABOLIC FLIGHT
+      // -----------------------------------------------------------
       if (matchState === 'ball_flight' || matchState === 'shot_result') {
         const flightT = Math.min(1, anim.ballT);
 
-        let targetX = w / 2;
-        if (anim.shotDir === 'left') targetX = goalX + goalW * 0.18;
-        if (anim.shotDir === 'right') targetX = goalX + goalW * 0.82;
+        let targetX = 0;
+        if (anim.shotDir === 'left') targetX = -1.8;
+        if (anim.shotDir === 'right') targetX = 1.8;
 
-        let targetY = goalLineY - 28;
-        if (anim.pitchElevation === 'low') targetY = goalLineY - 8;
-        if (anim.pitchElevation === 'high') targetY = crossbarY + 14;
-        if (anim.pitchElevation === 'panenka') targetY = crossbarY + 38;
+        let targetY = 1.2;
+        if (anim.pitchElevation === 'low') targetY = 0.2;
+        if (anim.pitchElevation === 'high') targetY = 1.85;
+        if (anim.pitchElevation === 'panenka') targetY = 1.6;
 
+        // Deflect off keeper if saved
         if (!anim.scored && flightT > 0.82) {
-          targetX = keeperX + (anim.diveDir === 'left' ? -14 : 14);
-          targetY = keeperY + 6;
+          targetX = keeperGroup.position.x + (anim.diveDir === 'left' ? -0.3 : 0.3);
+          targetY = 0.8;
         }
 
-        ballX = spotX + flightT * (targetX - spotX);
-        const linearY = spotY + flightT * (targetY - spotY);
-        const arcLift = Math.sin(flightT * Math.PI) * (anim.pitchElevation === 'panenka' ? 68 : 28);
-        ballY = linearY - arcLift;
+        ballMesh.position.x = flightT * targetX;
+        ballMesh.position.z = -flightT * 7.2;
 
-        ballScale = 1.0 - flightT * 0.54;
-        anim.ballSpin += 0.35;
-      }
+        const linearY = ballRadius + flightT * (targetY - ballRadius);
+        const arcLift = Math.sin(flightT * Math.PI) * (anim.pitchElevation === 'panenka' ? 1.5 : 0.65);
+        ballMesh.position.y = linearY + arcLift;
 
-      // Ball turf shadow
-      const shadowY = spotY + (ballY - spotY) * 0.35;
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-      ctx.beginPath();
-      ctx.ellipse(ballX + 2, shadowY, 10 * ballScale, 4.5 * ballScale, 0, 0, Math.PI * 2);
-      ctx.fill();
+        ballMesh.rotation.x += delta * 18;
+        ballMesh.rotation.y += delta * 12;
 
-      // Official Match Ball Sphere
-      const ballRadius = 9.5 * ballScale;
-      ctx.save();
-      ctx.translate(ballX, ballY);
-      ctx.rotate(anim.ballSpin);
-
-      const ballGrad = ctx.createRadialGradient(-ballRadius * 0.35, -ballRadius * 0.35, 1, 0, 0, ballRadius);
-      ballGrad.addColorStop(0, '#ffffff');
-      ballGrad.addColorStop(0.7, '#e2e8f0');
-      ballGrad.addColorStop(1, '#334155');
-      ctx.fillStyle = ballGrad;
-      ctx.beginPath();
-      ctx.arc(0, 0, ballRadius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Pentagon pattern
-      ctx.fillStyle = '#0f172a';
-      ctx.beginPath();
-      ctx.arc(0, 0, ballRadius * 0.42, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.restore();
-
-      // -------------------------------------------------------------
-      // 9. AIMING RETICLES (STRICTLY 3 DIRECTIONS: LEFT, CENTRE, RIGHT)
-      // -------------------------------------------------------------
-      if (matchState === 'aiming') {
-        const leftTargetX = goalX + goalW * 0.18;
-        const centreTargetX = w / 2;
-        const rightTargetX = goalX + goalW * 0.82;
-        const targetY = goalLineY - 36;
-
-        const drawFCTarget = (tx: number, ty: number, dir: ShotDirection) => {
-          const isSelected = userSelectedDir === dir;
-          const isHovered = hoveredDir === dir;
-          const active = isSelected || isHovered;
-
-          ctx.save();
-          // Aim target circle in goal
-          ctx.strokeStyle = active ? '#facc15' : 'rgba(255, 255, 255, 0.65)';
-          ctx.lineWidth = active ? 2.5 : 1.5;
-          ctx.setLineDash([4, 4]);
-          ctx.beginPath();
-          ctx.arc(tx, ty, 18, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.setLineDash([]);
-
-          ctx.fillStyle = active ? 'rgba(250, 204, 21, 0.3)' : 'rgba(255, 255, 255, 0.1)';
-          ctx.fill();
-
-          // Crosshairs
-          ctx.strokeStyle = active ? '#ffffff' : 'rgba(255, 255, 255, 0.8)';
-          ctx.beginPath();
-          ctx.moveTo(tx - 6, ty);
-          ctx.lineTo(tx + 6, ty);
-          ctx.moveTo(tx, ty - 6);
-          ctx.lineTo(tx, ty + 6);
-          ctx.stroke();
-
-          // Direction label
-          ctx.fillStyle = active ? '#fef08a' : '#ffffff';
-          ctx.font = 'bold 9px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(dir.toUpperCase(), tx, ty - 22);
-
-          // Subtle aim guideline from ball to selected target
-          if (active) {
-            ctx.strokeStyle = 'rgba(250, 204, 21, 0.5)';
-            ctx.lineWidth = 1.5;
-            ctx.setLineDash([3, 5]);
-            ctx.beginPath();
-            ctx.moveTo(spotX, spotY);
-            ctx.lineTo(tx, ty);
-            ctx.stroke();
-            ctx.setLineDash([]);
-          }
-
-          ctx.restore();
-        };
-
-        drawFCTarget(leftTargetX, targetY, 'left');
-        drawFCTarget(centreTargetX, targetY, 'centre');
-        drawFCTarget(rightTargetX, targetY, 'right');
-      }
-
-      // -------------------------------------------------------------
-      // 10. PARTICLE ENGINE
-      // -------------------------------------------------------------
-      const particles = particlesRef.current;
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.12;
-        p.alpha -= 0.025;
-
-        if (p.alpha <= 0) {
-          particles.splice(i, 1);
-          continue;
+        // Net bulge vibration
+        if (anim.scored && flightT > 0.75) {
+          anim.netRipple = Math.sin((flightT - 0.75) * Math.PI * 4) * 0.22;
+          netMesh.position.z = goalZ - 0.8 - anim.netRipple;
         }
-
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = p.alpha;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
+      } else {
+        ballMesh.position.set(0, ballRadius, 0);
+        ballMesh.rotation.set(0, 0, 0);
+        netMesh.position.set(0, goalHeight / 2, goalZ - 0.8);
       }
 
-      // Physics Clock Update
+      // Advance physics clock
       if (matchState === 'runup') {
-        anim.runup += 0.055;
+        anim.runup += delta * 2.4;
       } else if (matchState === 'ball_flight') {
-        const speed = (anim.powerKmH / 100) * 0.062;
-        anim.ballT += speed;
-        anim.keeperT += 0.068;
+        const speed = (anim.powerKmH / 100) * 2.2;
+        anim.ballT += delta * speed;
+        anim.keeperT += delta * 2.5;
       }
 
-      animFrameRef.current = requestAnimationFrame(render);
+      renderer.render(scene, camera);
     };
 
-    render();
+    animate();
+
+    const handleResize = () => {
+      if (!container) return;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    };
+    window.addEventListener('resize', handleResize);
 
     return () => {
-      running = false;
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', handleResize);
+      renderer.dispose();
+      scene.clear();
     };
-  }, [matchState, attackingTeam, currentShooter.number, userSelectedDir, hoveredDir]);
+  }, [matchState, attackingTeam, currentShooter.number]);
 
-  // Click on Canvas directly
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Handle user tap on canvas
+  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (matchState !== 'aiming') return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const w = rect.width;
 
-    if (x < w * 0.38) {
-      handleUserChoice('left');
-    } else if (x > w * 0.62) {
-      handleUserChoice('right');
-    } else {
-      handleUserChoice('centre');
-    }
-  };
-
-  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (matchState !== 'aiming') return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const w = rect.width;
-
-    if (x < w * 0.38) setHoveredDir('left');
-    else if (x > w * 0.62) setHoveredDir('right');
-    else setHoveredDir('centre');
+    if (x < w * 0.38) handleUserChoice('left');
+    else if (x > w * 0.62) handleUserChoice('right');
+    else handleUserChoice('centre');
   };
 
   return (
@@ -1324,7 +1166,7 @@ export function PenaltyShootoutPage() {
       {/* ============================================================= */}
       {matchState === 'lobby' ? (
         <div className="space-y-3 pt-2">
-          {/* EA FC Style Header Card */}
+          {/* EA FC Header */}
           <div className="rounded-2xl border border-[#35d399]/40 bg-gradient-to-r from-[#0d2218] via-[#081711] to-[#040e0a] p-4 shadow-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -1333,19 +1175,19 @@ export function PenaltyShootoutPage() {
                 </div>
                 <div>
                   <span className="font-mono-custom text-[10px] uppercase tracking-widest text-[#35D399]">
-                    FC 26 PRACTICE ARENA
+                    PS3 REALISM ENGINE
                   </span>
                   <h1 className="text-lg font-black text-white">3v3 Penalty Shootout</h1>
                 </div>
               </div>
               <div className="flex items-center gap-1 rounded-full border border-[#35D399]/40 bg-[#35D399]/15 px-2.5 py-1 text-[11px] font-mono-custom text-[#35D399]">
                 <Radio size={11} className="animate-pulse" />
-                <span>3v3 CUE</span>
+                <span>3D WEBGL</span>
               </div>
             </div>
 
             <p className="mt-2 text-xs text-[#8FA39A] leading-relaxed">
-              Experience authentic EA FC 26 penalty mechanics with the composure ring! 3 directions (Left, Centre, Right), 3v3 team shootout taking turns shooting &amp; saving.
+              Authentic EA FC 26 3D graphics with Three.js WebGL! Composure timing ring, 3 directions (Left, Centre, Right), taking turns shooting &amp; saving.
             </p>
           </div>
 
@@ -1359,7 +1201,6 @@ export function PenaltyShootoutPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs">
-              {/* Team Katika */}
               <div className="rounded-xl border border-[#35D399]/30 bg-black/40 p-2.5 space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="font-mono-custom text-[10px] font-black text-[#35D399] uppercase">
@@ -1375,7 +1216,6 @@ export function PenaltyShootoutPage() {
                 ))}
               </div>
 
-              {/* Team Rivals */}
               <div className="rounded-xl border border-blue-500/30 bg-black/40 p-2.5 space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="font-mono-custom text-[10px] font-black text-blue-400 uppercase">
@@ -1391,17 +1231,6 @@ export function PenaltyShootoutPage() {
                 ))}
               </div>
             </div>
-          </div>
-
-          {/* FC 26 Mechanic Highlight Card */}
-          <div className="rounded-2xl border border-[#1C3A2E] bg-[#0A1612] p-3 text-xs space-y-1.5">
-            <div className="flex items-center gap-1.5 font-mono-custom text-[#fde047] font-bold text-[11px]">
-              <Sparkles size={13} />
-              <span>FC 26 Composure Ring Feature</span>
-            </div>
-            <p className="text-[11px] text-[#8FA39A] leading-relaxed">
-              Watch the circular ring on the turf around the ball! When it contracts from wide <span className="text-red-400 font-bold">RED</span> to tight <span className="text-emerald-400 font-bold">GREEN</span>, strike the ball for maximum velocity &amp; precision into your chosen direction!
-            </p>
           </div>
 
           {/* Stake Selector */}
@@ -1506,7 +1335,7 @@ export function PenaltyShootoutPage() {
         /* ============================================================= */
         <div className="my-auto rounded-3xl border border-[#fef08a]/40 bg-[#091712] p-8 text-center shadow-2xl space-y-3">
           <span className="font-mono-custom text-xs font-black uppercase tracking-widest text-[#35D399]">
-            Arena Ready · 6 Players Connected
+            3D Arena Ready · 6 Players Connected
           </span>
           <div className="font-mono-custom text-7xl font-black text-[#fef08a] animate-ping">
             {countdownNum}
@@ -1515,13 +1344,12 @@ export function PenaltyShootoutPage() {
         </div>
       ) : (
         /* ============================================================= */
-        /* VIEW D: LIVE FC 26 MATCH ARENA (SCOREBOARD, CANVAS, CONTROLLER)*/
+        /* VIEW D: LIVE FC 26 3D ARENA (SCOREBOARD, 3D WEBGL, CONTROLS)  */
         /* ============================================================= */
         <>
-          {/* EA FC Top Practice HUD (Exact style from video!) */}
+          {/* EA FC Scoreboard HUD */}
           <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-r from-[#0f172a]/90 via-[#1e293b]/90 to-[#0f172a]/90 p-3 shadow-2xl backdrop-blur-md">
             <div className="flex items-center justify-between">
-              {/* Team A Info */}
               <div className="flex items-center gap-2">
                 <div className="grid h-8 w-8 place-items-center rounded-lg bg-[#eab308] p-1 font-black text-black text-xs shadow-sm">
                   10
@@ -1546,7 +1374,6 @@ export function PenaltyShootoutPage() {
                 </div>
               </div>
 
-              {/* Centre EA FC Scoreboard */}
               <div className="text-center px-4 py-1 rounded-xl bg-black/60 border border-white/10 shadow-inner">
                 <div className="font-mono-custom text-xl font-black text-[#fde047] tracking-widest">
                   {scoreTeamA} - {scoreTeamB}
@@ -1556,7 +1383,6 @@ export function PenaltyShootoutPage() {
                 </span>
               </div>
 
-              {/* Team B Info */}
               <div className="flex items-center gap-2 text-right">
                 <div>
                   <span className="font-mono-custom text-xs font-black tracking-wider text-white">
@@ -1582,7 +1408,6 @@ export function PenaltyShootoutPage() {
               </div>
             </div>
 
-            {/* Broadcast Telemetry Strip */}
             <div className="mt-2.5 flex items-center justify-between border-t border-white/10 pt-2 text-[10px]">
               <div className="flex items-center gap-1.5 font-mono-custom text-[#94a3b8]">
                 <Target size={12} className="text-[#facc15]" />
@@ -1598,36 +1423,33 @@ export function PenaltyShootoutPage() {
             </div>
           </div>
 
-          {/* EA FC 26 TRAINING ARENA CANVAS */}
-          <div className="relative mt-2 overflow-hidden rounded-3xl border-2 border-slate-700 bg-slate-900 shadow-2xl">
-            <canvas
-              ref={canvasRef}
-              width={480}
-              height={380}
+          {/* REAL-TIME 3D THREE.JS WEBGL VIEWPORT */}
+          <div className="relative mt-2 overflow-hidden rounded-3xl border-2 border-slate-700 bg-slate-900 shadow-2xl h-[380px]">
+            <div
+              ref={containerRef}
               onClick={handleCanvasClick}
-              onMouseMove={handleCanvasMouseMove}
-              className="h-full w-full object-cover cursor-pointer"
+              className="h-full w-full cursor-pointer"
             />
 
-            {/* Broadcast Notice Banner */}
+            {/* Banner Notice */}
             {bannerNotice && (
               <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-full border border-yellow-400/60 bg-black/80 px-4 py-1 font-mono-custom text-[11px] font-black tracking-wider text-[#fde047] shadow-lg animate-fade-in backdrop-blur-sm">
                 {bannerNotice}
               </div>
             )}
 
-            {/* Bottom Subtitle / Prompt Bar (as in video: "Забейте как можно больше голов") */}
+            {/* Prompt bar from video */}
             {matchState === 'aiming' && (
               <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-xl bg-black/70 px-4 py-1.5 font-sans text-xs font-semibold text-white shadow-lg backdrop-blur-md border border-white/10">
                 {isUserTurnToShoot
-                  ? 'Забейте гол: выберите направление (Лево, Центр или Право)'
+                  ? 'Забейте как можно больше голов (Лево, Центр или Право)'
                   : isUserTurnToSave
-                  ? 'Отразите удар: выберите прыжок вратаря'
+                  ? 'Отразите удар (Прыжок вратаря)'
                   : `Ход партнера: ${currentShooter.name}...`}
               </div>
             )}
 
-            {/* Active Shot Telemetry Overlay */}
+            {/* Shot Telemetry */}
             {activeShotData && matchState === 'shot_result' && (
               <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-2xl border border-emerald-400/60 bg-black/90 px-4 py-2 font-mono-custom text-xs shadow-2xl backdrop-blur-md">
                 <span className="font-bold text-[#fde047]">{activeShotData.powerKmH} KM/H</span>
@@ -1646,7 +1468,7 @@ export function PenaltyShootoutPage() {
                 <div className="mb-2 flex items-center justify-between px-1">
                   <span className="font-mono-custom text-xs font-black uppercase tracking-wider text-white">
                     {isUserTurnToShoot
-                      ? '🎯 Выберите направление (3 зоны):'
+                      ? '🎯 Направление удара (3 зоны):'
                       : isUserTurnToSave
                       ? '🧤 Прыжок вратаря:'
                       : `Удар наносит ${currentShooter.name}...`}
@@ -1656,13 +1478,10 @@ export function PenaltyShootoutPage() {
                   </span>
                 </div>
 
-                {/* THE 3 DIRECTIONAL TARGET BUTTONS */}
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => handleUserChoice('left')}
-                    onMouseEnter={() => setHoveredDir('left')}
-                    onMouseLeave={() => setHoveredDir(null)}
                     className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-slate-700 bg-gradient-to-b from-slate-900 to-slate-950 p-3.5 text-center transition-all hover:border-[#4ade80] hover:bg-[#4ade80]/15 active:scale-95 shadow-lg"
                   >
                     <ChevronLeft size={26} className="text-[#4ade80] group-hover:-translate-x-1 transition-transform" />
@@ -1677,8 +1496,6 @@ export function PenaltyShootoutPage() {
                   <button
                     type="button"
                     onClick={() => handleUserChoice('centre')}
-                    onMouseEnter={() => setHoveredDir('centre')}
-                    onMouseLeave={() => setHoveredDir(null)}
                     className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-slate-700 bg-gradient-to-b from-slate-900 to-slate-950 p-3.5 text-center transition-all hover:border-[#fde047] hover:bg-[#fde047]/15 active:scale-95 shadow-lg"
                   >
                     <Zap size={26} className="text-[#fde047] group-hover:scale-110 transition-transform" />
@@ -1693,8 +1510,6 @@ export function PenaltyShootoutPage() {
                   <button
                     type="button"
                     onClick={() => handleUserChoice('right')}
-                    onMouseEnter={() => setHoveredDir('right')}
-                    onMouseLeave={() => setHoveredDir(null)}
                     className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-slate-700 bg-gradient-to-b from-slate-900 to-slate-950 p-3.5 text-center transition-all hover:border-[#4ade80] hover:bg-[#4ade80]/15 active:scale-95 shadow-lg"
                   >
                     <ChevronRight size={26} className="text-[#4ade80] group-hover:translate-x-1 transition-transform" />
@@ -1741,7 +1556,7 @@ export function PenaltyShootoutPage() {
             ) : (
               <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-800 bg-slate-950 py-4 text-center font-mono-custom text-xs text-slate-400">
                 <span className="h-2.5 w-2.5 rounded-full bg-[#fde047] animate-ping" />
-                <span>Kick in flight · Resolving strike...</span>
+                <span>3D Strike in flight · Resolving kick...</span>
               </div>
             )}
           </div>
@@ -1754,7 +1569,6 @@ export function PenaltyShootoutPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs">
-              {/* Team A Lineup */}
               <div className="rounded-xl border border-emerald-500/30 bg-black/30 p-2 space-y-1">
                 <span className="font-mono-custom text-[9px] font-bold text-[#4ade80] uppercase">
                   Katika Elite
@@ -1776,7 +1590,6 @@ export function PenaltyShootoutPage() {
                 ))}
               </div>
 
-              {/* Team B Lineup */}
               <div className="rounded-xl border border-blue-500/30 bg-black/30 p-2 space-y-1">
                 <span className="font-mono-custom text-[9px] font-bold text-blue-400 uppercase">
                   Rivals Squad
