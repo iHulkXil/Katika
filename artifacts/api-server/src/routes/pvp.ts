@@ -1122,7 +1122,70 @@ async function handleGetRecent(_req: any, res: any) {
   }
 }
 
+// Handlers for Penalty Shootout Settlement
+async function handlePenaltySettle(req: any, res: any) {
+  try {
+    const identity = await authenticateRequest(req);
+    const wager = Number(req.body?.wager ?? 0);
+    const result = req.body?.result as "win" | "loss" | "draw";
+    const score = String(req.body?.score ?? "0-0");
+    const detail = String(req.body?.detail ?? "3v3 Penalty Shootout");
+
+    const user = await getOrCreateUser(identity.privyUserId);
+
+    if (wager > 0) {
+      const debit = await debitPlayable(user.id, identity.privyUserId, wager);
+      if (!debit.success) {
+        return res.status(400).json({ error: debit.error ?? "Not enough KTK" });
+      }
+
+      let payout = 0;
+      let won = false;
+
+      if (result === "win") {
+        won = true;
+        // Payout is 1.95x wager (5% house rake)
+        payout = Math.floor(wager * 1.95);
+        await creditBought(user.id, identity.privyUserId, payout);
+      } else if (result === "draw") {
+        won = false;
+        payout = wager; // Refund
+        await creditBought(user.id, identity.privyUserId, payout);
+      }
+
+      await recordBet({
+        userId: user.id,
+        privyUserId: identity.privyUserId,
+        game: "penalty",
+        wager,
+        payout,
+        won,
+        detail: `${detail} (Score: ${score})`,
+      });
+
+      return res.json({
+        success: true,
+        wager,
+        payout,
+        won,
+        result,
+      });
+    }
+
+    return res.json({ success: true, wager: 0, practice: true });
+  } catch (error) {
+    if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
+    if (error instanceof AuthError) return res.status(401).json({ error: error.message });
+    console.error("handlePenaltySettle error:", error);
+    return res.status(500).json({ error: "Failed to settle penalty shootout" });
+  }
+}
+
 // MOUNT DUAL PATHS (/api/pvp and /api/club alias)
+router.post("/pvp/penalty/settle", handlePenaltySettle);
+router.post("/club/penalty/settle", handlePenaltySettle);
+router.post("/games/penalty/settle", handlePenaltySettle);
+
 router.post("/pvp", handleCreateMatch);
 router.post("/club", handleCreateMatch);
 
