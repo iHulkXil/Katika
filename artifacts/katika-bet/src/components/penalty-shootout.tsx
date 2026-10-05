@@ -12,7 +12,6 @@ import {
   Zap,
   Volume2,
   VolumeX,
-  Bot,
   Users,
   Award,
   ArrowRight,
@@ -26,14 +25,13 @@ import {
   ChevronRight,
   Gauge,
   Flame,
-  UserCheck,
   Radio,
   Timer,
   Target,
 } from 'lucide-react';
 
 // =============================================================================
-// PROCEDURAL AUDIO SYNTHESIZER (HIGH FIDELITY BROADCAST AUDIO)
+// PROCEDURAL AUDIO SYNTHESIZER (EA FC STADIUM TRAINING AUDIO)
 // =============================================================================
 class PenaltyAudio {
   private ctx: AudioContext | null = null;
@@ -64,7 +62,6 @@ class PenaltyAudio {
       osc1.frequency.setValueAtTime(2850, t);
       osc2.frequency.setValueAtTime(3240, t);
 
-      // Trill modulation
       const trill = this.ctx.createOscillator();
       const trillGain = this.ctx.createGain();
       trill.frequency.value = 34;
@@ -84,9 +81,7 @@ class PenaltyAudio {
       osc2.start(t);
       osc1.stop(t + 0.38);
       osc2.stop(t + 0.38);
-    } catch {
-      // Audio fallback
-    }
+    } catch {}
   }
 
   playKick(powerMultiplier = 0.8) {
@@ -111,9 +106,7 @@ class PenaltyAudio {
 
       osc.start(t);
       osc.stop(t + 0.14);
-    } catch {
-      // Audio fallback
-    }
+    } catch {}
   }
 
   playGoal() {
@@ -143,8 +136,8 @@ class PenaltyAudio {
       netGain.connect(this.ctx.destination);
       noise.start(t);
 
-      // 2. Crowd roar swelling
-      const crowdBuffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 1.2, this.ctx.sampleRate);
+      // 2. Crowd cheer
+      const crowdBuffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 1.1, this.ctx.sampleRate);
       const crowdData = crowdBuffer.getChannelData(0);
       for (let i = 0; i < crowdBuffer.length; i++) {
         crowdData[i] = (Math.random() * 2 - 1) * Math.sin((i / crowdBuffer.length) * Math.PI);
@@ -156,15 +149,13 @@ class PenaltyAudio {
       crowdFilter.frequency.value = 850;
       const crowdGain = this.ctx.createGain();
       crowdGain.gain.setValueAtTime(0.02, t);
-      crowdGain.gain.linearRampToValueAtTime(0.42, t + 0.22);
-      crowdGain.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+      crowdGain.gain.linearRampToValueAtTime(0.38, t + 0.22);
+      crowdGain.gain.exponentialRampToValueAtTime(0.001, t + 1.1);
       crowd.connect(crowdFilter);
       crowdFilter.connect(crowdGain);
       crowdGain.connect(this.ctx.destination);
       crowd.start(t);
-    } catch {
-      // Audio fallback
-    }
+    } catch {}
   }
 
   playSave() {
@@ -173,7 +164,6 @@ class PenaltyAudio {
     if (!this.ctx) return;
     try {
       const t = this.ctx.currentTime;
-      // Glove slap impact
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'triangle';
@@ -187,9 +177,7 @@ class PenaltyAudio {
       gain.connect(this.ctx.destination);
       osc.start(t);
       osc.stop(t + 0.12);
-    } catch {
-      // Audio fallback
-    }
+    } catch {}
   }
 
   playCueJoin() {
@@ -201,17 +189,15 @@ class PenaltyAudio {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, t); // D5
-      osc.frequency.setValueAtTime(880, t + 0.05); // A5
+      osc.frequency.setValueAtTime(587.33, t);
+      osc.frequency.setValueAtTime(880, t + 0.05);
       gain.gain.setValueAtTime(0.12, t);
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
       osc.connect(gain);
       gain.connect(this.ctx.destination);
       osc.start(t);
       osc.stop(t + 0.12);
-    } catch {
-      // Audio fallback
-    }
+    } catch {}
   }
 
   playCountdown(count: number) {
@@ -230,9 +216,7 @@ class PenaltyAudio {
       gain.connect(this.ctx.destination);
       osc.start(t);
       osc.stop(t + 0.18);
-    } catch {
-      // Audio fallback
-    }
+    } catch {}
   }
 
   playFanfare() {
@@ -240,7 +224,7 @@ class PenaltyAudio {
     this.init();
     if (!this.ctx) return;
     try {
-      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+      const notes = [523.25, 659.25, 783.99, 1046.5];
       notes.forEach((freq, idx) => {
         const t = this.ctx!.currentTime + idx * 0.11;
         const osc = this.ctx!.createOscillator();
@@ -254,9 +238,7 @@ class PenaltyAudio {
         osc.start(t);
         osc.stop(t + 0.28);
       });
-    } catch {
-      // Audio fallback
-    }
+    } catch {}
   }
 }
 
@@ -295,10 +277,10 @@ export interface ShotResult {
   runupStyle: RunupStyle;
   kickStyle: KickStyle;
   keeperMotion: KeeperMotion;
+  composureQuality: 'green' | 'yellow' | 'red';
   message: string;
 }
 
-// Particle for grass kick debris, spark bursts, and net flash
 interface Particle {
   x: number;
   y: number;
@@ -322,7 +304,7 @@ export function PenaltyShootoutPage() {
   const [stake, setStake] = useState<number>(10);
   const [keeperControlAll, setKeeperControlAll] = useState<boolean>(true);
 
-  // Match States: 'lobby' -> 'queue_matching' -> 'countdown' -> 'aiming' -> 'runup' -> 'ball_flight' -> 'shot_result' -> 'game_over'
+  // Match States
   const [matchState, setMatchState] = useState<
     'lobby' | 'queue_matching' | 'countdown' | 'aiming' | 'runup' | 'ball_flight' | 'shot_result' | 'game_over'
   >('lobby');
@@ -352,15 +334,15 @@ export function PenaltyShootoutPage() {
 
   // 3v3 Squads
   const teamA: SquadPlayer[] = useMemo(() => [
-    { id: 'p1', name: legend?.name || 'Katika Cap (You)', number: 10, role: 'striker', isUser: true, avatarSeed: 1 },
-    { id: 'p2', name: 'Alvarez_19', number: 19, role: 'striker', isUser: false, avatarSeed: 2 },
-    { id: 'p3', name: 'Rashford_11', number: 11, role: 'striker', isUser: false, avatarSeed: 3 },
+    { id: 'p1', name: legend?.name || 'K. MBAPPÉ', number: 10, role: 'striker', isUser: true, avatarSeed: 1 },
+    { id: 'p2', name: 'V. JÚNIOR', number: 7, role: 'striker', isUser: false, avatarSeed: 2 },
+    { id: 'p3', name: 'J. BELLINGHAM', number: 5, role: 'striker', isUser: false, avatarSeed: 3 },
   ], [legend?.name]);
 
   const teamB: SquadPlayer[] = useMemo(() => [
-    { id: 'b1', name: 'Declan_4', number: 4, role: 'striker', isUser: false, avatarSeed: 4 },
-    { id: 'b2', name: 'Haaland_9', number: 9, role: 'striker', isUser: false, avatarSeed: 5 },
-    { id: 'b3', name: 'Courtois_1', number: 1, role: 'keeper', isUser: false, avatarSeed: 6 },
+    { id: 'b1', name: 'T. COURTOIS', number: 1, role: 'keeper', isUser: false, avatarSeed: 4 },
+    { id: 'b2', name: 'E. HAALAND', number: 9, role: 'striker', isUser: false, avatarSeed: 5 },
+    { id: 'b3', name: 'K. DE BRUYNE', number: 17, role: 'striker', isUser: false, avatarSeed: 6 },
   ], []);
 
   // Active Shooter & Goalkeeper
@@ -384,6 +366,8 @@ export function PenaltyShootoutPage() {
     keeperT: number;
     netRipple: number;
     ballSpin: number;
+    composureRadius: number;
+    composureColor: string;
     shotDir: ShotDirection;
     diveDir: DiveDirection;
     pitchElevation: PitchElevation;
@@ -399,6 +383,8 @@ export function PenaltyShootoutPage() {
     keeperT: 0,
     netRipple: 0,
     ballSpin: 0,
+    composureRadius: 36,
+    composureColor: '#ef4444',
     shotDir: 'centre',
     diveDir: 'centre',
     pitchElevation: 'mid',
@@ -478,7 +464,7 @@ export function PenaltyShootoutPage() {
     setActiveShotData(null);
     setMatchState('aiming');
     audio.playWhistle();
-    setBannerNotice('MATCH STARTED · ROUND 1 OF 3');
+    setBannerNotice('FC 26 TRAINING ARENA · ROUND 1 OF 3');
   };
 
   // Spawn visual particles
@@ -501,7 +487,7 @@ export function PenaltyShootoutPage() {
 
   // Execute Shot Resolution
   const resolveShot = useCallback((shooterChoice: ShotDirection, keeperChoice: DiveDirection) => {
-    const randomPower = Math.floor(78 + Math.random() * 46); // 78 - 124 km/h
+    const randomPower = Math.floor(82 + Math.random() * 44);
 
     const elevations: PitchElevation[] = ['low', 'mid', 'high', 'panenka'];
     const randomElevation = elevations[Math.floor(Math.random() * elevations.length)];
@@ -521,20 +507,26 @@ export function PenaltyShootoutPage() {
     ];
     const randomKeeperMotion = keeperMotions[Math.floor(Math.random() * keeperMotions.length)];
 
+    // Evaluate FC Composure Circle timing at moment of strike
+    const r = animProgressRef.current.composureRadius;
+    const compQuality: 'green' | 'yellow' | 'red' = r < 18 ? 'green' : r < 28 ? 'yellow' : 'red';
+
     let isGoal = false;
     let message = '';
 
     if (shooterChoice !== keeperChoice) {
       isGoal = true;
-      message = `GOAL! Keeper wrong-footed, clinical strike into the ${shooterChoice} net!`;
+      message = compQuality === 'green'
+        ? `PERFECT TIMED FINISH! Clinical strike buried in the ${shooterChoice} net!`
+        : `GOAL! Keeper wrong-footed, strike tucked into the ${shooterChoice}!`;
     } else {
       const topCornerBullet = randomElevation === 'high' && randomPower >= 110;
       if (topCornerBullet) {
         isGoal = true;
-        message = `GOAL! ${randomPower} km/h rocket sniped the top corner beyond the keeper's fingertips!`;
+        message = `UNSTOPPABLE! ${randomPower} km/h rocket into the top corner past the keeper's gloves!`;
       } else {
         isGoal = false;
-        message = `SAVED! Keeper anticipated ${keeperChoice} and pulled off a stunning reflex stop!`;
+        message = `SAVED! Courtois guessed ${keeperChoice} and made a brilliant reflex save!`;
       }
     }
 
@@ -552,26 +544,23 @@ export function PenaltyShootoutPage() {
       runupStyle: randomRunup,
       kickStyle: randomKick,
       keeperMotion: randomKeeperMotion,
+      composureQuality: compQuality,
       message,
     };
 
     setActiveShotData(shotResult);
-    animProgressRef.current = {
-      runup: 0,
-      ballT: 0,
-      keeperT: 0,
-      netRipple: 0,
-      ballSpin: 0,
-      shotDir: shooterChoice,
-      diveDir: keeperChoice,
-      pitchElevation: randomElevation,
-      powerKmH: randomPower,
-      runupStyle: randomRunup,
-      kickStyle: randomKick,
-      keeperMotion: randomKeeperMotion,
-      scored: isGoal,
-      flashRing: 0,
-    };
+    animProgressRef.current.shotDir = shooterChoice;
+    animProgressRef.current.diveDir = keeperChoice;
+    animProgressRef.current.pitchElevation = randomElevation;
+    animProgressRef.current.powerKmH = randomPower;
+    animProgressRef.current.runupStyle = randomRunup;
+    animProgressRef.current.kickStyle = randomKick;
+    animProgressRef.current.keeperMotion = randomKeeperMotion;
+    animProgressRef.current.scored = isGoal;
+    animProgressRef.current.runup = 0;
+    animProgressRef.current.ballT = 0;
+    animProgressRef.current.keeperT = 0;
+    animProgressRef.current.netRipple = 0;
 
     setMatchState('runup');
 
@@ -580,12 +569,11 @@ export function PenaltyShootoutPage() {
       audio.playKick(randomPower / 120);
       setMatchState('ball_flight');
 
-      // Turf particle splash at penalty spot
       const canvas = canvasRef.current;
       if (canvas) {
-        spawnParticles(canvas.width / 2, canvas.height * 0.74, '#22c55e', 14, 2.5);
+        spawnParticles(canvas.width / 2 + 10, canvas.height * 0.76, '#4ade80', 14, 2.5);
       }
-    }, 440);
+    }, 420);
 
     // Goal or Save Resolution
     setTimeout(() => {
@@ -594,14 +582,14 @@ export function PenaltyShootoutPage() {
         audio.playGoal();
         setBannerNotice(`⚽ GOAL! ${randomPower} KM/H · ${shooterChoice.toUpperCase()}`);
         if (canvas) {
-          spawnParticles(canvas.width / 2, canvas.height * 0.44, '#fef08a', 20, 4);
+          spawnParticles(canvas.width / 2, canvas.height * 0.44, '#fde047', 18, 3.5);
         }
       } else {
         audio.playSave();
-        setBannerNotice(`🧤 SAVED! ${currentKeeper.name} DENIES`);
+        setBannerNotice(`🧤 SAVED! ${currentKeeper.name} BLOCKS`);
         animProgressRef.current.flashRing = 1.0;
         if (canvas) {
-          spawnParticles(canvas.width / 2, canvas.height * 0.46, '#38bdf8', 18, 3.5);
+          spawnParticles(canvas.width / 2, canvas.height * 0.46, '#38bdf8', 16, 3);
         }
       }
       setMatchState('shot_result');
@@ -666,7 +654,7 @@ export function PenaltyShootoutPage() {
     }
   }, [attackingTeam, currentKickerSlot, currentRound, scoreTeamA, scoreTeamB, teamA, teamB, toast]);
 
-  // Handle User Input Button Click
+  // User Choice
   const handleUserChoice = (direction: ShotDirection) => {
     if (matchState !== 'aiming') return;
     setUserSelectedDir(direction);
@@ -687,7 +675,7 @@ export function PenaltyShootoutPage() {
     }
   };
 
-  // AI vs AI auto trigger
+  // AI Spectate turn
   useEffect(() => {
     if (matchState === 'aiming' && !isUserTurnToShoot && !isUserTurnToSave) {
       const timer = setTimeout(() => {
@@ -701,7 +689,7 @@ export function PenaltyShootoutPage() {
   }, [matchState, isUserTurnToShoot, isUserTurnToSave, resolveShot]);
 
   // =============================================================================
-  // CONSOLE-GRADE 3D CANVAS RENDERING ENGINE (BEHIND-THE-BALL BROADCAST VIEW)
+  // CANVAS RENDERING ENGINE (EXACT EA FC 26 TRAINING ARENA GRAPHICS FROM VIDEO)
   // =============================================================================
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -720,183 +708,132 @@ export function PenaltyShootoutPage() {
       const anim = animProgressRef.current;
 
       // -------------------------------------------------------------
-      // 1. NIGHT STADIUM ATMOSPHERE, ARCHITECTURE & FLOODLIGHT BEAMS
+      // 1. DAYLIGHT SKY & OUTDOOR LIGHTING (EXACTLY AS IN VIDEO)
       // -------------------------------------------------------------
-      const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.48);
-      skyGrad.addColorStop(0, '#020604');
-      skyGrad.addColorStop(0.5, '#05140d');
-      skyGrad.addColorStop(1, '#0a261a');
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h * 0.45);
+      skyGrad.addColorStop(0, '#bae6fd'); // soft pale daylight blue
+      skyGrad.addColorStop(0.6, '#e0f2fe');
+      skyGrad.addColorStop(1, '#f8fafc');
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, w, h);
 
-      // Curved stadium canopy roof arch
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(w / 2, -h * 0.5, w * 0.72, Math.PI * 0.15, Math.PI * 0.85);
-      ctx.stroke();
+      // Distant training facility trees & soft horizon haze
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(0, h * 0.28, w, h * 0.12);
 
-      // Atmospheric Stadium Floodlights & God Rays
-      const drawVolumetricFloodlight = (x: number, y: number, angleOffset: number) => {
-        // God-ray light shaft streaming down onto the field
-        const shaftGrad = ctx.createRadialGradient(x, y, 2, x + angleOffset, y + 220, 200);
-        shaftGrad.addColorStop(0, 'rgba(255, 255, 240, 0.32)');
-        shaftGrad.addColorStop(0.3, 'rgba(160, 255, 200, 0.12)');
-        shaftGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = shaftGrad;
+      // Soft green background tree canopy
+      for (let tx = 0; tx < w; tx += 45) {
+        ctx.fillStyle = '#64748b';
         ctx.beginPath();
-        ctx.moveTo(x - 12, y);
-        ctx.lineTo(x + angleOffset - 110, h * 0.85);
-        ctx.lineTo(x + angleOffset + 110, h * 0.85);
-        ctx.lineTo(x + 12, y);
-        ctx.closePath();
+        ctx.arc(tx + 20, h * 0.29, 28, 0, Math.PI);
         ctx.fill();
-
-        // Intense Halogen Core
-        const coreGrad = ctx.createRadialGradient(x, y, 2, x, y, 75);
-        coreGrad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-        coreGrad.addColorStop(0.25, 'rgba(210, 255, 230, 0.6)');
-        coreGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = coreGrad;
-        ctx.beginPath();
-        ctx.arc(x, y, 75, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Stanchion fixture with glowing lamps
-        ctx.fillStyle = '#94a3b8';
-        ctx.fillRect(x - 14, y - 4, 28, 6);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(x - 11, y - 2, 22, 3);
-      };
-
-      drawVolumetricFloodlight(w * 0.12, h * 0.08, 90);
-      drawVolumetricFloodlight(w * 0.88, h * 0.08, -90);
-
-      // -------------------------------------------------------------
-      // 2. DETAILED PACKED STADIUM STANDS & VIBRANT CROWD
-      // -------------------------------------------------------------
-      const crowdY = h * 0.15;
-      const crowdH = h * 0.21;
-      ctx.fillStyle = '#06130c';
-      ctx.fillRect(0, crowdY, w, crowdH);
-
-      const crowdPalette = ['#1e382b', '#047857', '#0369a1', '#b91c1c', '#f59e0b', '#f1f5f9'];
-      for (let r = 0; r < 6; r++) {
-        const rowY = crowdY + r * 13;
-        ctx.fillStyle = r % 2 === 0 ? 'rgba(12, 30, 20, 0.8)' : 'rgba(18, 42, 30, 0.8)';
-        ctx.fillRect(0, rowY, w, 11);
-
-        for (let c = 8; c < w; c += 14) {
-          const headX = c + (r % 2) * 7;
-          const color = crowdPalette[(c + r * 3) % crowdPalette.length];
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          ctx.arc(headX, rowY + 4, 3.2, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Camera flashbulb burst in stands
-          if (Math.random() < 0.018) {
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(headX, rowY + 3, 6, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
       }
 
       // -------------------------------------------------------------
-      // 3. PITCH-SIDE DIGITAL LED ADVERTISING HOARDINGS
+      // 2. TALL OUTDOOR CHAINLINK FENCE & RED REBOUNDERS BEHIND GOAL
       // -------------------------------------------------------------
-      const ledY = h * 0.36;
-      const ledH = 22;
-      const ledGrad = ctx.createLinearGradient(0, ledY, 0, ledY + ledH);
-      ledGrad.addColorStop(0, '#064e3b');
-      ledGrad.addColorStop(0.5, '#022c22');
-      ledGrad.addColorStop(1, '#064e3b');
-      ctx.fillStyle = ledGrad;
-      ctx.fillRect(0, ledY, w, ledH);
-      ctx.strokeStyle = '#35d399';
+      const fenceY = h * 0.22;
+      const fenceH = h * 0.24;
+
+      // Dark steel posts of the court perimeter
+      ctx.fillStyle = '#334155';
+      for (let px = 20; px < w; px += 70) {
+        ctx.fillRect(px, fenceY, 5, fenceH + 20);
+      }
+
+      // Chainlink wire mesh pattern
+      ctx.strokeStyle = 'rgba(71, 85, 105, 0.45)';
       ctx.lineWidth = 1;
-      ctx.strokeRect(0, ledY, w, ledH);
+      for (let fy = fenceY; fy <= fenceY + fenceH; fy += 8) {
+        ctx.beginPath();
+        ctx.moveTo(0, fy);
+        ctx.lineTo(w, fy);
+        ctx.stroke();
+      }
+      for (let fx = 0; fx <= w; fx += 10) {
+        ctx.beginPath();
+        ctx.moveTo(fx, fenceY);
+        ctx.lineTo(fx, fenceY + fenceH);
+        ctx.stroke();
+      }
 
-      // High-vis scrolling tournament branding
-      ctx.fillStyle = '#fef08a';
-      ctx.font = 'bold 9px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('⚡ KATIKA.BET · 3v3 PENALTY SHOOTOUT · EMERALD ELITE · $KTK POTS', w / 2, ledY + 14);
+      // Red Training Rebounder Net Barriers behind goal (seen in video)
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(w * 0.08, fenceY + 30, w * 0.22, fenceH - 25);
+      ctx.fillRect(w * 0.70, fenceY + 30, w * 0.22, fenceH - 25);
+      // White training barrier frames
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(w * 0.08, fenceY + 30, w * 0.22, fenceH - 25);
+      ctx.strokeRect(w * 0.70, fenceY + 30, w * 0.22, fenceH - 25);
+
+      // Concrete perimeter curb
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(0, fenceY + fenceH, w, 14);
 
       // -------------------------------------------------------------
-      // 4. PERSPECTIVE CUT-LAWN PITCH (3D DIAGONAL TURF STRIPES)
+      // 3. SUNLIT TRAINING PITCH (NATURAL GREEN LAWN WITH CUT STRIPES)
       // -------------------------------------------------------------
-      const pitchStartY = ledY + ledH;
+      const pitchStartY = fenceY + fenceH + 12;
       const pitchH = h - pitchStartY;
 
-      // 3D Perspective grass bands with subtle lawn sheen
-      const bands = 8;
+      // Natural grass bands in perspective
+      const bands = 9;
       for (let b = 0; b < bands; b++) {
         const y1 = pitchStartY + (b / bands) * pitchH;
         const y2 = pitchStartY + ((b + 1) / bands) * pitchH;
-        ctx.fillStyle = b % 2 === 0 ? '#103926' : '#14462f';
+        ctx.fillStyle = b % 2 === 0 ? '#427e36' : '#4e8c3f'; // Natural EA FC training grass
         ctx.fillRect(0, y1, w, y2 - y1);
       }
 
-      // Specular lawn gloss reflecting floodlights
-      const lawnGlow = ctx.createRadialGradient(w / 2, h * 0.65, 30, w / 2, h * 0.65, 220);
-      lawnGlow.addColorStop(0, 'rgba(52, 211, 153, 0.14)');
-      lawnGlow.addColorStop(0.7, 'rgba(16, 185, 129, 0.05)');
-      lawnGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = lawnGlow;
-      ctx.fillRect(0, pitchStartY, w, pitchH);
+      // White Chalk Penalty Box and Goal Lines
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
 
-      // Glowing White Chalk Penalty Box Lines
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.88)';
-      ctx.lineWidth = 2.5;
-
-      const goalLineY = pitchStartY + pitchH * 0.12;
+      const goalLineY = pitchStartY + pitchH * 0.16;
       ctx.beginPath();
-      ctx.moveTo(w * 0.16, goalLineY);
-      ctx.lineTo(w * 0.84, goalLineY);
+      ctx.moveTo(w * 0.14, goalLineY);
+      ctx.lineTo(w * 0.86, goalLineY);
       ctx.stroke();
 
-      // Penalty Spot
-      const spotX = w / 2;
-      const spotY = h * 0.74;
+      // Penalty Spot (Exactly positioned in front of striker)
+      const spotX = w / 2 + 10;
+      const spotY = h * 0.75;
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(spotX, spotY, 4.5, 0, Math.PI * 2);
+      ctx.arc(spotX, spotY, 5, 0, Math.PI * 2);
       ctx.fill();
 
-      // Penalty Arc (D-Box top curve)
+      // Penalty D-Arc
       ctx.beginPath();
-      ctx.arc(spotX, spotY - 8, 40, Math.PI * 0.16, Math.PI * 0.84);
+      ctx.arc(spotX, spotY - 12, 42, Math.PI * 0.15, Math.PI * 0.85);
       ctx.stroke();
 
       // -------------------------------------------------------------
-      // 5. 3D METALLIC GOAL FRAME & HIGH-DENSITY NET MESH
+      // 4. TRAINING GOAL FRAME & HIGH-DEFINITION NET MESH
       // -------------------------------------------------------------
-      const goalW = w * 0.62;
+      const goalW = w * 0.64;
       const goalX = (w - goalW) / 2;
-      const crossbarY = goalLineY - 98;
-      const postThickness = 8;
+      const crossbarY = goalLineY - 100;
+      const postThickness = 7.5;
 
-      const netBackY = crossbarY + 16;
+      const netBackY = crossbarY + 18;
       const netBackW = goalW * 0.94;
       const netBackX = (w - netBackW) / 2;
-      const netBackBottomY = goalLineY - 8;
 
-      // Net Ripple & Bulge Physics
+      // Net ripple when goal scored
       let netBulgeX = 0;
       let netBulgeY = 0;
       if (anim.scored && anim.ballT > 0.72) {
-        anim.netRipple = Math.sin((anim.ballT - 0.72) * Math.PI * 3.6) * 14;
+        anim.netRipple = Math.sin((anim.ballT - 0.72) * Math.PI * 3.6) * 16;
         if (anim.shotDir === 'left') netBulgeX = -anim.netRipple;
         if (anim.shotDir === 'right') netBulgeX = anim.netRipple;
-        netBulgeY = -anim.netRipple * 0.55;
+        netBulgeY = -anim.netRipple * 0.5;
       }
 
-      // Net Diamond Mesh with depth
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.32)';
-      ctx.lineWidth = 1;
+      // Grey/black depth netting (seen in video)
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.45)';
+      ctx.lineWidth = 1.2;
 
       // Horizontal net lines
       for (let ny = crossbarY; ny <= goalLineY; ny += 7) {
@@ -905,7 +842,7 @@ export function PenaltyShootoutPage() {
         ctx.lineTo(goalX + goalW, ny);
         ctx.stroke();
       }
-      // Vertical net lines with dynamic impact bulge
+      // Vertical net lines
       for (let nx = goalX; nx <= goalX + goalW; nx += 9) {
         ctx.beginPath();
         ctx.moveTo(nx, crossbarY);
@@ -913,7 +850,7 @@ export function PenaltyShootoutPage() {
         ctx.stroke();
       }
 
-      // 3D Net Depth Box & Stanchion Cords
+      // Net depth back box
       ctx.beginPath();
       ctx.moveTo(goalX, crossbarY);
       ctx.lineTo(netBackX, netBackY);
@@ -921,142 +858,59 @@ export function PenaltyShootoutPage() {
       ctx.lineTo(goalX + goalW, crossbarY);
       ctx.stroke();
 
-      // Stanchion poles behind net
-      ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.moveTo(netBackX, netBackY);
-      ctx.lineTo(netBackX - 10, netBackBottomY);
-      ctx.moveTo(netBackX + netBackW, netBackY);
-      ctx.lineTo(netBackX + netBackW + 10, netBackBottomY);
-      ctx.stroke();
-
-      // Metallic Specular Goalposts & Crossbar
-      const drawPost = (px: number, py: number, pw: number, ph: number) => {
+      // Clean White Metallic Goalposts
+      const drawWhitePost = (px: number, py: number, pw: number, ph: number) => {
         const postGrad = ctx.createLinearGradient(px, py, px + pw, py);
-        postGrad.addColorStop(0, '#94a3b8');
+        postGrad.addColorStop(0, '#e2e8f0');
         postGrad.addColorStop(0.3, '#ffffff');
-        postGrad.addColorStop(0.7, '#e2e8f0');
-        postGrad.addColorStop(1, '#64748b');
+        postGrad.addColorStop(0.7, '#f8fafc');
+        postGrad.addColorStop(1, '#cbd5e1');
         ctx.fillStyle = postGrad;
         ctx.fillRect(px, py, pw, ph);
       };
 
-      // Left Upright Post
-      drawPost(goalX - postThickness, crossbarY, postThickness, goalLineY - crossbarY);
-      // Right Upright Post
-      drawPost(goalX + goalW, crossbarY, postThickness, goalLineY - crossbarY);
+      drawWhitePost(goalX - postThickness, crossbarY, postThickness, goalLineY - crossbarY);
+      drawWhitePost(goalX + goalW, crossbarY, postThickness, goalLineY - crossbarY);
 
-      // Horizontal Crossbar with Specular Bevel
       const crossGrad = ctx.createLinearGradient(goalX, crossbarY, goalX, crossbarY + postThickness);
       crossGrad.addColorStop(0, '#ffffff');
-      crossGrad.addColorStop(0.4, '#f8fafc');
-      crossGrad.addColorStop(0.8, '#cbd5e1');
-      crossGrad.addColorStop(1, '#64748b');
+      crossGrad.addColorStop(0.5, '#f8fafc');
+      crossGrad.addColorStop(1, '#cbd5e1');
       ctx.fillStyle = crossGrad;
       ctx.fillRect(goalX - postThickness, crossbarY, goalW + postThickness * 2, postThickness);
 
       // -------------------------------------------------------------
-      // 6. HOLOGRAPHIC 3-DIRECTION TARGET RETICLES (AIMING PHASE)
-      // -------------------------------------------------------------
-      if (matchState === 'aiming') {
-        const targetRadius = 18;
-        const pulse = Math.sin(now / 140) * 3;
-        const rot = now / 400;
-
-        const drawReticle = (rx: number, ry: number, label: string, isHovered: boolean, isSelected: boolean) => {
-          const active = isHovered || isSelected;
-
-          // Radial target halo
-          const halo = ctx.createRadialGradient(rx, ry, 2, rx, ry, targetRadius + 14);
-          halo.addColorStop(0, active ? 'rgba(254, 240, 138, 0.45)' : 'rgba(53, 211, 153, 0.25)');
-          halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
-          ctx.fillStyle = halo;
-          ctx.beginPath();
-          ctx.arc(rx, ry, targetRadius + 14, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Rotating segmented compass ring
-          ctx.save();
-          ctx.translate(rx, ry);
-          ctx.rotate(rot);
-          ctx.strokeStyle = active ? '#fef08a' : '#35d399';
-          ctx.lineWidth = 2;
-          for (let i = 0; i < 4; i++) {
-            ctx.beginPath();
-            ctx.arc(0, 0, targetRadius + pulse, (i * Math.PI) / 2 + 0.15, ((i + 1) * Math.PI) / 2 - 0.15);
-            ctx.stroke();
-          }
-          ctx.restore();
-
-          // Inner crosshairs
-          ctx.strokeStyle = active ? '#ffffff' : '#35d399';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.moveTo(rx - 8, ry);
-          ctx.lineTo(rx + 8, ry);
-          ctx.moveTo(rx, ry - 8);
-          ctx.lineTo(rx, ry + 8);
-          ctx.stroke();
-
-          // Target Badge Banner
-          ctx.fillStyle = active ? '#fef08a' : '#ffffff';
-          ctx.font = 'bold 9px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(label, rx, ry - targetRadius - 6);
-
-          // Multiplier Chip
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-          ctx.fillRect(rx - 15, ry + targetRadius + 2, 30, 12);
-          ctx.strokeStyle = active ? '#fef08a' : '#35d399';
-          ctx.strokeRect(rx - 15, ry + targetRadius + 2, 30, 12);
-          ctx.fillStyle = active ? '#fef08a' : '#35d399';
-          ctx.font = 'bold 8px monospace';
-          ctx.fillText('1.92×', rx, ry + targetRadius + 11);
-        };
-
-        const leftTargetX = goalX + goalW * 0.18;
-        const centreTargetX = w / 2;
-        const rightTargetX = goalX + goalW * 0.82;
-        const targetY = goalLineY - 36;
-
-        drawReticle(leftTargetX, targetY, 'LEFT', hoveredDir === 'left', userSelectedDir === 'left');
-        drawReticle(centreTargetX, targetY, 'CENTRE', hoveredDir === 'centre', userSelectedDir === 'centre');
-        drawReticle(rightTargetX, targetY, 'RIGHT', hoveredDir === 'right', userSelectedDir === 'right');
-      }
-
-      // -------------------------------------------------------------
-      // 7. HIGH-FIDELITY ANIMATED 3D GOALKEEPER
+      // 5. GOALKEEPER IN BLUE KIT (EXACTLY AS IN VIDEO)
       // -------------------------------------------------------------
       const keeperBaseX = w / 2;
       const keeperBaseY = goalLineY;
 
       let keeperX = keeperBaseX;
-      let keeperY = keeperBaseY - 28;
+      let keeperY = keeperBaseY - 30;
       let keeperAngle = 0;
 
       if (matchState === 'ball_flight' || matchState === 'shot_result') {
         const diveProgress = Math.min(1, anim.keeperT);
 
         let verticalLift = 18;
-        if (anim.keeperMotion === 'top_corner_leap') verticalLift = 38;
+        if (anim.keeperMotion === 'top_corner_leap') verticalLift = 40;
         if (anim.keeperMotion === 'ground_sweep') verticalLift = 4;
-        if (anim.keeperMotion === 'crossbar_tipper') verticalLift = 32;
+        if (anim.keeperMotion === 'crossbar_tipper') verticalLift = 34;
 
         if (anim.diveDir === 'left') {
-          keeperX = keeperBaseX - diveProgress * (goalW * 0.4);
+          keeperX = keeperBaseX - diveProgress * (goalW * 0.42);
           keeperY = keeperBaseY - 14 - verticalLift * Math.sin(diveProgress * Math.PI);
-          keeperAngle = -0.82 * diveProgress;
+          keeperAngle = -0.85 * diveProgress;
         } else if (anim.diveDir === 'right') {
-          keeperX = keeperBaseX + diveProgress * (goalW * 0.4);
+          keeperX = keeperBaseX + diveProgress * (goalW * 0.42);
           keeperY = keeperBaseY - 14 - verticalLift * Math.sin(diveProgress * Math.PI);
-          keeperAngle = 0.82 * diveProgress;
+          keeperAngle = 0.85 * diveProgress;
         } else {
-          keeperY = keeperBaseY - 28 - verticalLift * 0.65 * Math.sin(diveProgress * Math.PI);
+          keeperY = keeperBaseY - 30 - verticalLift * 0.6 * Math.sin(diveProgress * Math.PI);
         }
       } else {
-        // Idle bouncing stance with subtle weight shifting
-        const idleBounce = Math.sin(now / 160) * 2.5;
+        // Subtle realistic ready stance weight bouncing
+        const idleBounce = Math.sin(now / 150) * 2.2;
         keeperY += idleBounce;
       }
 
@@ -1064,70 +918,65 @@ export function PenaltyShootoutPage() {
       ctx.translate(keeperX, keeperY);
       ctx.rotate(keeperAngle);
 
-      // Keeper dynamic grass shadow
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+      // Goalkeeper turf shadow (soft daytime sunlight shadow)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
       ctx.beginPath();
-      ctx.ellipse(0, 26, 20, 7, 0, 0, Math.PI * 2);
+      ctx.ellipse(4, 28, 22, 7, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Goalkeeper Torso (High-vis neon jersey with athletic panels)
-      const keeperJersey = ctx.createLinearGradient(-12, -24, 12, 10);
-      keeperJersey.addColorStop(0, '#f97316');
-      keeperJersey.addColorStop(0.5, '#ea580c');
-      keeperJersey.addColorStop(1, '#c2410c');
-      ctx.fillStyle = keeperJersey;
+      // Blue Jersey (Courtois style from video)
+      const blueJersey = ctx.createLinearGradient(-12, -26, 12, 10);
+      blueJersey.addColorStop(0, '#1d4ed8');
+      blueJersey.addColorStop(0.5, '#2563eb');
+      blueJersey.addColorStop(1, '#1e40af');
+      ctx.fillStyle = blueJersey;
       ctx.beginPath();
-      ctx.roundRect(-12, -24, 24, 30, 4);
+      ctx.roundRect(-12, -26, 24, 32, 4);
       ctx.fill();
-      ctx.strokeStyle = '#7c2d12';
+
+      // White chest trim
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-6, -20, 12, 3);
+
+      // Head & Hair
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath();
+      ctx.arc(0, -34, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(-7, -39, 14, 5);
+
+      // Arms & Gloves
+      ctx.fillStyle = '#1d4ed8';
+      ctx.fillRect(-24, -22, 14, 7);
+      ctx.fillRect(10, -22, 14, 7);
+
+      // White/Grey Goalkeeper Gloves
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.arc(-26, -18, 7, 0, Math.PI * 2);
+      ctx.arc(26, -18, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#475569';
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Chest badge
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(0, -10, 3, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Goalkeeper Head & Hair
-      ctx.fillStyle = '#b45309';
-      ctx.beginPath();
-      ctx.arc(0, -32, 9, 0, Math.PI * 2);
-      ctx.fill();
-      // Athletic headband / hair trim
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(-8, -37, 16, 5);
-
-      // Arms & Elbow Pads
-      ctx.fillStyle = '#f97316';
-      ctx.fillRect(-24, -20, 14, 7);
-      ctx.fillRect(10, -20, 14, 7);
-
-      // Neon Electric Green Goalkeeper Gloves
-      ctx.fillStyle = '#22c55e';
-      ctx.beginPath();
-      ctx.arc(-26, -16, 7, 0, Math.PI * 2);
-      ctx.arc(26, -16, 7, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#15803d';
-      ctx.stroke();
-
-      // Shorts
-      ctx.fillStyle = '#0f172a';
+      // Blue Shorts
+      ctx.fillStyle = '#1e3a8a';
       ctx.fillRect(-10, 6, 9, 16);
       ctx.fillRect(1, 6, 9, 16);
 
-      // Socks & Cleats
-      ctx.fillStyle = '#ea580c';
+      // White Socks & Cleats
+      ctx.fillStyle = '#ffffff';
       ctx.fillRect(-9, 18, 7, 10);
       ctx.fillRect(2, 18, 7, 10);
-      ctx.fillStyle = '#fef08a';
+      ctx.fillStyle = '#0f172a';
       ctx.fillRect(-10, 27, 9, 5);
       ctx.fillRect(1, 27, 9, 5);
 
       ctx.restore();
 
-      // Save impact flash ring
+      // Save impact flash
       if (anim.flashRing > 0) {
         ctx.strokeStyle = `rgba(56, 189, 248, ${anim.flashRing})`;
         ctx.lineWidth = 3;
@@ -1138,87 +987,138 @@ export function PenaltyShootoutPage() {
       }
 
       // -------------------------------------------------------------
-      // 8. HIGH-FIDELITY ANIMATED 3D STRIKER (KATIKA EMERALD / GOLD)
+      // 6. THE FC 26 COMPOSURE CIRCLE ON GRASS (CENTRAL VIDEO FEATURE!)
       // -------------------------------------------------------------
-      let strikerX = spotX - 26;
-      let strikerY = spotY + 46;
-      let legAngle = 0;
+      // The iconic composure ring around the ball expands and contracts!
+      // In video: "Как всегда забивать пенальти с красным кругом в FC 26"
+      if (matchState === 'aiming') {
+        const cycle = (now % 1600) / 1600; // 1.6s pulsing loop
+        // Smooth sine wave from wide (36px) to tight (14px)
+        const radius = 14 + (Math.sin(cycle * Math.PI * 2) * 0.5 + 0.5) * 22;
+        anim.composureRadius = radius;
 
-      let runupStartX = spotX - 26;
-      if (anim.runupStyle === 'curved_approach') runupStartX = spotX - 48;
-      if (anim.runupStyle === 'sprint_blast') runupStartX = spotX - 20;
+        // Color shifts: Red when wide -> Yellow/Orange mid -> Green when tight!
+        let ringColor = '#ef4444'; // Red
+        if (radius < 26) ringColor = '#f97316'; // Orange
+        if (radius < 21) ringColor = '#eab308'; // Yellow
+        if (radius < 17) ringColor = '#22c55e'; // Green (Sweet spot!)
+        anim.composureColor = ringColor;
+
+        // Outer glow
+        ctx.save();
+        ctx.shadowColor = ringColor;
+        ctx.shadowBlur = 10;
+        ctx.strokeStyle = ringColor;
+        ctx.lineWidth = 3;
+
+        // Draw Composure Ring on turf around ball
+        ctx.beginPath();
+        ctx.ellipse(spotX, spotY, radius * 1.3, radius * 0.7, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner subtle fill
+        ctx.fillStyle = ringColor === '#22c55e' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.12)';
+        ctx.fill();
+        ctx.restore();
+
+        // Controller Icon Prompt beside composure circle (as in video)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.beginPath();
+        ctx.arc(spotX - radius * 1.4 - 10, spotY, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 8px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚡', spotX - radius * 1.4 - 10, spotY + 3);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 8px sans-serif';
+        ctx.fillText('Click / Aim', spotX - radius * 1.4 - 10, spotY + 14);
+      }
+
+      // -------------------------------------------------------------
+      // 7. STRIKER IN NEON YELLOW/LIME KIT (EXACTLY AS IN VIDEO)
+      // -------------------------------------------------------------
+      // In video: Mbappé viewed from behind, positioned just to the left of the ball!
+      let strikerBaseX = spotX - 32;
+      let strikerBaseY = spotY + 28;
+      let legAngle = 0;
 
       if (matchState === 'runup' || matchState === 'ball_flight' || matchState === 'shot_result') {
         const runupT = Math.min(1, anim.runup);
-        strikerX = runupStartX + runupT * (spotX - runupStartX - 4);
-        strikerY = spotY + 46 - runupT * 40;
+        strikerBaseX = spotX - 32 + runupT * 22;
+        strikerBaseY = spotY + 28 - runupT * 32;
         legAngle = Math.sin(runupT * Math.PI * 2.8) * 0.9;
       }
 
       ctx.save();
-      ctx.translate(strikerX, strikerY);
+      ctx.translate(strikerBaseX, strikerBaseY);
 
-      // Striker shadow
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.46)';
+      // Soft natural daytime shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
       ctx.beginPath();
-      ctx.ellipse(0, 38, 24, 8, 0, 0, Math.PI * 2);
+      ctx.ellipse(4, 38, 22, 7, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Striker Jersey (Katika Emerald with Metallic Gold Trim)
-      const kitColor = attackingTeam === 'A' ? '#059669' : '#1d4ed8';
-      const kitTrim = attackingTeam === 'A' ? '#fef08a' : '#ffffff';
-
-      const strikerJersey = ctx.createLinearGradient(-14, -30, 14, 8);
-      strikerJersey.addColorStop(0, kitColor);
-      strikerJersey.addColorStop(0.6, attackingTeam === 'A' ? '#047857' : '#1e40af');
-      strikerJersey.addColorStop(1, '#022c22');
+      // Neon Lime/Yellow Training Kit (as in video)
+      const strikerJersey = ctx.createLinearGradient(-13, -30, 13, 8);
+      strikerJersey.addColorStop(0, '#facc15'); // Bright yellow/lime
+      strikerJersey.addColorStop(0.6, '#eab308');
+      strikerJersey.addColorStop(1, '#ca8a04');
       ctx.fillStyle = strikerJersey;
       ctx.beginPath();
-      ctx.roundRect(-14, -30, 28, 36, 4);
+      ctx.roundRect(-13, -30, 26, 36, 4);
       ctx.fill();
 
-      // Gold Kit Number on Back
-      ctx.fillStyle = kitTrim;
+      // Black shoulder accents & trim (as in video)
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(-13, -30, 6, 8);
+      ctx.fillRect(7, -30, 6, 8);
+
+      // Black Number 10 on back
+      ctx.fillStyle = '#0f172a';
       ctx.font = 'bold 13px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(String(currentShooter.number), 0, -8);
 
-      // Name on jersey
-      ctx.font = 'bold 7px sans-serif';
-      ctx.fillText(attackingTeam === 'A' ? 'KATIKA' : 'RIVALS', 0, -20);
-
-      // Head & Hair
-      ctx.fillStyle = '#92400e';
+      // Head & Short Haircut (Mbappé style)
+      ctx.fillStyle = '#78350f';
       ctx.beginPath();
-      ctx.arc(0, -40, 10, 0, Math.PI * 2);
+      ctx.arc(0, -39, 9, 0, Math.PI * 2);
       ctx.fill();
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(-7, -44, 14, 4);
 
-      // Shorts
+      // Black Shorts
       ctx.fillStyle = '#0f172a';
       ctx.fillRect(-11, 6, 10, 16);
       ctx.fillRect(1, 6, 10, 16);
 
-      // Golden Cleats & Striking Legs
+      // Legs & Athletic Cleats with run-up stride
       ctx.save();
       ctx.rotate(legAngle);
-      ctx.fillStyle = '#92400e';
+      ctx.fillStyle = '#78350f';
       ctx.fillRect(-7, 20, 6, 15);
-      ctx.fillStyle = '#eab308'; // Gold boot
+      ctx.fillStyle = '#ffffff'; // White/pink boot
       ctx.fillRect(-8, 34, 8, 6);
       ctx.restore();
 
       ctx.save();
       ctx.rotate(-legAngle * 0.7);
-      ctx.fillStyle = '#92400e';
+      ctx.fillStyle = '#78350f';
       ctx.fillRect(2, 20, 6, 15);
-      ctx.fillStyle = '#eab308';
+      ctx.fillStyle = '#ffffff';
       ctx.fillRect(2, 34, 8, 6);
       ctx.restore();
 
       ctx.restore();
 
       // -------------------------------------------------------------
-      // 9. ANIMATED 3D SOCCER BALL (ROTATION, SHADOW, & MOTION TRAIL)
+      // 8. SOCCER BALL WITH 3D FLIGHT, SPIN & TURF SHADOW
       // -------------------------------------------------------------
       let ballX = spotX;
       let ballY = spotY;
@@ -1233,74 +1133,124 @@ export function PenaltyShootoutPage() {
 
         let targetY = goalLineY - 28;
         if (anim.pitchElevation === 'low') targetY = goalLineY - 8;
-        if (anim.pitchElevation === 'high') targetY = crossbarY + 12;
-        if (anim.pitchElevation === 'panenka') targetY = crossbarY + 36;
+        if (anim.pitchElevation === 'high') targetY = crossbarY + 14;
+        if (anim.pitchElevation === 'panenka') targetY = crossbarY + 38;
 
         if (!anim.scored && flightT > 0.82) {
           targetX = keeperX + (anim.diveDir === 'left' ? -14 : 14);
           targetY = keeperY + 6;
         }
 
-        // Parabolic trajectory
         ballX = spotX + flightT * (targetX - spotX);
         const linearY = spotY + flightT * (targetY - spotY);
-        const arcLift = Math.sin(flightT * Math.PI) * (anim.pitchElevation === 'panenka' ? 70 : 30);
+        const arcLift = Math.sin(flightT * Math.PI) * (anim.pitchElevation === 'panenka' ? 68 : 28);
         ballY = linearY - arcLift;
 
         ballScale = 1.0 - flightT * 0.54;
         anim.ballSpin += 0.35;
-
-        // High velocity flame/slipstream motion trail
-        if (anim.powerKmH >= 100 && flightT < 0.88) {
-          ctx.strokeStyle = 'rgba(254, 240, 138, 0.45)';
-          ctx.lineWidth = 5 * ballScale;
-          ctx.beginPath();
-          ctx.moveTo(spotX, spotY);
-          ctx.quadraticCurveTo((spotX + ballX) / 2, (spotY + ballY) / 2 - arcLift, ballX, ballY);
-          ctx.stroke();
-        }
       }
 
-      // Ball Turf Shadow
+      // Ball turf shadow
       const shadowY = spotY + (ballY - spotY) * 0.35;
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
       ctx.beginPath();
-      ctx.ellipse(ballX, shadowY, 11 * ballScale, 4.5 * ballScale, 0, 0, Math.PI * 2);
+      ctx.ellipse(ballX + 2, shadowY, 10 * ballScale, 4.5 * ballScale, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 3D Shaded Soccer Ball Sphere
+      // Official Match Ball Sphere
       const ballRadius = 9.5 * ballScale;
       ctx.save();
       ctx.translate(ballX, ballY);
       ctx.rotate(anim.ballSpin);
 
-      // Shaded leather gradient
       const ballGrad = ctx.createRadialGradient(-ballRadius * 0.35, -ballRadius * 0.35, 1, 0, 0, ballRadius);
       ballGrad.addColorStop(0, '#ffffff');
-      ballGrad.addColorStop(0.65, '#e2e8f0');
-      ballGrad.addColorStop(1, '#1e293b');
+      ballGrad.addColorStop(0.7, '#e2e8f0');
+      ballGrad.addColorStop(1, '#334155');
       ctx.fillStyle = ballGrad;
       ctx.beginPath();
       ctx.arc(0, 0, ballRadius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Pentagonal Panels
+      // Pentagon pattern
       ctx.fillStyle = '#0f172a';
       ctx.beginPath();
-      ctx.arc(0, 0, ballRadius * 0.45, 0, Math.PI * 2);
+      ctx.arc(0, 0, ballRadius * 0.42, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();
 
       // -------------------------------------------------------------
-      // 10. PARTICLE SYSTEM ENGINE (TURF DUST & CELEBRATION SPARKS)
+      // 9. AIMING RETICLES (STRICTLY 3 DIRECTIONS: LEFT, CENTRE, RIGHT)
+      // -------------------------------------------------------------
+      if (matchState === 'aiming') {
+        const leftTargetX = goalX + goalW * 0.18;
+        const centreTargetX = w / 2;
+        const rightTargetX = goalX + goalW * 0.82;
+        const targetY = goalLineY - 36;
+
+        const drawFCTarget = (tx: number, ty: number, dir: ShotDirection) => {
+          const isSelected = userSelectedDir === dir;
+          const isHovered = hoveredDir === dir;
+          const active = isSelected || isHovered;
+
+          ctx.save();
+          // Aim target circle in goal
+          ctx.strokeStyle = active ? '#facc15' : 'rgba(255, 255, 255, 0.65)';
+          ctx.lineWidth = active ? 2.5 : 1.5;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.arc(tx, ty, 18, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          ctx.fillStyle = active ? 'rgba(250, 204, 21, 0.3)' : 'rgba(255, 255, 255, 0.1)';
+          ctx.fill();
+
+          // Crosshairs
+          ctx.strokeStyle = active ? '#ffffff' : 'rgba(255, 255, 255, 0.8)';
+          ctx.beginPath();
+          ctx.moveTo(tx - 6, ty);
+          ctx.lineTo(tx + 6, ty);
+          ctx.moveTo(tx, ty - 6);
+          ctx.lineTo(tx, ty + 6);
+          ctx.stroke();
+
+          // Direction label
+          ctx.fillStyle = active ? '#fef08a' : '#ffffff';
+          ctx.font = 'bold 9px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(dir.toUpperCase(), tx, ty - 22);
+
+          // Subtle aim guideline from ball to selected target
+          if (active) {
+            ctx.strokeStyle = 'rgba(250, 204, 21, 0.5)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([3, 5]);
+            ctx.beginPath();
+            ctx.moveTo(spotX, spotY);
+            ctx.lineTo(tx, ty);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+
+          ctx.restore();
+        };
+
+        drawFCTarget(leftTargetX, targetY, 'left');
+        drawFCTarget(centreTargetX, targetY, 'centre');
+        drawFCTarget(rightTargetX, targetY, 'right');
+      }
+
+      // -------------------------------------------------------------
+      // 10. PARTICLE ENGINE
       // -------------------------------------------------------------
       const particles = particlesRef.current;
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.12; // gravity
+        p.vy += 0.12;
         p.alpha -= 0.025;
 
         if (p.alpha <= 0) {
@@ -1336,7 +1286,7 @@ export function PenaltyShootoutPage() {
     };
   }, [matchState, attackingTeam, currentShooter.number, userSelectedDir, hoveredDir]);
 
-  // Click on Canvas directly to choose direction
+  // Click on Canvas directly
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (matchState !== 'aiming') return;
     const canvas = canvasRef.current;
@@ -1368,14 +1318,14 @@ export function PenaltyShootoutPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-[92vh] max-w-lg flex-col justify-between px-2 pt-1 pb-16 select-none">
+    <div className="mx-auto flex min-h-[92vh] max-w-lg flex-col justify-between px-2 pt-1 pb-16 select-none font-sans">
       {/* ============================================================= */}
       {/* VIEW A: LOBBY & 3V3 MATCHMAKING CUE SCREEN                    */}
       {/* ============================================================= */}
       {matchState === 'lobby' ? (
         <div className="space-y-3 pt-2">
-          {/* Header */}
-          <div className="rounded-2xl border border-[#d4af37]/40 bg-gradient-to-r from-[#0d2218] via-[#081711] to-[#040e0a] p-4 shadow-xl">
+          {/* EA FC Style Header Card */}
+          <div className="rounded-2xl border border-[#35d399]/40 bg-gradient-to-r from-[#0d2218] via-[#081711] to-[#040e0a] p-4 shadow-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#064e3b] p-1.5 border border-[#35d399]/40 shadow-sm">
@@ -1383,19 +1333,19 @@ export function PenaltyShootoutPage() {
                 </div>
                 <div>
                   <span className="font-mono-custom text-[10px] uppercase tracking-widest text-[#35D399]">
-                    PvP STADIUM ARENA
+                    FC 26 PRACTICE ARENA
                   </span>
                   <h1 className="text-lg font-black text-white">3v3 Penalty Shootout</h1>
                 </div>
               </div>
               <div className="flex items-center gap-1 rounded-full border border-[#35D399]/40 bg-[#35D399]/15 px-2.5 py-1 text-[11px] font-mono-custom text-[#35D399]">
                 <Radio size={11} className="animate-pulse" />
-                <span>CUE LIVE</span>
+                <span>3v3 CUE</span>
               </div>
             </div>
 
             <p className="mt-2 text-xs text-[#8FA39A] leading-relaxed">
-              Multiplayer 3 vs 3 penalty shootout. Players join the cue and take turns shooting and saving! Strictly 3 directions (Left, Centre, Right).
+              Experience authentic EA FC 26 penalty mechanics with the composure ring! 3 directions (Left, Centre, Right), 3v3 team shootout taking turns shooting &amp; saving.
             </p>
           </div>
 
@@ -1443,17 +1393,15 @@ export function PenaltyShootoutPage() {
             </div>
           </div>
 
-          {/* Gameplay Mechanics Info Card */}
+          {/* FC 26 Mechanic Highlight Card */}
           <div className="rounded-2xl border border-[#1C3A2E] bg-[#0A1612] p-3 text-xs space-y-1.5">
-            <div className="flex items-center gap-1.5 font-mono-custom text-[#fef08a] font-bold text-[11px]">
+            <div className="flex items-center gap-1.5 font-mono-custom text-[#fde047] font-bold text-[11px]">
               <Sparkles size={13} />
-              <span>Shootout Rules &amp; Graphics</span>
+              <span>FC 26 Composure Ring Feature</span>
             </div>
-            <ul className="text-[11px] text-[#8FA39A] space-y-1 list-disc pl-4">
-              <li><strong className="text-white">Strictly 3 Directions:</strong> Left, Centre, and Right.</li>
-              <li><strong className="text-white">Randomized Telemetry:</strong> Varied shot power (78–124 km/h), pitch elevations (low, mid, high, panenka), and dynamic player motions.</li>
-              <li><strong className="text-white">Take Turns:</strong> Each player in the 3v3 squad steps up to shoot as striker and defends as goalkeeper!</li>
-            </ul>
+            <p className="text-[11px] text-[#8FA39A] leading-relaxed">
+              Watch the circular ring on the turf around the ball! When it contracts from wide <span className="text-red-400 font-bold">RED</span> to tight <span className="text-emerald-400 font-bold">GREEN</span>, strike the ball for maximum velocity &amp; precision into your chosen direction!
+            </p>
           </div>
 
           {/* Stake Selector */}
@@ -1498,7 +1446,7 @@ export function PenaltyShootoutPage() {
               onClick={startCountdown}
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#1C3A2E] bg-black/40 py-2.5 font-mono-custom text-xs font-bold text-[#8FA39A] hover:text-white"
             >
-              <span>Instant Squad Kickoff (Practice) →</span>
+              <span>Instant FC Practice Kickoff →</span>
             </button>
           </div>
         </div>
@@ -1516,7 +1464,6 @@ export function PenaltyShootoutPage() {
             <p className="mt-1 font-mono-custom text-xs text-[#35D399]">{queueStatusText}</p>
           </div>
 
-          {/* Connected Players Bar */}
           <div className="mx-auto max-w-xs space-y-2">
             <div className="flex items-center justify-between text-xs font-mono-custom text-[#8FA39A]">
               <span>Players in Cue:</span>
@@ -1559,7 +1506,7 @@ export function PenaltyShootoutPage() {
         /* ============================================================= */
         <div className="my-auto rounded-3xl border border-[#fef08a]/40 bg-[#091712] p-8 text-center shadow-2xl space-y-3">
           <span className="font-mono-custom text-xs font-black uppercase tracking-widest text-[#35D399]">
-            Stadium Ready · 6 Players Connected
+            Arena Ready · 6 Players Connected
           </span>
           <div className="font-mono-custom text-7xl font-black text-[#fef08a] animate-ping">
             {countdownNum}
@@ -1568,30 +1515,30 @@ export function PenaltyShootoutPage() {
         </div>
       ) : (
         /* ============================================================= */
-        /* VIEW D: LIVE MATCH ARENA (SCOREBOARD, CANVAS, CONTROLLER)     */
+        /* VIEW D: LIVE FC 26 MATCH ARENA (SCOREBOARD, CANVAS, CONTROLLER)*/
         /* ============================================================= */
         <>
-          {/* BROADCAST TOP SCOREBOARD */}
-          <div className="relative overflow-hidden rounded-2xl border border-[#d4af37]/40 bg-gradient-to-r from-[#0d2218] via-[#081711] to-[#040e0a] p-3 shadow-2xl">
+          {/* EA FC Top Practice HUD (Exact style from video!) */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-r from-[#0f172a]/90 via-[#1e293b]/90 to-[#0f172a]/90 p-3 shadow-2xl backdrop-blur-md">
             <div className="flex items-center justify-between">
-              {/* Team A (Katika Elite) */}
+              {/* Team A Info */}
               <div className="flex items-center gap-2">
-                <div className="grid h-8 w-8 place-items-center rounded-xl bg-[#064e3b] p-1 border border-[#35d399]/40 shadow-sm">
-                  <KatikaLogo className="h-full w-full" />
+                <div className="grid h-8 w-8 place-items-center rounded-lg bg-[#eab308] p-1 font-black text-black text-xs shadow-sm">
+                  10
                 </div>
                 <div>
                   <span className="font-mono-custom text-xs font-black tracking-wider text-white">
-                    KATIKA
+                    {teamA[currentKickerSlot].name}
                   </span>
                   <div className="flex items-center gap-1 mt-0.5">
                     {shotsA.map((res, i) => (
                       <span key={i}>
                         {res === true ? (
-                          <CheckCircle2 size={13} className="text-[#35d399]" />
+                          <CheckCircle2 size={13} className="text-[#4ade80]" />
                         ) : res === false ? (
                           <XCircle size={13} className="text-red-400" />
                         ) : (
-                          <Circle size={11} className="text-[#475569]" />
+                          <Circle size={11} className="text-[#64748b]" />
                         )}
                       </span>
                     ))}
@@ -1599,17 +1546,17 @@ export function PenaltyShootoutPage() {
                 </div>
               </div>
 
-              {/* Central Live Score Display */}
-              <div className="text-center px-4 py-1 rounded-xl bg-black/60 border border-[#1C3A2E] shadow-inner">
-                <div className="font-mono-custom text-xl font-black text-[#fef08a] tracking-widest">
+              {/* Centre EA FC Scoreboard */}
+              <div className="text-center px-4 py-1 rounded-xl bg-black/60 border border-white/10 shadow-inner">
+                <div className="font-mono-custom text-xl font-black text-[#fde047] tracking-widest">
                   {scoreTeamA} - {scoreTeamB}
                 </div>
-                <span className="font-mono-custom text-[8px] font-bold uppercase tracking-widest text-[#35D399]">
-                  ROUND {currentRound} / 3
+                <span className="font-mono-custom text-[8px] font-bold uppercase tracking-widest text-[#38bdf8]">
+                  ПОПЫТКИ: {currentRound} / 3
                 </span>
               </div>
 
-              {/* Team B (Rivals) */}
+              {/* Team B Info */}
               <div className="flex items-center gap-2 text-right">
                 <div>
                   <span className="font-mono-custom text-xs font-black tracking-wider text-white">
@@ -1619,40 +1566,40 @@ export function PenaltyShootoutPage() {
                     {shotsB.map((res, i) => (
                       <span key={i}>
                         {res === true ? (
-                          <CheckCircle2 size={13} className="text-[#35d399]" />
+                          <CheckCircle2 size={13} className="text-[#4ade80]" />
                         ) : res === false ? (
                           <XCircle size={13} className="text-red-400" />
                         ) : (
-                          <Circle size={11} className="text-[#475569]" />
+                          <Circle size={11} className="text-[#64748b]" />
                         )}
                       </span>
                     ))}
                   </div>
                 </div>
-                <div className="grid h-8 w-8 place-items-center rounded-xl bg-[#1e3a8a] text-xs font-black text-white border border-blue-400/40 shadow-sm">
-                  WHU
+                <div className="grid h-8 w-8 place-items-center rounded-lg bg-[#2563eb] text-xs font-black text-white border border-blue-400/40 shadow-sm">
+                  GK
                 </div>
               </div>
             </div>
 
-            {/* Dynamic Telemetric Banner Notice */}
-            <div className="mt-2.5 flex items-center justify-between border-t border-[#1C3A2E] pt-2 text-[10px]">
-              <div className="flex items-center gap-1.5 font-mono-custom text-[#8FA39A]">
-                <Gauge size={12} className="text-[#fef08a]" />
-                <span>KICKER: {currentShooter.name} vs KEEPER: {currentKeeper.name}</span>
+            {/* Broadcast Telemetry Strip */}
+            <div className="mt-2.5 flex items-center justify-between border-t border-white/10 pt-2 text-[10px]">
+              <div className="flex items-center gap-1.5 font-mono-custom text-[#94a3b8]">
+                <Target size={12} className="text-[#facc15]" />
+                <span>KICKER: {currentShooter.name} vs GOALIE: {currentKeeper.name}</span>
               </div>
               <button
                 type="button"
                 onClick={toggleSound}
-                className="flex items-center gap-1 text-[#8FA39A] hover:text-white"
+                className="flex items-center gap-1 text-[#94a3b8] hover:text-white"
               >
                 {soundOn ? <Volume2 size={13} /> : <VolumeX size={13} />}
               </button>
             </div>
           </div>
 
-          {/* 3D PENALTY CANVAS ARENA */}
-          <div className="relative mt-2 overflow-hidden rounded-3xl border-2 border-[#1C3A2E] bg-black shadow-2xl">
+          {/* EA FC 26 TRAINING ARENA CANVAS */}
+          <div className="relative mt-2 overflow-hidden rounded-3xl border-2 border-slate-700 bg-slate-900 shadow-2xl">
             <canvas
               ref={canvasRef}
               width={480}
@@ -1664,17 +1611,28 @@ export function PenaltyShootoutPage() {
 
             {/* Broadcast Notice Banner */}
             {bannerNotice && (
-              <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-full border border-[#fef08a]/60 bg-black/80 px-4 py-1 font-mono-custom text-[11px] font-black tracking-wider text-[#fef08a] shadow-lg animate-fade-in backdrop-blur-sm">
+              <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-full border border-yellow-400/60 bg-black/80 px-4 py-1 font-mono-custom text-[11px] font-black tracking-wider text-[#fde047] shadow-lg animate-fade-in backdrop-blur-sm">
                 {bannerNotice}
               </div>
             )}
 
-            {/* In-Game Active Shot Telemetry Overlay */}
+            {/* Bottom Subtitle / Prompt Bar (as in video: "Забейте как можно больше голов") */}
+            {matchState === 'aiming' && (
+              <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-xl bg-black/70 px-4 py-1.5 font-sans text-xs font-semibold text-white shadow-lg backdrop-blur-md border border-white/10">
+                {isUserTurnToShoot
+                  ? 'Забейте гол: выберите направление (Лево, Центр или Право)'
+                  : isUserTurnToSave
+                  ? 'Отразите удар: выберите прыжок вратаря'
+                  : `Ход партнера: ${currentShooter.name}...`}
+              </div>
+            )}
+
+            {/* Active Shot Telemetry Overlay */}
             {activeShotData && matchState === 'shot_result' && (
-              <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-2xl border border-[#35D399]/60 bg-black/90 px-4 py-2 font-mono-custom text-xs shadow-2xl backdrop-blur-md">
-                <span className="font-bold text-[#fef08a]">{activeShotData.powerKmH} KM/H</span>
+              <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-2xl border border-emerald-400/60 bg-black/90 px-4 py-2 font-mono-custom text-xs shadow-2xl backdrop-blur-md">
+                <span className="font-bold text-[#fde047]">{activeShotData.powerKmH} KM/H</span>
                 <span className="text-white/40">|</span>
-                <span className="font-bold uppercase text-[#35D399]">{activeShotData.pitchElevation}</span>
+                <span className="font-bold uppercase text-[#4ade80]">{activeShotData.pitchElevation}</span>
                 <span className="text-white/40">|</span>
                 <span className="font-black text-white">{activeShotData.shotDirection.toUpperCase()}</span>
               </div>
@@ -1688,13 +1646,13 @@ export function PenaltyShootoutPage() {
                 <div className="mb-2 flex items-center justify-between px-1">
                   <span className="font-mono-custom text-xs font-black uppercase tracking-wider text-white">
                     {isUserTurnToShoot
-                      ? '🎯 Choose Kick Direction (3 Options):'
+                      ? '🎯 Выберите направление (3 зоны):'
                       : isUserTurnToSave
-                      ? '🧤 Choose Goalkeeper Dive Direction:'
-                      : `Watching ${currentShooter.name}...`}
+                      ? '🧤 Прыжок вратаря:'
+                      : `Удар наносит ${currentShooter.name}...`}
                   </span>
-                  <span className="font-mono-custom text-[10px] text-[#35D399]">
-                    {isUserTurnToShoot ? 'Striker Turn' : isUserTurnToSave ? 'Keeper Turn' : 'Squadmate Turn'}
+                  <span className="font-mono-custom text-[10px] text-[#4ade80]">
+                    {isUserTurnToShoot ? 'Striker' : isUserTurnToSave ? 'Keeper' : 'Squad Turn'}
                   </span>
                 </div>
 
@@ -1705,14 +1663,14 @@ export function PenaltyShootoutPage() {
                     onClick={() => handleUserChoice('left')}
                     onMouseEnter={() => setHoveredDir('left')}
                     onMouseLeave={() => setHoveredDir(null)}
-                    className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-[#1C3A2E] bg-gradient-to-b from-[#0E1A16] to-[#07110E] p-3.5 text-center transition-all hover:border-[#35D399] hover:bg-[#35D399]/15 active:scale-95 shadow-lg"
+                    className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-slate-700 bg-gradient-to-b from-slate-900 to-slate-950 p-3.5 text-center transition-all hover:border-[#4ade80] hover:bg-[#4ade80]/15 active:scale-95 shadow-lg"
                   >
-                    <ChevronLeft size={26} className="text-[#35D399] group-hover:-translate-x-1 transition-transform" />
+                    <ChevronLeft size={26} className="text-[#4ade80] group-hover:-translate-x-1 transition-transform" />
                     <span className="mt-1 font-mono-custom text-sm font-black text-white">
                       LEFT
                     </span>
-                    <span className="font-mono-custom text-[9px] text-[#8FA39A]">
-                      {isUserTurnToShoot ? 'Post / Corner' : 'Dive Left'}
+                    <span className="font-mono-custom text-[9px] text-slate-400">
+                      {isUserTurnToShoot ? 'Левый угол' : 'Прыжок влево'}
                     </span>
                   </button>
 
@@ -1721,14 +1679,14 @@ export function PenaltyShootoutPage() {
                     onClick={() => handleUserChoice('centre')}
                     onMouseEnter={() => setHoveredDir('centre')}
                     onMouseLeave={() => setHoveredDir(null)}
-                    className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-[#1C3A2E] bg-gradient-to-b from-[#0E1A16] to-[#07110E] p-3.5 text-center transition-all hover:border-[#fef08a] hover:bg-[#fef08a]/15 active:scale-95 shadow-lg"
+                    className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-slate-700 bg-gradient-to-b from-slate-900 to-slate-950 p-3.5 text-center transition-all hover:border-[#fde047] hover:bg-[#fde047]/15 active:scale-95 shadow-lg"
                   >
-                    <Zap size={26} className="text-[#fef08a] group-hover:scale-110 transition-transform" />
+                    <Zap size={26} className="text-[#fde047] group-hover:scale-110 transition-transform" />
                     <span className="mt-1 font-mono-custom text-sm font-black text-white">
                       CENTRE
                     </span>
-                    <span className="font-mono-custom text-[9px] text-[#8FA39A]">
-                      {isUserTurnToShoot ? 'Middle / Chip' : 'Hold Ground'}
+                    <span className="font-mono-custom text-[9px] text-slate-400">
+                      {isUserTurnToShoot ? 'По центру' : 'Остаться'}
                     </span>
                   </button>
 
@@ -1737,26 +1695,26 @@ export function PenaltyShootoutPage() {
                     onClick={() => handleUserChoice('right')}
                     onMouseEnter={() => setHoveredDir('right')}
                     onMouseLeave={() => setHoveredDir(null)}
-                    className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-[#1C3A2E] bg-gradient-to-b from-[#0E1A16] to-[#07110E] p-3.5 text-center transition-all hover:border-[#35D399] hover:bg-[#35D399]/15 active:scale-95 shadow-lg"
+                    className="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-slate-700 bg-gradient-to-b from-slate-900 to-slate-950 p-3.5 text-center transition-all hover:border-[#4ade80] hover:bg-[#4ade80]/15 active:scale-95 shadow-lg"
                   >
-                    <ChevronRight size={26} className="text-[#35D399] group-hover:translate-x-1 transition-transform" />
+                    <ChevronRight size={26} className="text-[#4ade80] group-hover:translate-x-1 transition-transform" />
                     <span className="mt-1 font-mono-custom text-sm font-black text-white">
                       RIGHT
                     </span>
-                    <span className="font-mono-custom text-[9px] text-[#8FA39A]">
-                      {isUserTurnToShoot ? 'Post / Corner' : 'Dive Right'}
+                    <span className="font-mono-custom text-[9px] text-slate-400">
+                      {isUserTurnToShoot ? 'Правый угол' : 'Прыжок вправо'}
                     </span>
                   </button>
                 </div>
               </div>
             ) : matchState === 'game_over' ? (
-              <div className="rounded-3xl border border-[#d4af37]/60 bg-[#091712] p-5 text-center shadow-2xl animate-fade-in">
-                <Trophy size={40} className="mx-auto text-[#fef08a] animate-bounce" />
+              <div className="rounded-3xl border border-yellow-500/60 bg-slate-900 p-5 text-center shadow-2xl animate-fade-in">
+                <Trophy size={40} className="mx-auto text-[#fde047] animate-bounce" />
                 <h3 className="mt-2 text-xl font-black text-white">Shootout Concluded!</h3>
-                <p className="font-mono-custom text-base font-bold text-[#35D399]">
+                <p className="font-mono-custom text-base font-bold text-[#4ade80]">
                   Final Score: {scoreTeamA} - {scoreTeamB}
                 </p>
-                <p className="mt-1 text-xs text-[#8FA39A]">
+                <p className="mt-1 text-xs text-slate-400">
                   {scoreTeamA > scoreTeamB
                     ? 'Katika Elite wins the match!'
                     : scoreTeamB > scoreTeamA
@@ -1774,31 +1732,31 @@ export function PenaltyShootoutPage() {
                   </button>
                   <Link
                     href="/pvp"
-                    className="rounded-xl border border-[#1C3A2E] bg-black/40 px-4 py-3 font-mono-custom text-xs font-bold text-[#8FA39A] hover:text-white"
+                    className="rounded-xl border border-slate-700 bg-black/40 px-4 py-3 font-mono-custom text-xs font-bold text-slate-400 hover:text-white"
                   >
                     PvP Floor
                   </Link>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center gap-2 rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] py-4 text-center font-mono-custom text-xs text-[#8FA39A]">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#fef08a] animate-ping" />
+              <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-800 bg-slate-950 py-4 text-center font-mono-custom text-xs text-slate-400">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#fde047] animate-ping" />
                 <span>Kick in flight · Resolving strike...</span>
               </div>
             )}
           </div>
 
           {/* 3 VS 3 ROSTER PREVIEW STRIP */}
-          <div className="mt-3 rounded-2xl border border-[#1C3A2E] bg-[#0A1612] p-3">
-            <div className="flex items-center justify-between text-[10px] font-mono-custom text-[#8FA39A] uppercase tracking-wider mb-2">
+          <div className="mt-3 rounded-2xl border border-slate-800 bg-slate-950/80 p-3">
+            <div className="flex items-center justify-between text-[10px] font-mono-custom text-slate-400 uppercase tracking-wider mb-2">
               <span>3v3 Squad Lineup</span>
-              <span className="text-[#35D399]">Taking Turns: Shoot &amp; Save</span>
+              <span className="text-[#4ade80]">Taking Turns: Shoot &amp; Save</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs">
               {/* Team A Lineup */}
-              <div className="rounded-xl border border-[#1C3A2E]/80 bg-black/30 p-2 space-y-1">
-                <span className="font-mono-custom text-[9px] font-bold text-[#35D399] uppercase">
+              <div className="rounded-xl border border-emerald-500/30 bg-black/30 p-2 space-y-1">
+                <span className="font-mono-custom text-[9px] font-bold text-[#4ade80] uppercase">
                   Katika Elite
                 </span>
                 {teamA.map((p, idx) => (
@@ -1806,8 +1764,8 @@ export function PenaltyShootoutPage() {
                     key={p.id}
                     className={`flex items-center justify-between text-[11px] px-1.5 py-0.5 rounded ${
                       currentKickerSlot === idx && attackingTeam === 'A'
-                        ? 'bg-[#35D399]/20 font-bold text-white'
-                        : 'text-[#8FA39A]'
+                        ? 'bg-[#4ade80]/20 font-bold text-white'
+                        : 'text-slate-400'
                     }`}
                   >
                     <span>#{p.number} {p.name}</span>
@@ -1819,7 +1777,7 @@ export function PenaltyShootoutPage() {
               </div>
 
               {/* Team B Lineup */}
-              <div className="rounded-xl border border-[#1C3A2E]/80 bg-black/30 p-2 space-y-1">
+              <div className="rounded-xl border border-blue-500/30 bg-black/30 p-2 space-y-1">
                 <span className="font-mono-custom text-[9px] font-bold text-blue-400 uppercase">
                   Rivals Squad
                 </span>
@@ -1829,7 +1787,7 @@ export function PenaltyShootoutPage() {
                     className={`flex items-center justify-between text-[11px] px-1.5 py-0.5 rounded ${
                       currentKickerSlot === idx && attackingTeam === 'B'
                         ? 'bg-blue-500/20 font-bold text-white'
-                        : 'text-[#8FA39A]'
+                        : 'text-slate-400'
                     }`}
                   >
                     <span>#{p.number} {p.name}</span>
