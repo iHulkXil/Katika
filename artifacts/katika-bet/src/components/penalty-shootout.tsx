@@ -9,7 +9,7 @@ import { useLegend } from '@/components/legend-card';
 import { useToast } from '@/hooks/use-toast';
 import { KatikaLogo } from '@/components/katika-logo';
 import { fireWinConfetti } from '@/lib/confetti';
-import { STRIKER_GLB, KEEPER_GLB } from '@/components/penalty-models';
+import { FOOTBALLER_ANIMATED_GLB } from '@/components/penalty-models';
 import {
   Trophy,
   Swords,
@@ -322,7 +322,7 @@ export function PenaltyShootoutPage() {
   const [soundOn, setSoundOn] = useState<boolean>(true);
 
   // Model & Asset Selection
-  const [activeModelName, setActiveModelName] = useState<string>('Athlete Motion (.GLB)');
+  const [activeModelName, setActiveModelName] = useState<string>('Footballer Animated (.GLB)');
   const [isLoadingModel, setIsLoadingModel] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -352,7 +352,7 @@ export function PenaltyShootoutPage() {
   const rigRef = useRef<RigController | null>(null);
   const customKeeperModelRef = useRef<THREE.Group | null>(null);
   const keeperRigRef = useRef<RigController | null>(null);
-  const [activeKeeperName, setActiveKeeperName] = useState<string>('Pro Goalkeeper (.GLB)');
+  const [activeKeeperName, setActiveKeeperName] = useState<string>('Footballer Animated GK (.GLB)');
 
   // Shared Animation State (Ref avoids re-render loops)
   const animRef = useRef({
@@ -472,21 +472,11 @@ export function PenaltyShootoutPage() {
   );
 
   const loadModelPreset = useCallback(
-    (type: 'striker' | 'cartoon' | 'athlete' | 'ronaldo') => {
+    () => {
       setIsLoadingModel(true);
       const loader = new GLTFLoader();
-      let path = STRIKER_GLB;
-      let label = 'Soldier Striker (.GLB)';
-      if (type === 'cartoon') {
-        path = '/models/cartoon-footballer.glb';
-        label = 'Cartoon Striker (.GLB)';
-      } else if (type === 'athlete') {
-        path = '/models/athlete-motion.glb';
-        label = 'Athlete Motion (.GLB)';
-      } else if (type === 'ronaldo') {
-        path = '/models/real-footballer.glb';
-        label = 'Realistic Pro (.GLB)';
-      }
+      const path = FOOTBALLER_ANIMATED_GLB;
+      const label = 'Footballer Animated (.GLB)';
 
       loader.load(
         path,
@@ -497,7 +487,7 @@ export function PenaltyShootoutPage() {
         undefined,
         (err) => {
           setIsLoadingModel(false);
-          console.error(`Failed to load striker ${type}:`, err);
+          console.error(`Failed to load striker:`, err);
         }
       );
     },
@@ -505,10 +495,10 @@ export function PenaltyShootoutPage() {
   );
 
   const loadKeeperPreset = useCallback(
-    (type: 'xbot' | 'cartoon') => {
+    () => {
       const loader = new GLTFLoader();
-      const path = type === 'xbot' ? KEEPER_GLB : '/models/cartoon-footballer.glb';
-      const label = type === 'xbot' ? 'Xbot Goalkeeper (.GLB)' : 'Animated Goalkeeper (.GLB)';
+      const path = FOOTBALLER_ANIMATED_GLB;
+      const label = 'Footballer Animated GK (.GLB)';
 
       loader.load(
         path,
@@ -517,17 +507,17 @@ export function PenaltyShootoutPage() {
         },
         undefined,
         (err) => {
-          console.error(`Failed to load keeper ${type}:`, err);
+          console.error(`Failed to load keeper:`, err);
         }
       );
     },
     [applyKeeperModel]
   );
 
-  // Auto-load official Soldier Striker and Xbot Goalkeeper on mount
+  // Auto-load Footballer Animated GLB on mount
   useEffect(() => {
-    loadModelPreset('striker');
-    loadKeeperPreset('xbot');
+    loadModelPreset();
+    loadKeeperPreset();
   }, [loadModelPreset, loadKeeperPreset]);
 
   // File upload handler
@@ -1259,94 +1249,42 @@ export function PenaltyShootoutPage() {
         </div>
       </div>
 
-      {/* 3D Model Quick Selector for Striker and Goalkeeper */}
+      {/* 3D Model Panel: Footballer Animated exclusively */}
       <div className="mt-2 rounded-2xl border border-white/10 bg-[#0E1A16] p-2.5 space-y-2">
         <div className="flex items-center justify-between text-[10px] font-mono-custom">
-          <span className="text-slate-400">STRIKER MODEL (.GLB):</span>
-          <span className="text-yellow-400">Official Presets</span>
+          <span className="text-slate-400">3D MODEL ENGINE:</span>
+          <span className="text-[#35D399] flex items-center gap-1">
+            <Sparkles size={11} className="text-yellow-400" /> Footballer Animated (22 Clips)
+          </span>
         </div>
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={() => loadModelPreset('striker')}
+            onClick={() => {
+              loadModelPreset();
+              loadKeeperPreset();
+            }}
             disabled={isLoadingModel}
-            className={`rounded-xl border p-2 text-left transition-all ${
-              activeModelName.includes('Soldier')
-                ? 'border-[#35D399] bg-[#35D399]/20 text-white ring-1 ring-[#35D399]/40'
-                : 'border-slate-800 bg-black/40 text-slate-300 hover:border-slate-700'
-            }`}
+            className="flex items-center justify-between rounded-xl border border-[#35D399]/40 bg-[#35D399]/15 p-2 text-left text-white shadow-sm transition-all hover:bg-[#35D399]/25"
           >
-            <span className="text-[10px] block font-mono-custom font-bold text-[#35D399]">🎯 Soldier .GLB</span>
-            <span className="text-[9px] text-slate-400 block truncate">Three.js Model</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => loadModelPreset('cartoon')}
-            disabled={isLoadingModel}
-            className={`rounded-xl border p-2 text-left transition-all ${
-              activeModelName.includes('Cartoon')
-                ? 'border-yellow-400 bg-yellow-400/20 text-white ring-1 ring-yellow-400/40'
-                : 'border-slate-800 bg-black/40 text-slate-300 hover:border-slate-700'
-            }`}
-          >
-            <span className="text-[10px] block font-mono-custom font-bold text-yellow-400">⚽ Footballer</span>
-            <span className="text-[9px] text-slate-400 block truncate">Animated Kit</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => loadModelPreset('athlete')}
-            disabled={isLoadingModel}
-            className={`rounded-xl border p-2 text-left transition-all ${
-              activeModelName.includes('Athlete Motion')
-                ? 'border-[#38bdf8] bg-[#38bdf8]/20 text-white ring-1 ring-[#38bdf8]/40'
-                : 'border-slate-800 bg-black/40 text-slate-300 hover:border-slate-700'
-            }`}
-          >
-            <span className="text-[10px] block font-mono-custom font-bold text-[#38bdf8]">🏃 Athlete</span>
-            <span className="text-[9px] text-slate-400 block truncate">Motion Clips</span>
-          </button>
-
-          <label className="cursor-pointer rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-2 text-left hover:bg-yellow-500/20 transition-all flex flex-col justify-center">
-            <span className="text-[10px] block font-mono-custom font-bold text-yellow-400 flex items-center gap-1">
-              <Upload size={11} /> Upload
+            <div>
+              <span className="text-[11px] block font-mono-custom font-bold text-[#35D399]">⚽ Footballer Animated</span>
+              <span className="text-[9px] text-slate-400 block">Striker & Keeper Rig</span>
+            </div>
+            <span className="rounded-full bg-[#35D399]/20 px-2 py-0.5 text-[9px] font-mono-custom font-bold text-[#35D399]">
+              ACTIVE
             </span>
-            <span className="text-[9px] text-slate-400 block truncate">Custom .glb</span>
+          </button>
+
+          <label className="cursor-pointer rounded-xl border border-white/10 bg-black/40 p-2 text-left hover:border-slate-600 transition-all flex items-center justify-between">
+            <div>
+              <span className="text-[11px] block font-mono-custom font-bold text-slate-300 flex items-center gap-1">
+                <Upload size={12} className="text-yellow-400" /> Custom GLB
+              </span>
+              <span className="text-[9px] text-slate-400 block truncate">Import your own .glb</span>
+            </div>
             <input ref={fileInputRef} type="file" accept=".glb,.gltf" onChange={handleFileUpload} className="hidden" />
           </label>
-        </div>
-
-        {/* Goalkeeper Model Switcher */}
-        <div className="pt-1.5 border-t border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-[10px] font-mono-custom text-slate-400">
-            <Shield size={12} className="text-[#38bdf8]" />
-            <span>KEEPER (.GLB):</span>
-          </div>
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              onClick={() => loadKeeperPreset('xbot')}
-              className={`rounded-lg px-2 py-0.5 text-[9px] font-mono-custom font-bold border transition-all ${
-                activeKeeperName.includes('Xbot')
-                  ? 'border-[#38bdf8] bg-[#38bdf8]/20 text-white'
-                  : 'border-slate-800 bg-black/40 text-slate-400 hover:text-white'
-              }`}
-            >
-              🤖 Xbot .GLB
-            </button>
-            <button
-              type="button"
-              onClick={() => loadKeeperPreset('cartoon')}
-              className={`rounded-lg px-2 py-0.5 text-[9px] font-mono-custom font-bold border transition-all ${
-                activeKeeperName.includes('Animated')
-                  ? 'border-[#38bdf8] bg-[#38bdf8]/20 text-white'
-                  : 'border-slate-800 bg-black/40 text-slate-400 hover:text-white'
-              }`}
-            >
-              ⚽ Footballer GK
-            </button>
-          </div>
         </div>
       </div>
 

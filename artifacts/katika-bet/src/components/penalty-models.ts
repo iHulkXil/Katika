@@ -1,3 +1,4 @@
-/** Rigged humanoids. Free three.js examples. Not FIFA likenesses. */
-export const STRIKER_GLB = 'https://threejs.org/examples/models/gltf/Soldier.glb';
-export const KEEPER_GLB = 'https://threejs.org/examples/models/gltf/Xbot.glb';
+/** Footballer Animated rigged model (.glb) with 22 animations for Striker & Goalkeeper */
+export const FOOTBALLER_ANIMATED_GLB = '/models/footballer-animated.glb';
+export const STRIKER_GLB = FOOTBALLER_ANIMATED_GLB;
+export const KEEPER_GLB = FOOTBALLER_ANIMATED_GLB;
