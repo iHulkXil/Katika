@@ -9,6 +9,7 @@ import { useLegend } from '@/components/legend-card';
 import { useToast } from '@/hooks/use-toast';
 import { KatikaLogo } from '@/components/katika-logo';
 import { fireWinConfetti } from '@/lib/confetti';
+import { STRIKER_GLB, KEEPER_GLB } from '@/components/penalty-models';
 import {
   Trophy,
   Swords,
@@ -162,6 +163,8 @@ interface RigController {
   initialHipsY: number;
   initialBottomY: number;
   mixer?: THREE.AnimationMixer;
+  /** -1 if model natively faces -Z (e.g. Soldier, Cartoon), +1 if faces +Z (e.g. Xbot) */
+  facingSign: number;
   actions: {
     idle?: THREE.AnimationAction;
     run?: THREE.AnimationAction;
@@ -259,12 +262,33 @@ function createRigController(root: THREE.Object3D, animations?: THREE.AnimationC
     if (actions.idle) actions.idle.play();
   }
 
+  // Detect native model facing direction (difference between toe/foot and heel in rest orientation)
+  let facingSign = -1; // default to -Z facing (standard three.js examples like Soldier)
+  const leftToe = new THREE.Vector3();
+  const leftHeel = new THREE.Vector3();
+  let foundToe = false;
+  let foundFoot = false;
+  root.traverse((node) => {
+    const n = node.name.toLowerCase();
+    if (n.includes('toe')) {
+      node.getWorldPosition(leftToe);
+      foundToe = true;
+    } else if (n.includes('foot')) {
+      node.getWorldPosition(leftHeel);
+      foundFoot = true;
+    }
+  });
+  if (foundToe && foundFoot) {
+    facingSign = leftToe.z > leftHeel.z ? 1 : -1;
+  }
+
   return {
     bones,
     restRotations,
     initialHipsY: bones.hips ? bones.hips.position.y : 0,
     initialBottomY: bottomY,
     mixer,
+    facingSign,
     actions,
     currentActionName: actions.idle ? 'idle' : undefined,
   };
@@ -380,11 +404,21 @@ export function PenaltyShootoutPage() {
         }
       });
 
+      // First create rig controller and detect native orientation
+      const rig = createRigController(sceneGroup, animations, bottomY);
+      rigRef.current = rig;
+
+      // In Three.js world, the goal is at -Z (z: -7.05).
+      // The striker starts at z: +1.4 and must face towards -Z (the goal).
+      // If a model natively faces -Z (facingSign === -1, e.g. Soldier, Cartoon Footballer),
+      // rotation.y should be 0 to face the goal!
+      // If a model natively faces +Z (facingSign === 1, e.g. Xbot, RPM),
+      // rotation.y should be Math.PI to turn 180 and face the goal!
+      const targetRotationY = rig.facingSign === -1 ? 0 : Math.PI;
+      sceneGroup.rotation.y = targetRotationY;
       sceneGroup.position.set(0, -bottomY, 1.4);
-      sceneGroup.rotation.y = Math.PI; // Face goal
 
       customModelRef.current = sceneGroup;
-      rigRef.current = createRigController(sceneGroup, animations, bottomY);
       setActiveModelName(name);
 
       toast({
@@ -414,11 +448,19 @@ export function PenaltyShootoutPage() {
         }
       });
 
+      // Goalkeeper is positioned at z: -7.05 on the goal line and must face towards +Z (the striker).
+      // If a model natively faces -Z (facingSign === -1, e.g. Soldier, Cartoon Footballer),
+      // rotation.y should be Math.PI to face the penalty spot!
+      // If a model natively faces +Z (facingSign === 1, e.g. Xbot),
+      // rotation.y should be 0 to face the penalty spot!
+      const kRig = createRigController(sceneGroup, animations, bottomY);
+      keeperRigRef.current = kRig;
+
+      const targetKeeperRotationY = kRig.facingSign === -1 ? Math.PI : 0;
+      sceneGroup.rotation.y = targetKeeperRotationY;
       sceneGroup.position.set(0, -bottomY, -7.05);
-      sceneGroup.rotation.y = 0; // Face striker
 
       customKeeperModelRef.current = sceneGroup;
-      keeperRigRef.current = createRigController(sceneGroup, animations, bottomY);
       setActiveKeeperName(name);
 
       toast({
@@ -430,20 +472,20 @@ export function PenaltyShootoutPage() {
   );
 
   const loadModelPreset = useCallback(
-    (type: 'soccer-striker' | 'athlete' | 'ronaldo' | 'striker') => {
+    (type: 'striker' | 'cartoon' | 'athlete' | 'ronaldo') => {
       setIsLoadingModel(true);
       const loader = new GLTFLoader();
-      let path = '/models/cartoon-footballer.glb';
-      let label = 'Cartoon Striker (.GLB)';
-      if (type === 'athlete') {
+      let path = STRIKER_GLB;
+      let label = 'Soldier Striker (.GLB)';
+      if (type === 'cartoon') {
+        path = '/models/cartoon-footballer.glb';
+        label = 'Cartoon Striker (.GLB)';
+      } else if (type === 'athlete') {
         path = '/models/athlete-motion.glb';
         label = 'Athlete Motion (.GLB)';
       } else if (type === 'ronaldo') {
         path = '/models/real-footballer.glb';
         label = 'Realistic Pro (.GLB)';
-      } else if (type === 'striker') {
-        path = '/models/generic-striker.glb';
-        label = 'Generic Striker (.GLB)';
       }
 
       loader.load(
@@ -463,10 +505,10 @@ export function PenaltyShootoutPage() {
   );
 
   const loadKeeperPreset = useCallback(
-    (type: 'cartoon-keeper' | 'generic-keeper') => {
+    (type: 'xbot' | 'cartoon') => {
       const loader = new GLTFLoader();
-      const path = type === 'cartoon-keeper' ? '/models/cartoon-footballer.glb' : '/models/generic-keeper.glb';
-      const label = type === 'cartoon-keeper' ? 'Animated Goalkeeper (.GLB)' : 'Generic Goalkeeper (.GLB)';
+      const path = type === 'xbot' ? KEEPER_GLB : '/models/cartoon-footballer.glb';
+      const label = type === 'xbot' ? 'Xbot Goalkeeper (.GLB)' : 'Animated Goalkeeper (.GLB)';
 
       loader.load(
         path,
@@ -482,10 +524,10 @@ export function PenaltyShootoutPage() {
     [applyKeeperModel]
   );
 
-  // Auto-load high quality footballer and goalkeeper models on mount
+  // Auto-load official Soldier Striker and Xbot Goalkeeper on mount
   useEffect(() => {
-    loadModelPreset('soccer-striker');
-    loadKeeperPreset('cartoon-keeper');
+    loadModelPreset('striker');
+    loadKeeperPreset('xbot');
   }, [loadModelPreset, loadKeeperPreset]);
 
   // File upload handler
@@ -887,42 +929,64 @@ export function PenaltyShootoutPage() {
         compRingMat.color.setHex(0xef4444);
       }
 
-      // 3. Striker Kinematics & Animations
+      // 3. Striker Kinematics & Realistic Footballer Animations
       const strikerModel = customModelRef.current;
       const rig = rigRef.current;
+      const strikerBaseRotY = rig?.facingSign === -1 ? 0 : Math.PI;
 
       if (currentPhase === 'runup') {
-        anim.runup += delta * 1.5;
+        anim.runup += delta * 1.6;
         const runupT = Math.min(1, anim.runup);
+        // Striker runs forward towards the penalty spot (z: 1.4 down to 0.15)
         const zPos = 1.4 - runupT * 1.25;
-        const bounce = Math.abs(Math.sin(runupT * Math.PI * 7)) * 0.08;
+        // Athletic running bounce and lean
+        const bounce = Math.abs(Math.sin(runupT * Math.PI * 8)) * 0.08;
+        const forwardLean = runupT < 0.75 ? 0.12 : -0.08; // Lean into the sprint, then lean back slightly for the shot
 
         if (strikerModel) {
           strikerModel.position.z = zPos;
           strikerModel.position.y = -(rig?.initialBottomY || 0) + bounce;
+          strikerModel.rotation.y = strikerBaseRotY;
+          strikerModel.rotation.x = forwardLean;
         }
 
         if (rig) {
           if (rig.mixer) {
-            switchAction(rig, runupT < 0.7 ? 'run' : 'kick');
+            // Smoothly switch between full run-up sprint and striking kick
+            switchAction(rig, runupT < 0.72 ? 'run' : 'kick');
             rig.mixer.update(delta);
           } else {
             rig.restRotations.forEach((q, bone) => bone.quaternion.copy(q));
             const b = rig.bones;
-            const stride = Math.sin(runupT * Math.PI * 7);
-            b.leftUpLeg?.rotateX(stride * 1.1);
-            b.rightUpLeg?.rotateX(-stride * 1.1);
-            b.leftLeg?.rotateX(Math.max(0, -stride) * 1.4);
-            b.rightLeg?.rotateX(Math.max(0, stride) * 1.4);
-            b.leftArm?.rotateX(-stride * 1.0);
-            b.rightArm?.rotateX(stride * 1.0);
+            if (runupT < 0.72) {
+              const stride = Math.sin(runupT * Math.PI * 8);
+              b.leftUpLeg?.rotateX(stride * 1.15);
+              b.rightUpLeg?.rotateX(-stride * 1.15);
+              b.leftLeg?.rotateX(Math.max(0, -stride) * 1.4);
+              b.rightLeg?.rotateX(Math.max(0, stride) * 1.4);
+              b.leftArm?.rotateX(-stride * 1.1);
+              b.rightArm?.rotateX(stride * 1.1);
+              b.spine?.rotateX(0.1);
+            } else {
+              // Striking follow-through
+              const kickProgress = (runupT - 0.72) / 0.28;
+              b.rightUpLeg?.rotateX(1.4 * kickProgress);
+              b.rightLeg?.rotateX(-0.6 * (1 - kickProgress));
+              b.leftUpLeg?.rotateX(-0.25);
+              b.leftArm?.rotateZ(0.9);
+              b.rightArm?.rotateZ(-0.9);
+              b.spine?.rotateX(-0.15);
+            }
           }
         }
       } else if (currentPhase === 'shot_result' && anim.scored) {
-        // Goal Celebration
-        const hop = Math.max(0, Math.sin(elapsed * 7)) * 0.14;
+        // Goal Celebration (Leaping & pumping arms)
+        const hop = Math.max(0, Math.sin(elapsed * 7)) * 0.16;
         if (strikerModel) {
+          strikerModel.position.z = 0.15;
           strikerModel.position.y = -(rig?.initialBottomY || 0) + hop;
+          strikerModel.rotation.y = strikerBaseRotY;
+          strikerModel.rotation.x = 0;
         }
         if (rig) {
           if (rig.mixer) {
@@ -931,15 +995,19 @@ export function PenaltyShootoutPage() {
           } else {
             rig.restRotations.forEach((q, bone) => bone.quaternion.copy(q));
             const b = rig.bones;
-            b.leftArm?.rotateZ(2.7);
-            b.rightArm?.rotateZ(-2.7);
-            b.spine?.rotateX(-0.25);
+            b.leftArm?.rotateZ(2.8);
+            b.rightArm?.rotateZ(-2.8);
+            b.spine?.rotateX(-0.22);
+            b.head?.rotateX(-0.2);
           }
         }
       } else if (currentPhase === 'shot_result' && !anim.scored) {
-        // Miss Regret
+        // Miss / Save Despair
         if (strikerModel) {
+          strikerModel.position.z = 0.15;
           strikerModel.position.y = -(rig?.initialBottomY || 0);
+          strikerModel.rotation.y = strikerBaseRotY;
+          strikerModel.rotation.x = 0;
         }
         if (rig) {
           if (rig.mixer) {
@@ -952,14 +1020,17 @@ export function PenaltyShootoutPage() {
             b.leftArm?.rotateX(-1.1);
             b.rightArm?.rotateZ(-1.2);
             b.rightArm?.rotateX(-1.1);
-            b.head?.rotateX(0.4);
+            b.head?.rotateX(0.45);
+            b.spine?.rotateX(0.18);
           }
         }
       } else {
-        // Ready Idle Stance with Breathing
+        // Ready Idle Stance with Realistic Breathing and Weight Shift
         const breathe = Math.sin(elapsed * 2.5);
         if (strikerModel) {
           strikerModel.position.set(0, -(rig?.initialBottomY || 0) + breathe * 0.015, 1.4);
+          strikerModel.rotation.y = strikerBaseRotY;
+          strikerModel.rotation.x = 0;
         }
         if (rig) {
           if (rig.mixer) {
@@ -1007,6 +1078,7 @@ export function PenaltyShootoutPage() {
       // 5. Goalkeeper Diving & Animation Motion
       const keeperModel = customKeeperModelRef.current;
       const kRig = keeperRigRef.current;
+      const keeperBaseRotY = kRig?.facingSign === -1 ? Math.PI : 0;
 
       if (currentPhase === 'ball_flight' || currentPhase === 'shot_result') {
         anim.keeperT += delta * 2.4;
@@ -1032,7 +1104,9 @@ export function PenaltyShootoutPage() {
           keeperModel.position.x = diveX;
           keeperModel.position.y = -(kRig?.initialBottomY || 0) + diveLift;
           keeperModel.position.z = -7.05;
-          keeperModel.rotation.z = diveAngle;
+          keeperModel.rotation.y = keeperBaseRotY;
+          // When facing backwards, roll around Z is reversed for correct tilt relative to goal
+          keeperModel.rotation.z = kRig?.facingSign === -1 ? -diveAngle : diveAngle;
         }
 
         if (kRig) {
@@ -1063,7 +1137,7 @@ export function PenaltyShootoutPage() {
 
         if (keeperModel) {
           keeperModel.position.set(0, -(kRig?.initialBottomY || 0) + hop, -7.05);
-          keeperModel.rotation.set(0, 0, 0);
+          keeperModel.rotation.set(0, keeperBaseRotY, 0);
         }
 
         if (kRig) {
@@ -1189,35 +1263,35 @@ export function PenaltyShootoutPage() {
       <div className="mt-2 rounded-2xl border border-white/10 bg-[#0E1A16] p-2.5 space-y-2">
         <div className="flex items-center justify-between text-[10px] font-mono-custom">
           <span className="text-slate-400">STRIKER MODEL (.GLB):</span>
-          <span className="text-yellow-400">Realistic & Animated</span>
+          <span className="text-yellow-400">Official Presets</span>
         </div>
         <div className="grid grid-cols-4 gap-1.5">
           <button
             type="button"
-            onClick={() => loadModelPreset('soccer-striker')}
+            onClick={() => loadModelPreset('striker')}
             disabled={isLoadingModel}
             className={`rounded-xl border p-2 text-left transition-all ${
-              activeModelName.includes('Cartoon Striker')
+              activeModelName.includes('Soldier')
                 ? 'border-[#35D399] bg-[#35D399]/20 text-white ring-1 ring-[#35D399]/40'
                 : 'border-slate-800 bg-black/40 text-slate-300 hover:border-slate-700'
             }`}
           >
-            <span className="text-[10px] block font-mono-custom font-bold text-[#35D399]">⚽ Footballer</span>
-            <span className="text-[9px] text-slate-400 block truncate">Animated GLB</span>
+            <span className="text-[10px] block font-mono-custom font-bold text-[#35D399]">🎯 Soldier .GLB</span>
+            <span className="text-[9px] text-slate-400 block truncate">Three.js Model</span>
           </button>
 
           <button
             type="button"
-            onClick={() => loadModelPreset('ronaldo')}
+            onClick={() => loadModelPreset('cartoon')}
             disabled={isLoadingModel}
             className={`rounded-xl border p-2 text-left transition-all ${
-              activeModelName.includes('Realistic Pro')
+              activeModelName.includes('Cartoon')
                 ? 'border-yellow-400 bg-yellow-400/20 text-white ring-1 ring-yellow-400/40'
                 : 'border-slate-800 bg-black/40 text-slate-300 hover:border-slate-700'
             }`}
           >
-            <span className="text-[10px] block font-mono-custom font-bold text-yellow-400">⭐ Realistic Pro</span>
-            <span className="text-[9px] text-slate-400 block truncate">Pro Rig</span>
+            <span className="text-[10px] block font-mono-custom font-bold text-yellow-400">⚽ Footballer</span>
+            <span className="text-[9px] text-slate-400 block truncate">Animated Kit</span>
           </button>
 
           <button
@@ -1252,25 +1326,25 @@ export function PenaltyShootoutPage() {
           <div className="flex gap-1.5">
             <button
               type="button"
-              onClick={() => loadKeeperPreset('cartoon-keeper')}
+              onClick={() => loadKeeperPreset('xbot')}
+              className={`rounded-lg px-2 py-0.5 text-[9px] font-mono-custom font-bold border transition-all ${
+                activeKeeperName.includes('Xbot')
+                  ? 'border-[#38bdf8] bg-[#38bdf8]/20 text-white'
+                  : 'border-slate-800 bg-black/40 text-slate-400 hover:text-white'
+              }`}
+            >
+              🤖 Xbot .GLB
+            </button>
+            <button
+              type="button"
+              onClick={() => loadKeeperPreset('cartoon')}
               className={`rounded-lg px-2 py-0.5 text-[9px] font-mono-custom font-bold border transition-all ${
                 activeKeeperName.includes('Animated')
                   ? 'border-[#38bdf8] bg-[#38bdf8]/20 text-white'
                   : 'border-slate-800 bg-black/40 text-slate-400 hover:text-white'
               }`}
             >
-              ⚽ Pro Animated GK
-            </button>
-            <button
-              type="button"
-              onClick={() => loadKeeperPreset('generic-keeper')}
-              className={`rounded-lg px-2 py-0.5 text-[9px] font-mono-custom font-bold border transition-all ${
-                activeKeeperName.includes('Generic')
-                  ? 'border-[#38bdf8] bg-[#38bdf8]/20 text-white'
-                  : 'border-slate-800 bg-black/40 text-slate-400 hover:text-white'
-              }`}
-            >
-              🧍 Generic GK
+              ⚽ Footballer GK
             </button>
           </div>
         </div>
