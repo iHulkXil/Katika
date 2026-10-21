@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useServerSession } from './server-session';
 import { useLegend } from './legend-card';
+import { useBallEconomy } from '@/hooks/use-ball-economy';
+import { BallGateModal } from '@/components/ball-gate-modal';
 import {
   CircleDollarSign,
   Gamepad2,
@@ -21,6 +23,8 @@ export function PvPLobby() {
   const [, setLocation] = useLocation();
   const { serverUser } = useServerSession();
   const { legend } = useLegend();
+  const { state: ballState, consumeBall } = useBallEconomy();
+  const [ballModalOpen, setBallModalOpen] = useState(false);
 
   const [selectedGame, setSelectedGame] = useState<'penalty' | 'pool' | 'ludo'>('penalty');
   const [mode, setMode] = useState<'queue' | 'challenge'>('queue');
@@ -50,11 +54,19 @@ export function PvPLobby() {
   };
 
   const handleStart = async () => {
+    // Check 1 $BALL cost for PvP entry
+    if (ballState.balls < 1) {
+      setBallModalOpen(true);
+      return;
+    }
+
     if (selectedGame === 'penalty') {
       // Launch 3v3 Penalty Shootout Arena directly
       setLocation(`/pvp/penalty?stake=${stake}&mode=${mode}`);
       return;
     }
+
+    void consumeBall(`PvP ${selectedGame}`);
 
     if (!serverUser) {
       setError('Please connect your wallet first');
@@ -357,6 +369,13 @@ export function PvPLobby() {
           )}
         </div>
       </div>
+
+      <BallGateModal
+        isOpen={ballModalOpen}
+        onClose={() => setBallModalOpen(false)}
+        gameTitle="PvP Arena"
+        ballsMinedToday={ballState.ballsMinedToday}
+      />
     </div>
   );
 }

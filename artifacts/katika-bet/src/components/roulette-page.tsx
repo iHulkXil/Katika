@@ -5,6 +5,8 @@ import { WalletAuthButton } from '@/components/wallet-auth';
 import { RolloverStrip } from '@/components/rollover-strip';
 import { fireWinConfetti } from '@/lib/confetti';
 import { playTableTone } from '@/lib/table-sound';
+import { useBallEconomy } from '@/hooks/use-ball-economy';
+import { BallGateModal } from '@/components/ball-gate-modal';
 import { RefreshCw } from 'lucide-react';
 
 type Bet = 'red' | 'black' | 'odd' | 'even' | 'number';
@@ -113,9 +115,18 @@ export function RoulettePage() {
   const [result, setResult] = useState<{ roll: number; color: string; won: boolean; payout: number } | null>(null);
   const [ribbon, setRibbon] = useState<number[]>([14, 31, 9, 22, 0, 7]);
 
+  const { state: ballState, consumeBall } = useBallEconomy();
+  const [ballModalOpen, setBallModalOpen] = useState(false);
+
   const balance = Number(serverUser?.ktk ?? serverUser?.demoCredits ?? 0);
 
   const play = async () => {
+    if (ballState.balls < 1) {
+      setBallModalOpen(true);
+      return;
+    }
+    void consumeBall('European Roulette');
+
     setError(null);
     setBusy(true);
     playTableTone('tick');
@@ -371,6 +382,13 @@ export function RoulettePage() {
       )}
 
       {error && <p className="mt-2.5 text-center text-xs text-red-400 font-semibold">{error}</p>}
+
+      <BallGateModal
+        isOpen={ballModalOpen}
+        onClose={() => setBallModalOpen(false)}
+        gameTitle="European Roulette"
+        ballsMinedToday={ballState.ballsMinedToday}
+      />
     </div>
   );
 }

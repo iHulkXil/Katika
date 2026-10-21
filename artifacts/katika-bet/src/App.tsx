@@ -11,7 +11,7 @@ import { CoinFlipPage } from '@/components/coinflip-page';
 import { MinesPage } from '@/components/mines-page';
 import { RoulettePage } from '@/components/roulette-page';
 import { PoolGamePage } from '@/components/pool-game';
-import { TelegramTapper } from '@/components/telegram-tapper';
+import { MiningStation } from '@/components/mining-station';
 import { PlayPage } from '@/components/play-page';
 import { LegendPage } from '@/components/legend-page';
 import { LeaderboardPage } from '@/components/leaderboard-page';
@@ -77,7 +77,7 @@ function GameTile({ game }: { game: Game }) {
 }
 
 function Home() {
-  return <TelegramTapper defaultTab="tap" />;
+  return <MiningStation defaultTab="mine" />;
 }
 
 function Games() {
@@ -135,9 +135,10 @@ function Router() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/dashboard" component={Home} />
-        <Route path="/tap">{() => <TelegramTapper defaultTab="tap" />}</Route>
-        <Route path="/swap">{() => <TelegramTapper defaultTab="swap" />}</Route>
-        <Route path="/legend">{() => <TelegramTapper defaultTab="legend" />}</Route>
+        <Route path="/mine">{() => <MiningStation defaultTab="mine" />}</Route>
+        <Route path="/tap">{() => <MiningStation defaultTab="mine" />}</Route>
+        <Route path="/swap">{() => <MiningStation defaultTab="upgrades" />}</Route>
+        <Route path="/legend">{() => <MiningStation defaultTab="legend" />}</Route>
         <Route path="/play" component={PlayPage} />
 
         {/* Redirects for legacy routes /clash and /club */}

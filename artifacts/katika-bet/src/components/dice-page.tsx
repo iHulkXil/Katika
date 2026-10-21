@@ -5,6 +5,8 @@ import { WalletAuthButton } from '@/components/wallet-auth';
 import { RolloverStrip } from '@/components/rollover-strip';
 import { fireWinConfetti } from '@/lib/confetti';
 import { playTableTone } from '@/lib/table-sound';
+import { useBallEconomy } from '@/hooks/use-ball-economy';
+import { BallGateModal } from '@/components/ball-gate-modal';
 import { RefreshCw, SlidersHorizontal, ArrowDown, ArrowUp } from 'lucide-react';
 
 type DiceResult = {
@@ -226,6 +228,9 @@ export function DicePage() {
   const stopRef = useRef(false);
   const stats = useMemo(() => previewStats(target, prediction), [target, prediction]);
 
+  const { state: ballState, consumeBall } = useBallEconomy();
+  const [ballModalOpen, setBallModalOpen] = useState(false);
+
   const balance = Number(serverUser?.ktk ?? serverUser?.demoCredits ?? 0);
 
   const playOnce = async () => {
@@ -247,6 +252,12 @@ export function DicePage() {
   };
 
   const play = async () => {
+    if (ballState.balls < 1) {
+      setBallModalOpen(true);
+      return;
+    }
+    void consumeBall('Classic Dice');
+
     setError(null);
     setBusy(true);
     const tick = setInterval(() => setDisplay(Math.floor(Math.random() * 100) + 1), 50);
@@ -517,6 +528,13 @@ export function DicePage() {
       )}
 
       {error && <p className="mt-2.5 text-center text-xs text-red-400 font-semibold">{error}</p>}
+
+      <BallGateModal
+        isOpen={ballModalOpen}
+        onClose={() => setBallModalOpen(false)}
+        gameTitle="Classic Dice"
+        ballsMinedToday={ballState.ballsMinedToday}
+      />
     </div>
   );
 }

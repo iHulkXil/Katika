@@ -3,6 +3,8 @@ import { useLocation, useRoute, Link } from 'wouter';
 import { useServerSession } from '@/components/server-session';
 import { useLegend } from '@/components/legend-card';
 import { useToast } from '@/hooks/use-toast';
+import { useBallEconomy } from '@/hooks/use-ball-economy';
+import { BallGateModal } from '@/components/ball-gate-modal';
 import {
   Trophy,
   Swords,
@@ -282,6 +284,8 @@ export function PoolGamePage() {
   const { serverUser, refresh: refreshUser } = useServerSession();
   const { legend } = useLegend();
   const { toast } = useToast();
+  const { state: ballState, consumeBall } = useBallEconomy();
+  const [ballModalOpen, setBallModalOpen] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -433,6 +437,17 @@ export function PoolGamePage() {
   // User Fires Shot
   const handleShoot = () => {
     if (ballsMoving || winner || isShooting) return;
+    if (shotCount === 0) {
+      if (ballState.balls < 1) {
+        setBallModalOpen(true);
+        return;
+      }
+      void consumeBall('8-Ball Pool');
+      toast({
+        title: '⚽ 1 $BALL Consumed',
+        description: `Break off! (${ballState.balls - 1} $BALL remaining)`,
+      });
+    }
     fireShot(aimAngle, shotPower);
   };
 
@@ -1314,6 +1329,13 @@ export function PoolGamePage() {
           </div>
         </Link>
       </div>
+
+      <BallGateModal
+        isOpen={ballModalOpen}
+        onClose={() => setBallModalOpen(false)}
+        gameTitle="8-Ball Pool Arena"
+        ballsMinedToday={ballState.ballsMinedToday}
+      />
     </div>
   );
 }

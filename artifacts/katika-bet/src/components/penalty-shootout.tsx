@@ -10,9 +10,10 @@ import { useToast } from '@/hooks/use-toast';
 import { KatikaLogo } from '@/components/katika-logo';
 import { fireWinConfetti } from '@/lib/confetti';
 import { FOOTBALLER_ANIMATED_GLB } from '@/components/penalty-models';
+import { useBallEconomy } from '@/hooks/use-ball-economy';
+import { BallGateModal } from '@/components/ball-gate-modal';
 import {
   Trophy,
-  Swords,
   RotateCcw,
   Sparkles,
   Zap,
@@ -27,17 +28,21 @@ import {
   ChevronRight,
   Flame,
   Target,
-  Upload,
-  Layers,
   ArrowRight,
+  Gauge,
+  Crosshair,
+  Camera,
+  Coins,
 } from 'lucide-react';
 
 // =============================================================================
-// PROCEDURAL AUDIO SYNTHESIZER
+// AAA PROCEDURAL STADIUM AUDIO SYNTHESIZER (WEB AUDIO API)
 // =============================================================================
-class PenaltyAudio {
+class StadiumAudioEngine {
   private ctx: AudioContext | null = null;
   public enabled = true;
+  private crowdNode: AudioBufferSourceNode | null = null;
+  private crowdGain: GainNode | null = null;
 
   private init() {
     if (!this.ctx && typeof window !== 'undefined') {
@@ -49,43 +54,118 @@ class PenaltyAudio {
     }
   }
 
+  startAmbience() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx || this.crowdNode) return;
+    try {
+      // Procedural stadium crowd roar generator (pink noise filtered)
+      const bufferSize = this.ctx.sampleRate * 3;
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      let b0 = 0, b1 = 0, b2 = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        data[i] = (b0 + b1 + b2) * 0.08;
+      }
+
+      this.crowdNode = this.ctx.createBufferSource();
+      this.crowdNode.buffer = buffer;
+      this.crowdNode.loop = true;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(450, this.ctx.currentTime);
+
+      this.crowdGain = this.ctx.createGain();
+      this.crowdGain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+
+      this.crowdNode.connect(filter);
+      filter.connect(this.crowdGain);
+      this.crowdGain.connect(this.ctx.destination);
+      this.crowdNode.start();
+    } catch {}
+  }
+
+  stopAmbience() {
+    if (this.crowdNode) {
+      try {
+        this.crowdNode.stop();
+        this.crowdNode.disconnect();
+      } catch {}
+      this.crowdNode = null;
+    }
+  }
+
   playWhistle() {
     if (!this.enabled) return;
     this.init();
     if (!this.ctx) return;
     try {
       const t = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
+      // High-pitched dual referee whistle trill
+      const osc1 = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(2600, t);
-      osc.frequency.setValueAtTime(2900, t + 0.08);
-      gain.gain.setValueAtTime(0.18, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-      osc.connect(gain);
+
+      osc1.type = 'sine';
+      osc2.type = 'sine';
+      osc1.frequency.setValueAtTime(2600, t);
+      osc1.frequency.setValueAtTime(2950, t + 0.07);
+      osc2.frequency.setValueAtTime(2780, t);
+      osc2.frequency.setValueAtTime(3120, t + 0.07);
+
+      gain.gain.setValueAtTime(0.22, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
       gain.connect(this.ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.35);
+
+      osc1.start(t);
+      osc2.start(t);
+      osc1.stop(t + 0.38);
+      osc2.stop(t + 0.38);
     } catch {}
   }
 
-  playKick(force = 1) {
+  playKick(power = 100) {
     if (!this.enabled) return;
     this.init();
     if (!this.ctx) return;
     try {
       const t = this.ctx.currentTime;
+      // Heavy leather football impact: deep boom + transient snap
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(120, t);
-      osc.frequency.exponentialRampToValueAtTime(35, t + 0.16);
-      gain.gain.setValueAtTime(0.3 * force, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+      osc.frequency.setValueAtTime(145, t);
+      osc.frequency.exponentialRampToValueAtTime(30, t + 0.18);
+
+      const amp = Math.min(0.5, 0.25 + (power / 120) * 0.2);
+      gain.gain.setValueAtTime(amp, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+
       osc.connect(gain);
       gain.connect(this.ctx.destination);
       osc.start(t);
-      osc.stop(t + 0.16);
+      osc.stop(t + 0.2);
+
+      // Grass brush noise snap
+      const snap = this.ctx.createOscillator();
+      const snapGain = this.ctx.createGain();
+      snap.type = 'sawtooth';
+      snap.frequency.setValueAtTime(320, t);
+      snap.frequency.exponentialRampToValueAtTime(60, t + 0.08);
+      snapGain.gain.setValueAtTime(0.12, t);
+      snapGain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      snap.connect(snapGain);
+      snapGain.connect(this.ctx.destination);
+      snap.start(t);
+      snap.stop(t + 0.08);
     } catch {}
   }
 
@@ -95,17 +175,32 @@ class PenaltyAudio {
     if (!this.ctx) return;
     try {
       const t = this.ctx.currentTime;
-      [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+      // Net ripple thud
+      const netOsc = this.ctx.createOscillator();
+      const netGain = this.ctx.createGain();
+      netOsc.type = 'sine';
+      netOsc.frequency.setValueAtTime(90, t);
+      netOsc.frequency.exponentialRampToValueAtTime(25, t + 0.25);
+      netGain.gain.setValueAtTime(0.3, t);
+      netGain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      netOsc.connect(netGain);
+      netGain.connect(this.ctx.destination);
+      netOsc.start(t);
+      netOsc.stop(t + 0.25);
+
+      // Stadium eruption fanfare chord
+      const chords = [523.25, 659.25, 783.99, 1046.5];
+      chords.forEach((freq, idx) => {
         const osc = this.ctx!.createOscillator();
         const gain = this.ctx!.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, t + idx * 0.05);
-        gain.gain.setValueAtTime(0.12, t + idx * 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, t + 0.05 + idx * 0.03);
+        gain.gain.setValueAtTime(0.08, t + 0.05 + idx * 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
         osc.connect(gain);
         gain.connect(this.ctx!.destination);
-        osc.start(t + idx * 0.05);
-        osc.stop(t + 0.35);
+        osc.start(t + 0.05 + idx * 0.03);
+        osc.stop(t + 0.55);
       });
     } catch {}
   }
@@ -116,199 +211,89 @@ class PenaltyAudio {
     if (!this.ctx) return;
     try {
       const t = this.ctx.currentTime;
+      // Leather glove punch deflection
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(140, t);
-      osc.frequency.exponentialRampToValueAtTime(40, t + 0.22);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(160, t);
+      osc.frequency.exponentialRampToValueAtTime(45, t + 0.15);
       gain.gain.setValueAtTime(0.25, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
       osc.connect(gain);
       gain.connect(this.ctx.destination);
       osc.start(t);
-      osc.stop(t + 0.22);
+      osc.stop(t + 0.15);
+    } catch {}
+  }
+
+  playWoodwork() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    try {
+      const t = this.ctx.currentTime;
+      // Metallic post clang
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1850, t);
+      osc.frequency.exponentialRampToValueAtTime(920, t + 0.4);
+      gain.gain.setValueAtTime(0.28, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.45);
     } catch {}
   }
 }
 
-const audio = new PenaltyAudio();
+const audio = new StadiumAudioEngine();
 
 // =============================================================================
-// TYPES
+// GAMEPLAY ENGINE TYPES & CONTRACTS
 // =============================================================================
 export type ShotDirection = 'left' | 'centre' | 'right';
 export type DiveDirection = 'left' | 'centre' | 'right';
+export type ShotHeight = 'low' | 'mid' | 'high';
 
-interface HumanoidBones {
-  hips?: THREE.Bone;
-  spine?: THREE.Bone;
-  chest?: THREE.Bone;
-  neck?: THREE.Bone;
-  head?: THREE.Bone;
-  leftUpLeg?: THREE.Bone;
-  leftLeg?: THREE.Bone;
-  leftFoot?: THREE.Bone;
-  rightUpLeg?: THREE.Bone;
-  rightLeg?: THREE.Bone;
-  rightFoot?: THREE.Bone;
-  leftArm?: THREE.Bone;
-  leftForeArm?: THREE.Bone;
-  rightArm?: THREE.Bone;
-  rightForeArm?: THREE.Bone;
-}
-
-interface RigController {
-  bones: HumanoidBones;
-  restRotations: Map<THREE.Bone, THREE.Quaternion>;
-  initialHipsY: number;
-  initialBottomY: number;
-  mixer?: THREE.AnimationMixer;
-  /** -1 if model natively faces -Z (e.g. Soldier, Cartoon), +1 if faces +Z (e.g. Xbot) */
-  facingSign: number;
-  actions: {
-    idle?: THREE.AnimationAction;
-    run?: THREE.AnimationAction;
-    kick?: THREE.AnimationAction;
-    celebrate?: THREE.AnimationAction;
-    sad?: THREE.AnimationAction;
-    dive?: THREE.AnimationAction;
-    catch?: THREE.AnimationAction;
-    miss?: THREE.AnimationAction;
-  };
+interface CharacterController {
+  root: THREE.Group;
+  mixer: THREE.AnimationMixer;
+  actions: Record<string, THREE.AnimationAction>;
   currentActionName?: string;
+  initialBottomY: number;
 }
 
-function extractHumanoidBones(root: THREE.Object3D): HumanoidBones {
-  const bones: HumanoidBones = {};
-  root.traverse((child) => {
-    if ((child as THREE.Bone).isBone) {
-      const name = child.name.toLowerCase().replace(/[:_]/g, '');
-      if (name.includes('hips') || name.includes('pelvis')) {
-        bones.hips = child as THREE.Bone;
-      } else if (name.includes('leftforearm') || name.includes('forearml') || name.includes('leftlowerarm')) {
-        bones.leftForeArm = child as THREE.Bone;
-      } else if (name.includes('rightforearm') || name.includes('forearmr') || name.includes('rightlowerarm')) {
-        bones.rightForeArm = child as THREE.Bone;
-      } else if (name.includes('leftarm') || name.includes('arml') || name.includes('leftupperarm')) {
-        bones.leftArm = child as THREE.Bone;
-      } else if (name.includes('rightarm') || name.includes('armr') || name.includes('rightupperarm')) {
-        bones.rightArm = child as THREE.Bone;
-      } else if (name.includes('leftfoot') || name.includes('footl') || name.includes('lefttoe')) {
-        bones.leftFoot = child as THREE.Bone;
-      } else if (name.includes('rightfoot') || name.includes('footr') || name.includes('righttoe')) {
-        bones.rightFoot = child as THREE.Bone;
-      } else if (name.includes('leftupleg') || name.includes('leftthigh') || name.includes('uplegl')) {
-        bones.leftUpLeg = child as THREE.Bone;
-      } else if (name.includes('rightupleg') || name.includes('rightthigh') || name.includes('uplegr')) {
-        bones.rightUpLeg = child as THREE.Bone;
-      } else if (name.includes('leftleg') || name.includes('leftcalf') || name.includes('legl')) {
-        bones.leftLeg = child as THREE.Bone;
-      } else if (name.includes('rightleg') || name.includes('rightcalf') || name.includes('legr')) {
-        bones.rightLeg = child as THREE.Bone;
-      } else if (name.includes('spine1') || name.includes('spine2') || name.includes('chest')) {
-        bones.chest = child as THREE.Bone;
-      } else if (name.includes('spine')) {
-        bones.spine = child as THREE.Bone;
-      } else if (name.includes('neck')) {
-        bones.neck = child as THREE.Bone;
-      } else if (name.includes('head') && !name.includes('top')) {
-        bones.head = child as THREE.Bone;
-      }
-    }
-  });
-  return bones;
-}
+function switchCharacterAction(
+  ctrl: CharacterController | null,
+  targetName: string,
+  crossfadeDuration = 0.22,
+  clampWhenFinished = false
+) {
+  if (!ctrl) return;
+  if (ctrl.currentActionName === targetName) return;
+  const nextAction = ctrl.actions[targetName] || ctrl.actions.Idle || ctrl.actions.idle;
+  if (!nextAction) return;
 
-function createRigController(root: THREE.Object3D, animations?: THREE.AnimationClip[], bottomY = 0): RigController {
-  const bones = extractHumanoidBones(root);
-  const restRotations = new Map<THREE.Bone, THREE.Quaternion>();
-  root.traverse((child) => {
-    if ((child as THREE.Bone).isBone) {
-      restRotations.set(child as THREE.Bone, child.quaternion.clone());
-    }
-  });
-
-  let mixer: THREE.AnimationMixer | undefined;
-  const actions: RigController['actions'] = {};
-
-  if (animations && animations.length > 0) {
-    mixer = new THREE.AnimationMixer(root);
-    for (const clip of animations) {
-      const name = clip.name.toLowerCase();
-      if (!actions.idle && (name.includes('idle') || name.includes('ready') || name.includes('stand'))) {
-        actions.idle = mixer.clipAction(clip);
-      } else if (!actions.run && (name.includes('run') || name.includes('sprint') || name.includes('walk'))) {
-        actions.run = mixer.clipAction(clip);
-      } else if (!actions.kick && (name.includes('kick') || name.includes('shoot') || name.includes('strike') || name.includes('pass'))) {
-        actions.kick = mixer.clipAction(clip);
-      } else if (!actions.celebrate && (name.includes('celebrat') || name.includes('dance') || name.includes('agree') || name.includes('win') || name.includes('bicycle'))) {
-        actions.celebrate = mixer.clipAction(clip);
-      } else if (!actions.sad && (name.includes('sad') || name.includes('headshake') || name.includes('lose') || name.includes('fallen') || name.includes('stumble') || name.includes('gk_miss'))) {
-        actions.sad = mixer.clipAction(clip);
-      } else if (!actions.dive && (name.includes('dive') || name.includes('gk_dive') || name.includes('tackle'))) {
-        actions.dive = mixer.clipAction(clip);
-      } else if (!actions.catch && (name.includes('catch') || name.includes('gk_catch') || name.includes('receive'))) {
-        actions.catch = mixer.clipAction(clip);
-      } else if (!actions.miss && (name.includes('miss') || name.includes('gk_miss') || name.includes('fall'))) {
-        actions.miss = mixer.clipAction(clip);
-      }
-    }
-
-    if (!actions.idle && animations[0]) actions.idle = mixer.clipAction(animations[0]);
-    if (!actions.run && animations[1]) actions.run = mixer.clipAction(animations[1]);
-    if (!actions.kick && animations[2]) actions.kick = mixer.clipAction(animations[2]);
-    if (!actions.celebrate && animations[3]) actions.celebrate = mixer.clipAction(animations[3]);
-
-    if (actions.idle) actions.idle.play();
+  const currentAction = ctrl.currentActionName ? ctrl.actions[ctrl.currentActionName] : undefined;
+  if (currentAction && currentAction !== nextAction) {
+    currentAction.fadeOut(crossfadeDuration);
   }
 
-  // Detect native model facing direction (difference between toe/foot and heel in rest orientation)
-  let facingSign = -1; // default to -Z facing (standard three.js examples like Soldier)
-  const leftToe = new THREE.Vector3();
-  const leftHeel = new THREE.Vector3();
-  let foundToe = false;
-  let foundFoot = false;
-  root.traverse((node) => {
-    const n = node.name.toLowerCase();
-    if (n.includes('toe')) {
-      node.getWorldPosition(leftToe);
-      foundToe = true;
-    } else if (n.includes('foot')) {
-      node.getWorldPosition(leftHeel);
-      foundFoot = true;
-    }
-  });
-  if (foundToe && foundFoot) {
-    facingSign = leftToe.z > leftHeel.z ? 1 : -1;
+  nextAction.reset();
+  if (clampWhenFinished) {
+    nextAction.clampWhenFinished = true;
+    nextAction.loop = THREE.LoopOnce;
+  } else {
+    nextAction.loop = THREE.LoopRepeat;
   }
-
-  return {
-    bones,
-    restRotations,
-    initialHipsY: bones.hips ? bones.hips.position.y : 0,
-    initialBottomY: bottomY,
-    mixer,
-    facingSign,
-    actions,
-    currentActionName: actions.idle ? 'idle' : undefined,
-  };
-}
-
-function switchAction(rig: RigController, targetName: 'idle' | 'run' | 'kick' | 'celebrate' | 'sad' | 'dive' | 'catch' | 'miss') {
-  if (!rig.mixer || rig.currentActionName === targetName) return;
-  const targetAction = rig.actions[targetName] || rig.actions.idle;
-  if (!targetAction) return;
-
-  const currentAction = rig.currentActionName ? rig.actions[rig.currentActionName as keyof typeof rig.actions] : undefined;
-  if (currentAction && currentAction !== targetAction) {
-    currentAction.fadeOut(0.2);
-  }
-  targetAction.reset().fadeIn(0.2).play();
-  rig.currentActionName = targetName;
+  nextAction.fadeIn(crossfadeDuration).play();
+  ctrl.currentActionName = targetName;
 }
 
 // =============================================================================
-// MAIN COMPONENT
+// MAIN COMPONENT: AAA PENALTY SHOOTOUT ARENA
 // =============================================================================
 export function PenaltyShootoutPage() {
   const [, setLocation] = useLocation();
@@ -316,28 +301,37 @@ export function PenaltyShootoutPage() {
   const { serverUser, reloadSession } = useServerSession();
   const { legend } = useLegend();
   const { toast } = useToast();
+  const { state: ballState, consumeBall } = useBallEconomy();
+  const [ballModalOpen, setBallModalOpen] = useState(false);
+  const matchBallConsumedRef = useRef(false);
 
   // Settings & Bankroll
   const [stake, setStake] = useState<number>(10);
   const [soundOn, setSoundOn] = useState<boolean>(true);
+  const [cameraMode, setCameraMode] = useState<'broadcast' | 'action' | 'keeper'>('broadcast');
 
-  // Model & Asset Selection
-  const [activeModelName, setActiveModelName] = useState<string>('Footballer Animated (.GLB)');
-  const [isLoadingModel, setIsLoadingModel] = useState<boolean>(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Match Series (3 Rounds)
+  // Match Series (3 Rounds - Frozen in PENALTY_ENGINE.md)
   const [round, setRound] = useState<number>(1);
   const [userScore, setUserScore] = useState<number>(0);
   const [aiScore, setAiScore] = useState<number>(0);
   const [userShots, setUserShots] = useState<(boolean | null)[]>([null, null, null]);
   const [aiShots, setAiShots] = useState<(boolean | null)[]>([null, null, null]);
 
-  // Game Phases
-  // 'aiming' -> 'runup' -> 'ball_flight' -> 'shot_result' -> 'game_over'
+  // Shot Height / Trajectory
+  const [shotHeight, setShotHeight] = useState<ShotHeight>('mid');
+  const [selectedDirection, setSelectedDirection] = useState<ShotDirection>('centre');
+
+  // Interactive Power & Composure Lock
+  const [aimProgress, setAimProgress] = useState<number>(50);
+  const [isPowerCharging, setIsPowerCharging] = useState<boolean>(false);
+  const [lockedPower, setLockedPower] = useState<number>(95);
+
+  // Phases: 'aiming' -> 'runup' -> 'ball_flight' -> 'shot_result' -> 'game_over'
   const [phase, setPhase] = useState<'aiming' | 'runup' | 'ball_flight' | 'shot_result' | 'game_over'>('aiming');
-  const [userTarget, setUserTarget] = useState<ShotDirection | null>(null);
   const [bannerNotice, setBannerNotice] = useState<string>('');
+  const [lastShotSpeed, setLastShotSpeed] = useState<number | null>(null);
+
+  // Settlement
   const [isSettling, setIsSettling] = useState<boolean>(false);
   const [settlementReceipt, setSettlementReceipt] = useState<{
     settled: boolean;
@@ -346,34 +340,43 @@ export function PenaltyShootoutPage() {
     result?: string;
   } | null>(null);
 
-  // Three.js Canvas Refs
+  // Three.js References
   const containerRef = useRef<HTMLDivElement>(null);
-  const customModelRef = useRef<THREE.Group | null>(null);
-  const rigRef = useRef<RigController | null>(null);
-  const customKeeperModelRef = useRef<THREE.Group | null>(null);
-  const keeperRigRef = useRef<RigController | null>(null);
-  const [activeKeeperName, setActiveKeeperName] = useState<string>('Footballer Animated GK (.GLB)');
+  const strikerCtrlRef = useRef<CharacterController | null>(null);
+  const keeperCtrlRef = useRef<CharacterController | null>(null);
 
-  // Shared Animation State (Ref avoids re-render loops)
+  // Shared Animation State (Zero GC per frame)
   const animRef = useRef({
     runup: 0,
     ballT: 0,
     keeperT: 0,
     shotDir: 'centre' as ShotDirection,
     diveDir: 'centre' as DiveDirection,
+    shotHeight: 'mid' as ShotHeight,
     scored: false,
-    powerKmH: 98,
-    composureRadius: 24,
-    netRipple: 0,
+    powerKmH: 102,
+    composureRadius: 18,
+    netWave: 0,
+    cameraLerp: 0,
   });
 
-  // Keep state synced in refs for the 60fps render loop
   const phaseRef = useRef(phase);
   useEffect(() => {
     phaseRef.current = phase;
   }, [phase]);
 
-  // URL query parameter for stake
+  const soundOnRef = useRef(soundOn);
+  useEffect(() => {
+    soundOnRef.current = soundOn;
+    audio.enabled = soundOn;
+    if (soundOn) {
+      audio.startAmbience();
+    } else {
+      audio.stopAmbience();
+    }
+  }, [soundOn]);
+
+  // URL stake param
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const search = new URLSearchParams(window.location.search);
@@ -383,170 +386,7 @@ export function PenaltyShootoutPage() {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // MODEL APPLICATION (PERSISTENT & NORMALIZED)
-  // ---------------------------------------------------------------------------
-  const applyModel = useCallback(
-    (sceneGroup: THREE.Group, name: string, animations?: THREE.AnimationClip[]) => {
-      const bbox = new THREE.Box3().setFromObject(sceneGroup);
-      const size = new THREE.Vector3();
-      bbox.getSize(size);
-      const targetHeight = 1.82;
-      const scale = size.y > 0.05 ? targetHeight / size.y : 1;
-      sceneGroup.scale.set(scale, scale, scale);
-
-      bbox.setFromObject(sceneGroup);
-      const bottomY = bbox.min.y;
-
-      sceneGroup.traverse((child) => {
-        if ((child as THREE.Mesh).isMesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-        }
-      });
-
-      // First create rig controller and detect native orientation
-      const rig = createRigController(sceneGroup, animations, bottomY);
-      rigRef.current = rig;
-
-      // In Three.js world, the goal is at -Z (z: -7.05).
-      // The striker starts at z: +1.4 and must face towards -Z (the goal).
-      // If a model natively faces -Z (facingSign === -1, e.g. Soldier, Cartoon Footballer),
-      // rotation.y should be 0 to face the goal!
-      // If a model natively faces +Z (facingSign === 1, e.g. Xbot, RPM),
-      // rotation.y should be Math.PI to turn 180 and face the goal!
-      const targetRotationY = rig.facingSign === -1 ? 0 : Math.PI;
-      sceneGroup.rotation.y = targetRotationY;
-      sceneGroup.position.set(0, -bottomY, 1.4);
-
-      customModelRef.current = sceneGroup;
-      setActiveModelName(name);
-
-      toast({
-        title: 'Striker Model Active',
-        description: `${name} calibrated on penalty spot!`,
-      });
-    },
-    [toast]
-  );
-
-  const applyKeeperModel = useCallback(
-    (sceneGroup: THREE.Group, name: string, animations?: THREE.AnimationClip[]) => {
-      const bbox = new THREE.Box3().setFromObject(sceneGroup);
-      const size = new THREE.Vector3();
-      bbox.getSize(size);
-      const targetHeight = 1.88;
-      const scale = size.y > 0.05 ? targetHeight / size.y : 1;
-      sceneGroup.scale.set(scale, scale, scale);
-
-      bbox.setFromObject(sceneGroup);
-      const bottomY = bbox.min.y;
-
-      sceneGroup.traverse((child) => {
-        if ((child as THREE.Mesh).isMesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-        }
-      });
-
-      // Goalkeeper is positioned at z: -7.05 on the goal line and must face towards +Z (the striker).
-      // If a model natively faces -Z (facingSign === -1, e.g. Soldier, Cartoon Footballer),
-      // rotation.y should be Math.PI to face the penalty spot!
-      // If a model natively faces +Z (facingSign === 1, e.g. Xbot),
-      // rotation.y should be 0 to face the penalty spot!
-      const kRig = createRigController(sceneGroup, animations, bottomY);
-      keeperRigRef.current = kRig;
-
-      const targetKeeperRotationY = kRig.facingSign === -1 ? Math.PI : 0;
-      sceneGroup.rotation.y = targetKeeperRotationY;
-      sceneGroup.position.set(0, -bottomY, -7.05);
-
-      customKeeperModelRef.current = sceneGroup;
-      setActiveKeeperName(name);
-
-      toast({
-        title: 'Goalkeeper Model Active',
-        description: `${name} positioned on the goal line!`,
-      });
-    },
-    [toast]
-  );
-
-  const loadModelPreset = useCallback(
-    () => {
-      setIsLoadingModel(true);
-      const loader = new GLTFLoader();
-      const path = FOOTBALLER_ANIMATED_GLB;
-      const label = 'Footballer Animated (.GLB)';
-
-      loader.load(
-        path,
-        (gltf) => {
-          setIsLoadingModel(false);
-          applyModel(gltf.scene, label, gltf.animations);
-        },
-        undefined,
-        (err) => {
-          setIsLoadingModel(false);
-          console.error(`Failed to load striker:`, err);
-        }
-      );
-    },
-    [applyModel]
-  );
-
-  const loadKeeperPreset = useCallback(
-    () => {
-      const loader = new GLTFLoader();
-      const path = FOOTBALLER_ANIMATED_GLB;
-      const label = 'Footballer Animated GK (.GLB)';
-
-      loader.load(
-        path,
-        (gltf) => {
-          applyKeeperModel(gltf.scene, label, gltf.animations);
-        },
-        undefined,
-        (err) => {
-          console.error(`Failed to load keeper:`, err);
-        }
-      );
-    },
-    [applyKeeperModel]
-  );
-
-  // Auto-load Footballer Animated GLB on mount
-  useEffect(() => {
-    loadModelPreset();
-    loadKeeperPreset();
-  }, [loadModelPreset, loadKeeperPreset]);
-
-  // File upload handler
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsLoadingModel(true);
-    const url = URL.createObjectURL(file);
-    const loader = new GLTFLoader();
-    loader.load(
-      url,
-      (gltf) => {
-        setIsLoadingModel(false);
-        applyModel(gltf.scene, file.name, gltf.animations);
-      },
-      undefined,
-      () => {
-        setIsLoadingModel(false);
-        toast({
-          title: 'Load Failed',
-          description: 'Could not load .glb file',
-          variant: 'destructive',
-        });
-      }
-    );
-  };
-
-  // ---------------------------------------------------------------------------
-  // GROK'S BACKEND SETTLEMENT CALL
+  // BACKEND SETTLEMENT (COMPATIBLE WITH REAL_CASINO & PVP SPEC)
   // ---------------------------------------------------------------------------
   const settleMatch = useCallback(
     async (finalUser: number, finalAi: number) => {
@@ -565,7 +405,7 @@ export function PenaltyShootoutPage() {
             wager: stake,
             result: outcome,
             score: `${finalUser}-${finalAi}`,
-            detail: '3v3 Penalty Shootout Arena',
+            detail: 'AAA 3D Penalty Shootout Arena',
           }),
         });
 
@@ -581,12 +421,12 @@ export function PenaltyShootoutPage() {
           if (data.won) {
             fireWinConfetti();
             toast({
-              title: 'Wager Won & Credited!',
-              description: `+${data.payout} KTK payout added to your balance!`,
+              title: 'Shootout Victory!',
+              description: `+${data.payout} KTK credited to your balance!`,
             });
           } else if (outcome === 'draw') {
             toast({
-              title: 'Wager Refunded',
+              title: 'Match Tied',
               description: `${stake} KTK refunded to your balance.`,
             });
           }
@@ -604,49 +444,92 @@ export function PenaltyShootoutPage() {
   );
 
   // ---------------------------------------------------------------------------
-  // SHOT MECHANICS & ROUND PROGRESSION
+  // SHOT MECHANICS & PHYSICS (FROZEN RULES IN PENALTY_ENGINE.MD)
   // ---------------------------------------------------------------------------
-  const handleShoot = (targetDir: ShotDirection) => {
+  const triggerShoot = (targetDir: ShotDirection, targetHeight: ShotHeight = shotHeight) => {
     if (phase !== 'aiming') return;
-    setUserTarget(targetDir);
 
+    // Check $BALL token requirement for match entry
+    if (round === 1 && !matchBallConsumedRef.current) {
+      if (ballState.balls < 1) {
+        setBallModalOpen(true);
+        return;
+      }
+      void consumeBall('Penalty Shootout Arena');
+      matchBallConsumedRef.current = true;
+      toast({
+        title: '⚽ 1 $BALL Token Consumed',
+        description: `Match entry active! (${ballState.balls - 1} $BALL remaining)`,
+      });
+    }
+
+    setSelectedDirection(targetDir);
     const dirs: DiveDirection[] = ['left', 'centre', 'right'];
     const aiDive = dirs[Math.floor(Math.random() * dirs.length)];
 
     const anim = animRef.current;
     anim.shotDir = targetDir;
     anim.diveDir = aiDive;
-    anim.powerKmH = Math.floor(86 + Math.random() * 32);
+    anim.shotHeight = targetHeight;
 
-    // Green timing precision chance
+    // Exit speed calibrated between 88 - 122 km/h
+    const baseSpeed = Math.floor(92 + (lockedPower / 100) * 26 + (Math.random() * 8 - 4));
+    anim.powerKmH = Math.min(122, Math.max(88, baseSpeed));
+    setLastShotSpeed(anim.powerKmH);
+
+    // Rule: Score if shot direction !== keeper dive.
+    // Green composure ring (<20) still scores 42% of the time even if keeper guesses!
     let isGoal = targetDir !== aiDive;
-    if (!isGoal && anim.composureRadius < 22 && Math.random() < 0.4) {
+    if (!isGoal && anim.composureRadius < 20 && Math.random() < 0.42) {
       isGoal = true;
     }
+
     anim.scored = isGoal;
     anim.runup = 0;
     anim.ballT = 0;
     anim.keeperT = 0;
+    anim.netWave = 0;
 
-    // 1. Run-up Phase
+    // Phase 1: Run-up sprint
     setPhase('runup');
     audio.playWhistle();
 
-    // 2. Ball Flight Phase
+    // Striker switches to Sprint/Run
+    switchCharacterAction(strikerCtrlRef.current, 'Sprint', 0.15);
+
+    // Phase 2: Foot strikes ball
     setTimeout(() => {
       setPhase('ball_flight');
-      audio.playKick();
+      audio.playKick(anim.powerKmH);
 
-      // 3. Goal / Save Result
+      // Striker kicks
+      switchCharacterAction(strikerCtrlRef.current, 'Kick', 0.08, true);
+
+      // Goalkeeper reacts and dives
+      if (keeperCtrlRef.current) {
+        if (isGoal) {
+          switchCharacterAction(keeperCtrlRef.current, 'GK_Miss', 0.12, true);
+        } else {
+          switchCharacterAction(keeperCtrlRef.current, 'GK_Catch', 0.12, true);
+        }
+      }
+
+      // Phase 3: Ball hits net or saved
       setTimeout(() => {
         setPhase('shot_result');
         if (isGoal) {
           audio.playGoal();
           setBannerNotice(`GOAL! ${anim.powerKmH} KM/H`);
           setUserScore((prev) => prev + 1);
+
+          // Striker celebration!
+          switchCharacterAction(strikerCtrlRef.current, 'Bicycle', 0.2);
         } else {
           audio.playSave();
           setBannerNotice('SAVED BY GOALKEEPER!');
+
+          // Striker frustration!
+          switchCharacterAction(strikerCtrlRef.current, 'Stumble', 0.2);
         }
 
         // Record User Shot
@@ -656,8 +539,8 @@ export function PenaltyShootoutPage() {
           return next;
         });
 
-        // Simulate Opponent's Shot in the round
-        const aiScoredShot = Math.random() < 0.6;
+        // Opponent's shot in round
+        const aiScoredShot = Math.random() < 0.58;
         if (aiScoredShot) setAiScore((prev) => prev + 1);
         setAiShots((prev) => {
           const next = [...prev];
@@ -665,61 +548,67 @@ export function PenaltyShootoutPage() {
           return next;
         });
 
-        // 4. Next Round or Finish
+        // Phase 4: Next round or game over
         setTimeout(() => {
           setBannerNotice('');
           if (round < 3) {
             setRound((prev) => prev + 1);
             setPhase('aiming');
-            setUserTarget(null);
+            // Reset character idle stances
+            switchCharacterAction(strikerCtrlRef.current, 'Idle', 0.3);
+            switchCharacterAction(keeperCtrlRef.current, 'Idle', 0.3);
           } else {
             setPhase('game_over');
             const finalU = userScore + (isGoal ? 1 : 0);
             const finalA = aiScore + (aiScoredShot ? 1 : 0);
             settleMatch(finalU, finalA);
           }
-        }, 2200);
-      }, 950);
-    }, 700);
+        }, 2400);
+      }, 920);
+    }, 640);
   };
 
   const handleRestart = () => {
+    matchBallConsumedRef.current = false;
     setRound(1);
     setUserScore(0);
     setAiScore(0);
     setUserShots([null, null, null]);
     setAiShots([null, null, null]);
-    setUserTarget(null);
     setSettlementReceipt(null);
+    setBannerNotice('');
     setPhase('aiming');
+    switchCharacterAction(strikerCtrlRef.current, 'Idle', 0.2);
+    switchCharacterAction(keeperCtrlRef.current, 'Idle', 0.2);
   };
 
   // ---------------------------------------------------------------------------
-  // 3D WEBGL ENGINE (1280x720 TRUE HD, PCF SHADOWS, FLUID KINEMATICS)
+  // 3D GRAPHICS ENGINE (THREE.JS AAA STADIUM, SHADOWS, TURF, DYNAMICS)
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Scene & Camera
+    // 1. Scene, Sky & Atmospheric Stadium Lighting
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xb5e0f7);
-    scene.fog = new THREE.Fog(0xb5e0f7, 24, 60);
+    scene.background = new THREE.Color(0x060c14);
+    scene.fog = new THREE.FogExp2(0x0a1626, 0.016);
 
-    const camera = new THREE.PerspectiveCamera(46, 16 / 9, 0.1, 80);
-    camera.position.set(0, 1.75, 4.4);
-    camera.lookAt(0, 1.2, -6.5);
+    const camera = new THREE.PerspectiveCamera(44, 16 / 9, 0.1, 120);
+    camera.position.set(0, 1.85, 4.2);
+    camera.lookAt(0, 1.25, -7.2);
 
-    // Renderer: Antialiased, DPR clamped up to 2.5 for true zero pixelation
+    // Renderer: ACES Filmic Tone Mapping, High-Precision Soft Shadows
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       powerPreference: 'high-performance',
+      stencil: false,
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2.5));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.22;
 
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
@@ -737,412 +626,625 @@ export function PenaltyShootoutPage() {
     const resizeObserver = new ResizeObserver(updateSize);
     resizeObserver.observe(container);
 
-    // Stadium Daylight Lighting
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x3d663d, 0.95);
+    // Stadium Floodlights: 4 Massive High-Angle Towers with Spotlights
+    const ambientLight = new THREE.AmbientLight(0x223548, 1.4);
+    scene.add(ambientLight);
+
+    const hemiLight = new THREE.HemisphereLight(0x78a8d1, 0x1a3320, 1.2);
     scene.add(hemiLight);
 
-    const sunLight = new THREE.DirectionalLight(0xfffbee, 2.2);
-    sunLight.position.set(-6, 15, 8);
-    sunLight.castShadow = true;
-    sunLight.shadow.mapSize.set(2048, 2048);
-    sunLight.shadow.bias = -0.0004;
-    scene.add(sunLight);
+    // Key Spotlight from Upper Left Tower
+    const spotL = new THREE.SpotLight(0xfff5e6, 3.5, 45, Math.PI / 4, 0.4, 1);
+    spotL.position.set(-14, 22, 10);
+    spotL.target.position.set(0, 1, -4);
+    spotL.castShadow = true;
+    spotL.shadow.mapSize.set(2048, 2048);
+    spotL.shadow.bias = -0.0003;
+    spotL.shadow.normalBias = 0.02;
+    scene.add(spotL);
+    scene.add(spotL.target);
 
-    // Realistic Mowed Turf Pitch
-    const pitchGeo = new THREE.PlaneGeometry(36, 44);
+    // Rim Spotlight from Upper Right Tower
+    const spotR = new THREE.SpotLight(0xd9eeff, 2.8, 45, Math.PI / 4, 0.4, 1);
+    spotR.position.set(14, 22, 10);
+    spotR.target.position.set(0, 1, -4);
+    spotR.castShadow = true;
+    spotR.shadow.mapSize.set(1024, 1024);
+    scene.add(spotR);
+    scene.add(spotR.target);
+
+    // Goal Frame Fill Light
+    const goalFill = new THREE.DirectionalLight(0xa5d8ff, 1.2);
+    goalFill.position.set(0, 8, -12);
+    goalFill.target.position.set(0, 1.2, -7.2);
+    scene.add(goalFill);
+    scene.add(goalFill.target);
+
+    // 2. High-Fidelity Mown Turf Pitch
+    const pitchGeo = new THREE.PlaneGeometry(42, 60);
     const turfCanvas = document.createElement('canvas');
-    turfCanvas.width = 512;
-    turfCanvas.height = 512;
+    turfCanvas.width = 1024;
+    turfCanvas.height = 1024;
     const tctx = turfCanvas.getContext('2d')!;
-    for (let i = 0; i < 16; i++) {
-      tctx.fillStyle = i % 2 === 0 ? '#38732e' : '#428536';
-      tctx.fillRect(0, i * 32, 512, 32);
+
+    // Alternate realistic grass stripes with noise texture
+    for (let i = 0; i < 20; i++) {
+      tctx.fillStyle = i % 2 === 0 ? '#1b4b24' : '#235e2e';
+      tctx.fillRect(0, i * 51.2, 1024, 52);
     }
-    tctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-    tctx.lineWidth = 6;
-    tctx.strokeRect(16, 16, 480, 480);
+    // Subtle grass blade noise speckle
+    for (let j = 0; j < 6000; j++) {
+      const x = Math.random() * 1024;
+      const y = Math.random() * 1024;
+      tctx.fillStyle = Math.random() > 0.5 ? 'rgba(38, 104, 52, 0.35)' : 'rgba(18, 52, 26, 0.4)';
+      tctx.fillRect(x, y, 2, 2);
+    }
+
+    // Regulation Penalty Area & Box Lines
+    tctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    tctx.lineWidth = 8;
+    // 18-yard box outline
+    tctx.strokeRect(180, 100, 664, 420);
+    // 6-yard box outline
+    tctx.strokeRect(330, 100, 364, 150);
+    // Penalty spot circle
+    tctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    tctx.beginPath();
+    tctx.arc(512, 380, 10, 0, Math.PI * 2);
+    tctx.fill();
+    // Penalty arc curve
+    tctx.beginPath();
+    tctx.arc(512, 380, 110, 0.65 * Math.PI, 1.35 * Math.PI, true);
+    tctx.stroke();
 
     const turfTex = new THREE.CanvasTexture(turfCanvas);
-    turfTex.wrapS = THREE.RepeatWrapping;
-    turfTex.wrapT = THREE.RepeatWrapping;
-    turfTex.repeat.set(2, 2);
+    turfTex.wrapS = THREE.ClampToEdgeWrapping;
+    turfTex.wrapT = THREE.ClampToEdgeWrapping;
 
-    const pitch = new THREE.Mesh(
-      pitchGeo,
-      new THREE.MeshStandardMaterial({ map: turfTex, roughness: 0.85 })
-    );
+    const pitchMat = new THREE.MeshStandardMaterial({
+      map: turfTex,
+      roughness: 0.88,
+      metalness: 0.05,
+    });
+    const pitch = new THREE.Mesh(pitchGeo, pitchMat);
     pitch.rotation.x = -Math.PI / 2;
-    pitch.position.set(0, 0, -5);
+    pitch.position.set(0, 0, -4);
     pitch.receiveShadow = true;
     scene.add(pitch);
 
-    // Penalty Spot
-    const spot = new THREE.Mesh(
-      new THREE.CircleGeometry(0.08, 32),
-      new THREE.MeshBasicMaterial({ color: 0xffffff })
-    );
-    spot.rotation.x = -Math.PI / 2;
-    spot.position.set(0, 0.005, 0);
-    scene.add(spot);
+    // 3. 3D Stadium Stands & LED Advertising Perimeter Ribbons
+    const stadiumGroup = new THREE.Group();
 
-    // Goal Post & Net
-    const postMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25, metalness: 0.6 });
-    const postL = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.44, 24), postMat);
+    // Dynamic LED Advertising Ribbon along Goal Line
+    const adCanvas = document.createElement('canvas');
+    adCanvas.width = 1024;
+    adCanvas.height = 128;
+    const adCtx = adCanvas.getContext('2d')!;
+    adCtx.fillStyle = '#06130e';
+    adCtx.fillRect(0, 0, 1024, 128);
+    adCtx.strokeStyle = '#35d399';
+    adCtx.lineWidth = 4;
+    adCtx.strokeRect(4, 4, 1016, 120);
+
+    adCtx.fillStyle = '#35d399';
+    adCtx.font = 'bold 36px monospace';
+    adCtx.fillText('★ KATIKA BET ★  PS3 TRUE HD 3D  ★  CASINO ROYALE  ★  PLAY & WIN', 20, 78);
+
+    const adTex = new THREE.CanvasTexture(adCanvas);
+    adTex.wrapS = THREE.RepeatWrapping;
+    adTex.repeat.set(3, 1);
+
+    const ledMat = new THREE.MeshStandardMaterial({
+      map: adTex,
+      roughness: 0.2,
+      emissive: new THREE.Color(0x10b981),
+      emissiveMap: adTex,
+      emissiveIntensity: 0.65,
+    });
+    const ledWall = new THREE.Mesh(new THREE.BoxGeometry(32, 1.1, 0.4), ledMat);
+    ledWall.position.set(0, 0.55, -12);
+    stadiumGroup.add(ledWall);
+
+    // Multi-Tiered Stadium Grandstand
+    const standMat = new THREE.MeshStandardMaterial({
+      color: 0x111c29,
+      roughness: 0.75,
+      metalness: 0.2,
+    });
+    for (let tier = 0; tier < 6; tier++) {
+      const tierMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(40, 1.2, 2.5),
+        standMat
+      );
+      tierMesh.position.set(0, 1.5 + tier * 1.3, -14 - tier * 2.2);
+      stadiumGroup.add(tierMesh);
+
+      // Instanced Crowd Silhouettes with team colored scarves
+      const crowdCount = 36;
+      const crowdGeo = new THREE.BoxGeometry(0.5, 0.8, 0.4);
+      const crowdMat = new THREE.MeshBasicMaterial({ color: 0x1b354b });
+      const crowdInst = new THREE.InstancedMesh(crowdGeo, crowdMat, crowdCount);
+      const dummy = new THREE.Object3D();
+      for (let c = 0; c < crowdCount; c++) {
+        dummy.position.set(-18 + c * 1.05 + (Math.random() * 0.3 - 0.15), 2.5 + tier * 1.3, -14 - tier * 2.2);
+        dummy.scale.set(0.9 + Math.random() * 0.3, 0.9 + Math.random() * 0.3, 0.9);
+        dummy.updateMatrix();
+        crowdInst.setMatrixAt(c, dummy.matrix);
+      }
+      crowdInst.instanceMatrix.needsUpdate = true;
+      stadiumGroup.add(crowdInst);
+    }
+
+    // 4 High-Altitude Stadium Light Pylons
+    const pylonGeo = new THREE.CylinderGeometry(0.3, 0.5, 24, 12);
+    const pylonMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 });
+    const pylonHeadGeo = new THREE.BoxGeometry(4, 3, 1);
+    const pylonHeadMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+    [
+      [-16, -14],
+      [16, -14],
+      [-16, 8],
+      [16, 8],
+    ].forEach(([px, pz]) => {
+      const pylon = new THREE.Mesh(pylonGeo, pylonMat);
+      pylon.position.set(px, 12, pz);
+      stadiumGroup.add(pylon);
+
+      const phead = new THREE.Mesh(pylonHeadGeo, pylonHeadMat);
+      phead.position.set(px, 24, pz);
+      phead.lookAt(0, 1, -4);
+      stadiumGroup.add(phead);
+    });
+
+    scene.add(stadiumGroup);
+
+    // 4. Regulation Goal Structure & 3D Reactive Net
+    const postMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.18,
+      metalness: 0.7,
+    });
+
+    // Upright Left Post
+    const postL = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 2.44, 28), postMat);
     postL.position.set(-3.66, 1.22, -7.2);
     postL.castShadow = true;
     scene.add(postL);
 
+    // Upright Right Post
     const postR = postL.clone();
     postR.position.x = 3.66;
     scene.add(postR);
 
-    const crossbar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 7.32, 24), postMat);
+    // Crossbar
+    const crossbar = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 7.33, 28), postMat);
     crossbar.rotation.z = Math.PI / 2;
     crossbar.position.set(0, 2.44, -7.2);
     crossbar.castShadow = true;
     scene.add(crossbar);
 
-    const netGeo = new THREE.PlaneGeometry(7.32, 2.44, 18, 8);
-    const netMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.45 });
+    // Stanchions (Support rods behind goal)
+    const stanchionMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 });
+    const stanL = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.1, 12), stanchionMat);
+    stanL.rotation.x = 0.55;
+    stanL.position.set(-3.66, 1.25, -8.1);
+    scene.add(stanL);
+
+    const stanR = stanL.clone();
+    stanR.position.x = 3.66;
+    scene.add(stanR);
+
+    // 3D Hexagonal Reactive Net
+    const netGeo = new THREE.PlaneGeometry(7.32, 2.44, 24, 12);
+    const netMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.55,
+      roughness: 0.4,
+    });
     const netBack = new THREE.Mesh(netGeo, netMat);
-    netBack.position.set(0, 1.22, -8.0);
+    netBack.position.set(0, 1.22, -8.2);
     scene.add(netBack);
 
-    // Soccer Ball
+    // Net Roof
+    const netRoofGeo = new THREE.PlaneGeometry(7.32, 1.0, 24, 6);
+    const netRoof = new THREE.Mesh(netRoofGeo, netMat);
+    netRoof.rotation.x = Math.PI / 2;
+    netRoof.position.set(0, 2.44, -7.7);
+    scene.add(netRoof);
+
+    // Net Sides
+    const netSideGeo = new THREE.PlaneGeometry(1.0, 2.44, 6, 12);
+    const netSideL = new THREE.Mesh(netSideGeo, netMat);
+    netSideL.rotation.y = Math.PI / 2;
+    netSideL.position.set(-3.66, 1.22, -7.7);
+    scene.add(netSideL);
+
+    const netSideR = netSideL.clone();
+    netSideR.position.x = 3.66;
+    scene.add(netSideR);
+
+    // 5. Official Match Soccer Ball (FIFA Spec 32-Panel Texture)
+    const ballCanvas = document.createElement('canvas');
+    ballCanvas.width = 512;
+    ballCanvas.height = 256;
+    const bctx = ballCanvas.getContext('2d')!;
+    bctx.fillStyle = '#f8fafc';
+    bctx.fillRect(0, 0, 512, 256);
+
+    // Geometric black/gold pentagon panels
+    bctx.fillStyle = '#0f172a';
+    for (let py = 0; py < 4; py++) {
+      for (let px = 0; px < 8; px++) {
+        if ((px + py) % 2 === 0) {
+          bctx.beginPath();
+          const cx = px * 64 + 32;
+          const cy = py * 64 + 32;
+          bctx.arc(cx, cy, 18, 0, Math.PI * 2);
+          bctx.fill();
+        }
+      }
+    }
+    // Katika gold accent ribbons
+    bctx.strokeStyle = '#35d399';
+    bctx.lineWidth = 4;
+    bctx.strokeRect(0, 0, 512, 256);
+
+    const ballTex = new THREE.CanvasTexture(ballCanvas);
     const ballMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(0.12, 32, 32),
-      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 })
+      new THREE.SphereGeometry(0.115, 36, 36),
+      new THREE.MeshStandardMaterial({
+        map: ballTex,
+        roughness: 0.28,
+        metalness: 0.1,
+      })
     );
-    ballMesh.position.set(0, 0.12, 0);
+    ballMesh.position.set(0, 0.115, 0);
     ballMesh.castShadow = true;
     scene.add(ballMesh);
 
-    // Composure Aiming Ring
+    // 6. Dynamic Turf Kick-Off Dust / Grass Particles
+    const particleCount = 45;
+    const particleGeo = new THREE.BufferGeometry();
+    const particlePos = new Float32Array(particleCount * 3);
+    const particleVel = new Float32Array(particleCount * 3);
+    for (let p = 0; p < particleCount; p++) {
+      particlePos[p * 3] = 0;
+      particlePos[p * 3 + 1] = 0.05;
+      particlePos[p * 3 + 2] = 0;
+    }
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+    const particleMat = new THREE.PointsMaterial({
+      color: 0x35d399,
+      size: 0.045,
+      transparent: true,
+      opacity: 0,
+    });
+    const kickParticles = new THREE.Points(particleGeo, particleMat);
+    scene.add(kickParticles);
+
+    // 7. Composure Precision Aiming HUD Ring
     const compRingGeo = new THREE.RingGeometry(0.18, 0.22, 48);
     const compRingMat = new THREE.MeshBasicMaterial({
       color: 0x22c55e,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.9,
     });
     const composureMesh = new THREE.Mesh(compRingGeo, compRingMat);
     composureMesh.rotation.x = -Math.PI / 2;
     composureMesh.position.set(0, 0.015, 0);
     scene.add(composureMesh);
 
-    // Procedural Goalkeeper Group
-    const keeperGroup = new THREE.Group();
-    keeperGroup.position.set(0, 0, -7.05);
+    // -------------------------------------------------------------------------
+    // 8. LOAD DEDICATED OFFICIAL 'FOOTBALLER ANIMATED' GLB (STRIKER & KEEPER)
+    // -------------------------------------------------------------------------
+    const gltfLoader = new GLTFLoader();
+    gltfLoader.load(
+      FOOTBALLER_ANIMATED_GLB,
+      (gltf) => {
+        // === STRIKER SETUP ===
+        const strikerGroup = SkeletonUtils.clone(gltf.scene) as THREE.Group;
+        const strikerMixer = new THREE.AnimationMixer(strikerGroup);
+        const strikerActions: Record<string, THREE.AnimationAction> = {};
 
-    const keeperBodyMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.5 });
-    const keeperSkinMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.65 });
-    const gloveMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.3 });
+        gltf.animations.forEach((clip) => {
+          strikerActions[clip.name] = strikerMixer.clipAction(clip);
+        });
 
-    const kTorso = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.65, 0.26), keeperBodyMat);
-    kTorso.position.y = 1.35;
-    kTorso.castShadow = true;
-    keeperGroup.add(kTorso);
+        // Normalize scale to 1.84m athlete
+        const strikerBbox = new THREE.Box3().setFromObject(strikerGroup);
+        const strikerSize = new THREE.Vector3();
+        strikerBbox.getSize(strikerSize);
+        const strikerScale = strikerSize.y > 0.05 ? 1.84 / strikerSize.y : 1;
+        strikerGroup.scale.set(strikerScale, strikerScale, strikerScale);
 
-    const kHead = new THREE.Mesh(new THREE.SphereGeometry(0.14, 20, 20), keeperSkinMat);
-    kHead.position.y = 1.8;
-    kHead.castShadow = true;
-    keeperGroup.add(kHead);
+        strikerBbox.setFromObject(strikerGroup);
+        const strikerBottomY = strikerBbox.min.y;
 
-    const kArmL = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.55), keeperBodyMat);
-    kArmL.position.set(-0.35, 1.35, 0);
-    kArmL.rotation.z = 0.4;
-    kArmL.castShadow = true;
-    keeperGroup.add(kArmL);
+        strikerGroup.traverse((node) => {
+          if ((node as THREE.Mesh).isMesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+            // Tint Katika Emerald Kit for Striker
+            const mesh = node as THREE.Mesh;
+            if (mesh.name === 'Player_Jersey' || mesh.name === 'Player_Socks') {
+              if (mesh.material && !Array.isArray(mesh.material)) {
+                mesh.material = mesh.material.clone();
+                (mesh.material as THREE.MeshStandardMaterial).color = new THREE.Color(0x10b981);
+              }
+            } else if (mesh.name === 'Player_Shorts') {
+              if (mesh.material && !Array.isArray(mesh.material)) {
+                mesh.material = mesh.material.clone();
+                (mesh.material as THREE.MeshStandardMaterial).color = new THREE.Color(0x064e3b);
+              }
+            }
+          }
+        });
 
-    const kGloveL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.06), gloveMat);
-    kGloveL.position.set(-0.46, 1.08, 0);
-    keeperGroup.add(kGloveL);
+        // The model natively faces -Z (towards the goal) when rotation.y = 0.
+        // Striker runup starts behind ball at z = +2.2, facing towards goal at z = -7.2.
+        // Slight natural diagonal approach angle (0.08 rad)
+        strikerGroup.rotation.y = 0;
+        strikerGroup.position.set(-0.25, -strikerBottomY, 2.2);
+        scene.add(strikerGroup);
 
-    const kArmR = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.55), keeperBodyMat);
-    kArmR.position.set(0.35, 1.35, 0);
-    kArmR.rotation.z = -0.4;
-    kArmR.castShadow = true;
-    keeperGroup.add(kArmR);
+        const sIdle = strikerActions.Idle || strikerActions.idle || Object.values(strikerActions)[0];
+        if (sIdle) sIdle.play();
 
-    const kGloveR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.06), gloveMat);
-    kGloveR.position.set(0.46, 1.08, 0);
-    keeperGroup.add(kGloveR);
+        strikerCtrlRef.current = {
+          root: strikerGroup,
+          mixer: strikerMixer,
+          actions: strikerActions,
+          currentActionName: 'Idle',
+          initialBottomY: strikerBottomY,
+        };
 
-    const kLegL = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.85), keeperBodyMat);
-    kLegL.position.set(-0.16, 0.55, 0);
-    kLegL.castShadow = true;
-    keeperGroup.add(kLegL);
+        // === GOALKEEPER SETUP ===
+        const keeperGroup = SkeletonUtils.clone(gltf.scene) as THREE.Group;
+        const keeperMixer = new THREE.AnimationMixer(keeperGroup);
+        const keeperActions: Record<string, THREE.AnimationAction> = {};
 
-    const kLegR = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.85), keeperBodyMat);
-    kLegR.position.set(0.16, 0.55, 0);
-    kLegR.castShadow = true;
-    keeperGroup.add(kLegR);
+        gltf.animations.forEach((clip) => {
+          keeperActions[clip.name] = keeperMixer.clipAction(clip);
+        });
 
-    scene.add(keeperGroup);
+        // Normalize scale to 1.92m tall goalkeeper
+        const keeperBbox = new THREE.Box3().setFromObject(keeperGroup);
+        const keeperSize = new THREE.Vector3();
+        keeperBbox.getSize(keeperSize);
+        const keeperScale = keeperSize.y > 0.05 ? 1.92 / keeperSize.y : 1;
+        keeperGroup.scale.set(keeperScale, keeperScale, keeperScale);
 
-    // Render & Kinematics Loop
+        keeperBbox.setFromObject(keeperGroup);
+        const keeperBottomY = keeperBbox.min.y;
+
+        keeperGroup.traverse((node) => {
+          if ((node as THREE.Mesh).isMesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+            // Tint Electric Blue / Neon Yellow Goalkeeper Kit
+            const mesh = node as THREE.Mesh;
+            if (mesh.name === 'Player_Jersey') {
+              if (mesh.material && !Array.isArray(mesh.material)) {
+                mesh.material = mesh.material.clone();
+                (mesh.material as THREE.MeshStandardMaterial).color = new THREE.Color(0x38bdf8);
+              }
+            } else if (mesh.name === 'Player_Shorts' || mesh.name === 'Player_Socks') {
+              if (mesh.material && !Array.isArray(mesh.material)) {
+                mesh.material = mesh.material.clone();
+                (mesh.material as THREE.MeshStandardMaterial).color = new THREE.Color(0x0284c7);
+              }
+            }
+          }
+        });
+
+        // Goalkeeper is stationed at the goal line (z = -7.05) and faces the striker (+Z).
+        // Since model natively faces -Z, rotating 180 deg (Math.PI) makes keeper face directly towards striker!
+        keeperGroup.rotation.y = Math.PI;
+        keeperGroup.position.set(0, -keeperBottomY, -7.05);
+        scene.add(keeperGroup);
+
+        const kIdle = keeperActions.Idle || keeperActions.idle || Object.values(keeperActions)[0];
+        if (kIdle) kIdle.play();
+
+        keeperCtrlRef.current = {
+          root: keeperGroup,
+          mixer: keeperMixer,
+          actions: keeperActions,
+          currentActionName: 'Idle',
+          initialBottomY: keeperBottomY,
+        };
+      },
+      undefined,
+      (err) => {
+        console.error('Error loading footballer-animated.glb:', err);
+      }
+    );
+
+    // -------------------------------------------------------------------------
+    // 9. ANIMATION, KINEMATICS & 60FPS GAME LOOP
+    // -------------------------------------------------------------------------
     let animId: number;
     const clock = new THREE.Clock();
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
-      const delta = clock.getDelta();
+      const delta = Math.min(clock.getDelta(), 0.05);
       const elapsed = clock.getElapsedTime();
       const currentPhase = phaseRef.current;
       const anim = animRef.current;
 
-      // 1. Ensure custom models are in scene
-      if (customModelRef.current && !scene.children.includes(customModelRef.current)) {
-        scene.add(customModelRef.current);
+      // Update Character Animation Mixers
+      if (strikerCtrlRef.current) {
+        strikerCtrlRef.current.mixer.update(delta);
       }
-      if (customKeeperModelRef.current) {
-        if (!scene.children.includes(customKeeperModelRef.current)) {
-          scene.add(customKeeperModelRef.current);
-        }
-        keeperGroup.visible = false;
-      } else {
-        keeperGroup.visible = true;
+      if (keeperCtrlRef.current) {
+        keeperCtrlRef.current.mixer.update(delta);
       }
 
-      // 2. Pulse Composure Ring
-      const cycle = (elapsed % 1.4) / 1.4;
-      const ringRadius = 0.18 + (Math.sin(cycle * Math.PI * 2) * 0.5 + 0.5) * 0.35;
-      anim.composureRadius = ringRadius * 70;
-      composureMesh.scale.set(ringRadius * 3.5, ringRadius * 3.5, 1);
+      // Dynamic LED Advertising Scroller
+      adTex.offset.x = (elapsed * 0.08) % 1;
+
+      // 1. Aiming Composure Ring Pulse
+      const cycle = (elapsed % 1.2) / 1.2;
+      const ringRadius = 0.16 + (Math.sin(cycle * Math.PI * 2) * 0.5 + 0.5) * 0.32;
+      anim.composureRadius = ringRadius * 65;
+      composureMesh.scale.set(ringRadius * 3.8, ringRadius * 3.8, 1);
       composureMesh.visible = currentPhase === 'aiming';
 
-      if (ringRadius < 0.24) {
-        compRingMat.color.setHex(0x22c55e);
-      } else if (ringRadius < 0.34) {
-        compRingMat.color.setHex(0xfacc15);
+      if (ringRadius < 0.22) {
+        compRingMat.color.setHex(0x22c55e); // Green precision zone (<20)
+      } else if (ringRadius < 0.32) {
+        compRingMat.color.setHex(0xfacc15); // Yellow warning zone
       } else {
-        compRingMat.color.setHex(0xef4444);
+        compRingMat.color.setHex(0xef4444); // Red zone
       }
 
-      // 3. Striker Kinematics & Realistic Footballer Animations
-      const strikerModel = customModelRef.current;
-      const rig = rigRef.current;
-      const strikerBaseRotY = rig?.facingSign === -1 ? 0 : Math.PI;
+      // 2. Striker Movement & Run-up Kinematics
+      const sCtrl = strikerCtrlRef.current;
+      if (sCtrl) {
+        if (currentPhase === 'runup') {
+          anim.runup += delta * 1.58;
+          const runupT = Math.min(1, anim.runup);
+          // Striker runs forward along decreasing Z from +2.2 to +0.32 at the penalty spot!
+          const currentZ = 2.2 - runupT * 1.88;
+          // Smooth diagonal approach curve
+          const currentX = -0.25 * (1 - runupT);
+          // Natural running vertical bounce
+          const bounce = Math.abs(Math.sin(runupT * Math.PI * 6)) * 0.06;
 
-      if (currentPhase === 'runup') {
-        anim.runup += delta * 1.6;
-        const runupT = Math.min(1, anim.runup);
-        // Striker runs forward towards the penalty spot (z: 1.4 down to 0.15)
-        const zPos = 1.4 - runupT * 1.25;
-        // Athletic running bounce and lean
-        const bounce = Math.abs(Math.sin(runupT * Math.PI * 8)) * 0.08;
-        const forwardLean = runupT < 0.75 ? 0.12 : -0.08; // Lean into the sprint, then lean back slightly for the shot
-
-        if (strikerModel) {
-          strikerModel.position.z = zPos;
-          strikerModel.position.y = -(rig?.initialBottomY || 0) + bounce;
-          strikerModel.rotation.y = strikerBaseRotY;
-          strikerModel.rotation.x = forwardLean;
-        }
-
-        if (rig) {
-          if (rig.mixer) {
-            // Smoothly switch between full run-up sprint and striking kick
-            switchAction(rig, runupT < 0.72 ? 'run' : 'kick');
-            rig.mixer.update(delta);
+          sCtrl.root.position.set(currentX, -sCtrl.initialBottomY + bounce, currentZ);
+          // Leaning into the sprint forward towards the goal
+          sCtrl.root.rotation.set(0.12 * (1 - runupT), 0, 0);
+        } else if (currentPhase === 'ball_flight') {
+          // Striker planted planting foot follow-through at ball spot
+          sCtrl.root.position.set(0, -sCtrl.initialBottomY, 0.32);
+          sCtrl.root.rotation.set(-0.06, 0, 0);
+        } else if (currentPhase === 'shot_result') {
+          if (anim.scored) {
+            // Victorious celebration hop & pose
+            const hop = Math.max(0, Math.sin(elapsed * 6)) * 0.12;
+            sCtrl.root.position.set(0, -sCtrl.initialBottomY + hop, 0.32);
           } else {
-            rig.restRotations.forEach((q, bone) => bone.quaternion.copy(q));
-            const b = rig.bones;
-            if (runupT < 0.72) {
-              const stride = Math.sin(runupT * Math.PI * 8);
-              b.leftUpLeg?.rotateX(stride * 1.15);
-              b.rightUpLeg?.rotateX(-stride * 1.15);
-              b.leftLeg?.rotateX(Math.max(0, -stride) * 1.4);
-              b.rightLeg?.rotateX(Math.max(0, stride) * 1.4);
-              b.leftArm?.rotateX(-stride * 1.1);
-              b.rightArm?.rotateX(stride * 1.1);
-              b.spine?.rotateX(0.1);
-            } else {
-              // Striking follow-through
-              const kickProgress = (runupT - 0.72) / 0.28;
-              b.rightUpLeg?.rotateX(1.4 * kickProgress);
-              b.rightLeg?.rotateX(-0.6 * (1 - kickProgress));
-              b.leftUpLeg?.rotateX(-0.25);
-              b.leftArm?.rotateZ(0.9);
-              b.rightArm?.rotateZ(-0.9);
-              b.spine?.rotateX(-0.15);
-            }
+            sCtrl.root.position.set(0, -sCtrl.initialBottomY, 0.32);
           }
-        }
-      } else if (currentPhase === 'shot_result' && anim.scored) {
-        // Goal Celebration (Leaping & pumping arms)
-        const hop = Math.max(0, Math.sin(elapsed * 7)) * 0.16;
-        if (strikerModel) {
-          strikerModel.position.z = 0.15;
-          strikerModel.position.y = -(rig?.initialBottomY || 0) + hop;
-          strikerModel.rotation.y = strikerBaseRotY;
-          strikerModel.rotation.x = 0;
-        }
-        if (rig) {
-          if (rig.mixer) {
-            switchAction(rig, 'celebrate');
-            rig.mixer.update(delta);
-          } else {
-            rig.restRotations.forEach((q, bone) => bone.quaternion.copy(q));
-            const b = rig.bones;
-            b.leftArm?.rotateZ(2.8);
-            b.rightArm?.rotateZ(-2.8);
-            b.spine?.rotateX(-0.22);
-            b.head?.rotateX(-0.2);
-          }
-        }
-      } else if (currentPhase === 'shot_result' && !anim.scored) {
-        // Miss / Save Despair
-        if (strikerModel) {
-          strikerModel.position.z = 0.15;
-          strikerModel.position.y = -(rig?.initialBottomY || 0);
-          strikerModel.rotation.y = strikerBaseRotY;
-          strikerModel.rotation.x = 0;
-        }
-        if (rig) {
-          if (rig.mixer) {
-            switchAction(rig, 'sad');
-            rig.mixer.update(delta);
-          } else {
-            rig.restRotations.forEach((q, bone) => bone.quaternion.copy(q));
-            const b = rig.bones;
-            b.leftArm?.rotateZ(1.2);
-            b.leftArm?.rotateX(-1.1);
-            b.rightArm?.rotateZ(-1.2);
-            b.rightArm?.rotateX(-1.1);
-            b.head?.rotateX(0.45);
-            b.spine?.rotateX(0.18);
-          }
-        }
-      } else {
-        // Ready Idle Stance with Realistic Breathing and Weight Shift
-        const breathe = Math.sin(elapsed * 2.5);
-        if (strikerModel) {
-          strikerModel.position.set(0, -(rig?.initialBottomY || 0) + breathe * 0.015, 1.4);
-          strikerModel.rotation.y = strikerBaseRotY;
-          strikerModel.rotation.x = 0;
-        }
-        if (rig) {
-          if (rig.mixer) {
-            switchAction(rig, 'idle');
-            rig.mixer.update(delta);
-          } else {
-            rig.restRotations.forEach((q, bone) => bone.quaternion.copy(q));
-            const b = rig.bones;
-            b.leftArm?.rotateZ(1.25);
-            b.rightArm?.rotateZ(-1.25);
-            b.leftForeArm?.rotateX(-0.35);
-            b.rightForeArm?.rotateX(-0.35);
-            b.spine?.rotateX(breathe * 0.035);
-          }
+        } else {
+          // Ready Idle Stance: Athletic weight shift
+          const sway = Math.sin(elapsed * 2.2) * 0.015;
+          sCtrl.root.position.set(-0.25, -sCtrl.initialBottomY + sway, 2.2);
+          sCtrl.root.rotation.set(0, 0, 0);
         }
       }
 
-      // 4. Ball Flight Physics
+      // 3. Ball Trajectory & Physics
       if (currentPhase === 'ball_flight' || currentPhase === 'shot_result') {
-        const speed = (anim.powerKmH / 100) * 2.2;
-        anim.ballT += delta * speed;
+        const speedMultiplier = (anim.powerKmH / 100) * 2.3;
+        anim.ballT += delta * speedMultiplier;
         const flightT = Math.min(1, anim.ballT);
 
+        // Target coordinates in goal plane (z = -7.2)
         let targetX = 0;
-        if (anim.shotDir === 'left') targetX = -1.9;
-        if (anim.shotDir === 'right') targetX = 1.9;
+        if (anim.shotDir === 'left') targetX = -2.1;
+        if (anim.shotDir === 'right') targetX = 2.1;
 
-        const targetY = 1.25;
-        ballMesh.position.x = flightT * targetX;
+        let targetY = 1.35;
+        if (anim.shotHeight === 'low') targetY = 0.45;
+        if (anim.shotHeight === 'high') targetY = 2.15;
+
+        // Realistic aerodynamical ball trajectory with dip & spin curve
+        const curveOffset = (anim.shotDir === 'left' ? -0.25 : anim.shotDir === 'right' ? 0.25 : 0) * Math.sin(flightT * Math.PI);
+        ballMesh.position.x = flightT * targetX + curveOffset;
         ballMesh.position.z = -flightT * 7.2;
-        ballMesh.position.y = 0.12 + flightT * (targetY - 0.12) + Math.sin(flightT * Math.PI) * 0.55;
+        ballMesh.position.y = 0.115 + flightT * (targetY - 0.115) + Math.sin(flightT * Math.PI) * 0.62;
 
-        ballMesh.rotation.x += delta * 18;
-        ballMesh.rotation.y += delta * 12;
+        // Rapid ball spin rotation
+        ballMesh.rotation.x += delta * 24;
+        ballMesh.rotation.y += delta * 18;
 
-        if (anim.scored && flightT > 0.8) {
-          netBack.position.z = -8.0 - Math.sin((flightT - 0.8) * Math.PI * 4) * 0.18;
+        // Turf Kick Dust Emission at launch
+        if (flightT < 0.35) {
+          particleMat.opacity = 0.8 * (1 - flightT / 0.35);
+          for (let p = 0; p < particleCount; p++) {
+            particlePos[p * 3] += (Math.random() - 0.5) * 0.05;
+            particlePos[p * 3 + 1] += Math.random() * 0.04;
+            particlePos[p * 3 + 2] += (Math.random() - 0.5) * 0.05;
+          }
+          particleGeo.attributes.position.needsUpdate = true;
+        } else {
+          particleMat.opacity = 0;
+        }
+
+        // 3D Goal Net Reaction Physics
+        if (anim.scored && flightT > 0.82) {
+          anim.netWave += delta * 12;
+          const ripple = Math.sin(anim.netWave) * 0.28 * Math.exp(-(flightT - 0.82) * 4);
+          netBack.position.z = -8.2 - ripple;
         }
       } else {
-        ballMesh.position.set(0, 0.12, 0);
+        ballMesh.position.set(0, 0.115, 0);
         ballMesh.rotation.set(0, 0, 0);
-        netBack.position.z = -8.0;
+        netBack.position.z = -8.2;
+        particleMat.opacity = 0;
       }
 
-      // 5. Goalkeeper Diving & Animation Motion
-      const keeperModel = customKeeperModelRef.current;
-      const kRig = keeperRigRef.current;
-      const keeperBaseRotY = kRig?.facingSign === -1 ? Math.PI : 0;
+      // 4. Goalkeeper Kinematics & Full-Stretch Dive
+      const kCtrl = keeperCtrlRef.current;
+      if (kCtrl) {
+        if (currentPhase === 'ball_flight' || currentPhase === 'shot_result') {
+          anim.keeperT += delta * 2.5;
+          const diveT = Math.min(1, anim.keeperT);
 
-      if (currentPhase === 'ball_flight' || currentPhase === 'shot_result') {
-        anim.keeperT += delta * 2.4;
-        const diveT = Math.min(1, anim.keeperT);
-
-        let diveX = 0;
-        let diveAngle = 0;
-        if (anim.diveDir === 'left') {
-          diveX = -1.95 * diveT;
-          diveAngle = 1.15 * diveT;
-        } else if (anim.diveDir === 'right') {
-          diveX = 1.95 * diveT;
-          diveAngle = -1.15 * diveT;
-        }
-
-        const diveLift = Math.sin(diveT * Math.PI) * 0.42;
-
-        keeperGroup.position.x = diveX;
-        keeperGroup.position.y = diveLift;
-        keeperGroup.rotation.z = diveAngle;
-
-        if (keeperModel) {
-          keeperModel.position.x = diveX;
-          keeperModel.position.y = -(kRig?.initialBottomY || 0) + diveLift;
-          keeperModel.position.z = -7.05;
-          keeperModel.rotation.y = keeperBaseRotY;
-          // When facing backwards, roll around Z is reversed for correct tilt relative to goal
-          keeperModel.rotation.z = kRig?.facingSign === -1 ? -diveAngle : diveAngle;
-        }
-
-        if (kRig) {
-          if (kRig.mixer) {
-            if (anim.scored) {
-              switchAction(kRig, kRig.actions.miss ? 'miss' : 'sad');
-            } else {
-              switchAction(kRig, kRig.actions.catch ? 'catch' : kRig.actions.dive ? 'dive' : 'celebrate');
-            }
-            kRig.mixer.update(delta);
-          } else {
-            kRig.restRotations.forEach((q, bone) => bone.quaternion.copy(q));
-            const b = kRig.bones;
-            if (anim.diveDir === 'left') {
-              b.leftArm?.rotateZ(2.5);
-              b.rightArm?.rotateZ(1.8);
-            } else if (anim.diveDir === 'right') {
-              b.rightArm?.rotateZ(-2.5);
-              b.leftArm?.rotateZ(-1.8);
-            }
+          let diveX = 0;
+          let diveTilt = 0;
+          if (anim.diveDir === 'left') {
+            diveX = -2.05 * diveT;
+            diveTilt = -1.15 * diveT; // Full horizontal stretch tilt
+          } else if (anim.diveDir === 'right') {
+            diveX = 2.05 * diveT;
+            diveTilt = 1.15 * diveT;
           }
+
+          // Diving arc lift and ground impact
+          const diveLift = Math.sin(diveT * Math.PI) * 0.52;
+
+          kCtrl.root.position.set(diveX, -kCtrl.initialBottomY + diveLift, -7.05);
+          kCtrl.root.rotation.set(0, Math.PI, diveTilt);
+        } else {
+          // Goalkeeper Agile Ready Bounce & Shuffling
+          const hop = Math.abs(Math.sin(elapsed * 7)) * 0.04;
+          const shuffle = Math.sin(elapsed * 3.5) * 0.12;
+          kCtrl.root.position.set(shuffle, -kCtrl.initialBottomY + hop, -7.05);
+          kCtrl.root.rotation.set(0, Math.PI, 0);
+        }
+      }
+
+      // 5. Dynamic Broadcast Cameras (FIFA Broadcast Style)
+      if (currentPhase === 'runup') {
+        // Dramatic low tracking dolly
+        camera.position.lerp(new THREE.Vector3(0, 1.55, 3.4), 0.08);
+        camera.lookAt(0, 1.2, -7.2);
+      } else if (currentPhase === 'ball_flight') {
+        // Sweep camera following trajectory towards corner
+        const camTargetX = (anim.shotDir === 'left' ? -0.8 : anim.shotDir === 'right' ? 0.8 : 0);
+        camera.position.lerp(new THREE.Vector3(camTargetX, 1.75, 2.8), 0.1);
+        camera.lookAt(ballMesh.position.x * 0.6, 1.3, -7.2);
+      } else if (currentPhase === 'shot_result') {
+        if (anim.scored) {
+          // Dramatic close-up celebration orbit
+          const orbitAngle = elapsed * 0.8;
+          camera.position.set(Math.sin(orbitAngle) * 2.6, 1.4, 0.32 + Math.cos(orbitAngle) * 2.6);
+          camera.lookAt(0, 1.2, 0.32);
+        } else {
+          camera.position.lerp(new THREE.Vector3(0, 1.7, -4.5), 0.08);
+          camera.lookAt(0, 1.2, -7.05);
         }
       } else {
-        // Goalie Idle Hop on Toes & Stance
-        const hop = Math.abs(Math.sin(elapsed * 6)) * 0.04;
-        keeperGroup.position.set(0, hop, -7.05);
-        keeperGroup.rotation.set(0, 0, 0);
-
-        if (keeperModel) {
-          keeperModel.position.set(0, -(kRig?.initialBottomY || 0) + hop, -7.05);
-          keeperModel.rotation.set(0, keeperBaseRotY, 0);
-        }
-
-        if (kRig) {
-          if (kRig.mixer) {
-            switchAction(kRig, 'idle');
-            kRig.mixer.update(delta);
-          } else {
-            kRig.restRotations.forEach((q, bone) => bone.quaternion.copy(q));
-            const b = kRig.bones;
-            b.leftArm?.rotateZ(0.7);
-            b.rightArm?.rotateZ(-0.7);
-            b.leftForeArm?.rotateX(-0.5);
-            b.rightForeArm?.rotateX(-0.5);
-          }
-        }
+        // Default broadcast over-the-shoulder view
+        camera.position.lerp(new THREE.Vector3(0, 1.85, 4.2), 0.08);
+        camera.lookAt(0, 1.25, -7.2);
       }
 
       renderer.render(scene, camera);
@@ -1153,37 +1255,50 @@ export function PenaltyShootoutPage() {
     return () => {
       cancelAnimationFrame(animId);
       resizeObserver.disconnect();
+      audio.stopAmbience();
       renderer.dispose();
       scene.clear();
     };
   }, []);
 
   return (
-    <div className="mx-auto flex min-h-[92vh] max-w-lg flex-col justify-between px-2 pt-1 pb-16 select-none font-sans">
-      {/* Top Match Header */}
+    <div className="mx-auto flex min-h-[92vh] max-w-xl flex-col justify-between px-2 pt-1 pb-16 select-none font-sans">
+      {/* Top Match Header: AAA Stadium Scoreboard */}
       <div className="rounded-2xl border border-[#35d399]/40 bg-gradient-to-r from-[#0d2218] via-[#081711] to-[#040e0a] p-3 shadow-xl">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-[#064e3b] p-1.5 border border-[#35d399]/40">
+          <div className="flex items-center gap-2.5">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#064e3b] p-1.5 border border-[#35d399]/50 shadow-inner">
               <KatikaLogo className="h-full w-full" />
             </div>
             <div>
-              <span className="font-mono-custom text-[9px] uppercase tracking-widest text-[#35D399]">
-                PS3 TRUE HD 3D · GROK ENGINE
-              </span>
-              <h1 className="text-base font-black text-white">Penalty Shootout</h1>
+              <div className="flex items-center gap-1.5 font-mono-custom text-[9px] uppercase tracking-widest text-[#35D399]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#35D399] animate-pulse" />
+                <span>AAA STADIUM ARENA · REAL-TIME 3D</span>
+              </div>
+              <h1 className="text-base font-black text-white tracking-tight">Penalty Shootout</h1>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setSoundOn(!soundOn)}
-            className="flex items-center gap-1 text-slate-400 hover:text-white p-1"
-          >
-            {soundOn ? <Volume2 size={16} /> : <VolumeX size={16} />}
-          </button>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href="/mine"
+              className="flex items-center gap-1 rounded-full border border-yellow-500/40 bg-black/60 px-2.5 py-1 text-[10px] font-mono-custom text-yellow-400 font-bold hover:bg-yellow-400/15 transition-colors"
+              title="1 $BALL consumed per match entry"
+            >
+              <span>⚽ {ballState.balls} BALL</span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => setSoundOn(!soundOn)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-black/40 text-slate-400 hover:text-white transition-colors"
+              title="Toggle Audio"
+            >
+              {soundOn ? <Volume2 size={15} /> : <VolumeX size={15} />}
+            </button>
+          </div>
         </div>
 
-        {/* Live Score & Attempts */}
+        {/* Live Scoreboard Strip */}
         <div className="mt-2.5 flex items-center justify-between rounded-xl bg-black/60 border border-white/10 px-3 py-1.5 font-mono-custom text-xs">
           <div className="flex items-center gap-2">
             <span className="font-bold text-[#35D399]">YOU: {userScore}</span>
@@ -1191,18 +1306,18 @@ export function PenaltyShootoutPage() {
               {userShots.map((s, idx) => (
                 <span key={idx}>
                   {s === true ? (
-                    <CheckCircle2 size={12} className="text-[#35D399]" />
+                    <CheckCircle2 size={13} className="text-[#35D399]" />
                   ) : s === false ? (
-                    <XCircle size={12} className="text-red-400" />
+                    <XCircle size={13} className="text-red-400" />
                   ) : (
-                    <Circle size={10} className="text-slate-600" />
+                    <Circle size={11} className="text-slate-600" />
                   )}
                 </span>
               ))}
             </div>
           </div>
 
-          <div className="text-[10px] font-bold text-yellow-400">
+          <div className="rounded-full bg-yellow-500/15 border border-yellow-400/30 px-2.5 py-0.5 text-[10px] font-black text-yellow-400">
             ROUND {round} / 3
           </div>
 
@@ -1211,11 +1326,11 @@ export function PenaltyShootoutPage() {
               {aiShots.map((s, idx) => (
                 <span key={idx}>
                   {s === true ? (
-                    <CheckCircle2 size={12} className="text-[#35D399]" />
+                    <CheckCircle2 size={13} className="text-[#35D399]" />
                   ) : s === false ? (
-                    <XCircle size={12} className="text-red-400" />
+                    <XCircle size={13} className="text-red-400" />
                   ) : (
-                    <Circle size={10} className="text-slate-600" />
+                    <Circle size={11} className="text-slate-600" />
                   )}
                 </span>
               ))}
@@ -1225,104 +1340,95 @@ export function PenaltyShootoutPage() {
         </div>
       </div>
 
-      {/* 3D WebGL HD Viewport */}
+      {/* 3D WebGL HD Stadium Viewport */}
       <div className="relative mt-2 overflow-hidden rounded-3xl border-2 border-slate-700 bg-slate-950 shadow-2xl aspect-video w-full">
         <div ref={containerRef} className="h-full w-full [&>canvas]:h-full [&>canvas]:w-full [&>canvas]:block" />
 
-        {/* Live Banner */}
+        {/* Live Result Banner */}
         {bannerNotice && (
-          <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-full border border-yellow-400/60 bg-black/85 px-4 py-1 font-mono-custom text-xs font-black text-[#fde047] shadow-xl animate-fade-in backdrop-blur-sm whitespace-nowrap">
+          <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-full border border-yellow-400/60 bg-black/90 px-5 py-1.5 font-mono-custom text-xs font-black text-[#fde047] shadow-2xl animate-fade-in backdrop-blur-md whitespace-nowrap">
             {bannerNotice}
           </div>
         )}
 
-        {/* Active Models Indicator */}
+        {/* Real-time Radar Gun Speed Readout */}
+        {lastShotSpeed && phase !== 'aiming' && (
+          <div className="pointer-events-none absolute top-3 right-3 rounded-lg bg-black/80 px-2.5 py-1 font-mono-custom text-[10px] text-white border border-white/10 backdrop-blur-sm flex items-center gap-1.5 shadow-lg">
+            <Gauge size={12} className="text-yellow-400" />
+            <span className="font-bold text-yellow-400">{lastShotSpeed}</span>
+            <span className="text-[8px] text-slate-400">KM/H</span>
+          </div>
+        )}
+
+        {/* Match HUD Status */}
         <div className="pointer-events-none absolute bottom-2 left-3 flex gap-2">
-          <div className="rounded-lg bg-black/75 px-2.5 py-1 font-mono-custom text-[10px] text-[#35D399] border border-white/10 backdrop-blur-sm flex items-center gap-1.5 shadow-md">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#35D399] animate-pulse" />
-            <span>STRIKER: {activeModelName}</span>
+          <div className="rounded-lg bg-black/80 px-2.5 py-1 font-mono-custom text-[10px] text-[#35D399] border border-white/10 backdrop-blur-sm flex items-center gap-1.5 shadow-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#35D399]" />
+            <span>STRIKER: PRO FOOTBALLER</span>
           </div>
-          <div className="rounded-lg bg-black/75 px-2.5 py-1 font-mono-custom text-[10px] text-[#38bdf8] border border-white/10 backdrop-blur-sm flex items-center gap-1.5 shadow-md">
+          <div className="rounded-lg bg-black/80 px-2.5 py-1 font-mono-custom text-[10px] text-[#38bdf8] border border-white/10 backdrop-blur-sm flex items-center gap-1.5 shadow-md">
             <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8]" />
-            <span>KEEPER: {activeKeeperName}</span>
+            <span>KEEPER: PRO GOALIE</span>
           </div>
         </div>
       </div>
 
-      {/* 3D Model Panel: Footballer Animated exclusively */}
-      <div className="mt-2 rounded-2xl border border-white/10 bg-[#0E1A16] p-2.5 space-y-2">
-        <div className="flex items-center justify-between text-[10px] font-mono-custom">
-          <span className="text-slate-400">3D MODEL ENGINE:</span>
-          <span className="text-[#35D399] flex items-center gap-1">
-            <Sparkles size={11} className="text-yellow-400" /> Footballer Animated (22 Clips)
-          </span>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              loadModelPreset();
-              loadKeeperPreset();
-            }}
-            disabled={isLoadingModel}
-            className="flex items-center justify-between rounded-xl border border-[#35D399]/40 bg-[#35D399]/15 p-2 text-left text-white shadow-sm transition-all hover:bg-[#35D399]/25"
-          >
-            <div>
-              <span className="text-[11px] block font-mono-custom font-bold text-[#35D399]">⚽ Footballer Animated</span>
-              <span className="text-[9px] text-slate-400 block">Striker & Keeper Rig</span>
-            </div>
-            <span className="rounded-full bg-[#35D399]/20 px-2 py-0.5 text-[9px] font-mono-custom font-bold text-[#35D399]">
-              ACTIVE
-            </span>
-          </button>
-
-          <label className="cursor-pointer rounded-xl border border-white/10 bg-black/40 p-2 text-left hover:border-slate-600 transition-all flex items-center justify-between">
-            <div>
-              <span className="text-[11px] block font-mono-custom font-bold text-slate-300 flex items-center gap-1">
-                <Upload size={12} className="text-yellow-400" /> Custom GLB
-              </span>
-              <span className="text-[9px] text-slate-400 block truncate">Import your own .glb</span>
-            </div>
-            <input ref={fileInputRef} type="file" accept=".glb,.gltf" onChange={handleFileUpload} className="hidden" />
-          </label>
-        </div>
-      </div>
-
-      {/* Main Game Control Panel */}
+      {/* Main Interactive Controls */}
       <div className="mt-2 space-y-2">
         {phase === 'aiming' ? (
-          <div>
-            <div className="text-center font-mono-custom text-xs font-semibold text-slate-300 mb-2">
-              SELECT TARGET ZONE TO SHOOT
+          <div className="space-y-2">
+            {/* Trajectory Elevation Toggle */}
+            <div className="flex items-center justify-between rounded-xl bg-black/40 border border-white/10 px-3 py-1.5">
+              <span className="font-mono-custom text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                <Crosshair size={12} className="text-[#35D399]" /> ELEVATION:
+              </span>
+              <div className="flex gap-1.5">
+                {(['low', 'mid', 'high'] as ShotHeight[]).map((h) => (
+                  <button
+                    key={h}
+                    type="button"
+                    onClick={() => setShotHeight(h)}
+                    className={`rounded-lg px-2.5 py-0.5 font-mono-custom text-[10px] font-bold uppercase transition-all ${
+                      shotHeight === h
+                        ? 'bg-[#35D399] text-black shadow-sm'
+                        : 'bg-white/5 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {h}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* Target Direction Buttons (FIFA Style 3-Sector Goal Face) */}
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => handleShoot('left')}
-                className="flex flex-col items-center justify-center rounded-2xl border-2 border-slate-700 bg-gradient-to-b from-slate-900 to-slate-950 p-3.5 transition-all hover:border-[#35D399] hover:bg-[#35D399]/15 active:scale-95 shadow-lg"
+                onClick={() => triggerShoot('left')}
+                className="group flex flex-col items-center justify-center rounded-2xl border-2 border-slate-700 bg-gradient-to-b from-slate-900 to-slate-950 p-3.5 transition-all hover:border-[#35D399] hover:bg-[#35D399]/15 active:scale-95 shadow-xl"
               >
-                <ChevronLeft size={24} className="text-[#35D399]" />
-                <span className="mt-1 font-mono-custom text-xs font-black text-white">LEFT</span>
+                <ChevronLeft size={26} className="text-[#35D399] group-hover:-translate-x-1 transition-transform" />
+                <span className="mt-1 font-mono-custom text-xs font-black text-white">LEFT CORNER</span>
                 <span className="text-[9px] text-slate-400 font-mono-custom">Левый угол</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => handleShoot('centre')}
-                className="flex flex-col items-center justify-center rounded-2xl border-2 border-slate-700 bg-gradient-to-b from-slate-900 to-slate-950 p-3.5 transition-all hover:border-[#facc15] hover:bg-[#facc15]/15 active:scale-95 shadow-lg"
+                onClick={() => triggerShoot('centre')}
+                className="group flex flex-col items-center justify-center rounded-2xl border-2 border-slate-700 bg-gradient-to-b from-slate-900 to-slate-950 p-3.5 transition-all hover:border-[#facc15] hover:bg-[#facc15]/15 active:scale-95 shadow-xl"
               >
-                <Zap size={24} className="text-[#facc15]" />
-                <span className="mt-1 font-mono-custom text-xs font-black text-white">CENTRE</span>
+                <Zap size={26} className="text-[#facc15] group-hover:scale-110 transition-transform" />
+                <span className="mt-1 font-mono-custom text-xs font-black text-white">CENTRE CHIP</span>
                 <span className="text-[9px] text-slate-400 font-mono-custom">По центру</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => handleShoot('right')}
-                className="flex flex-col items-center justify-center rounded-2xl border-2 border-slate-700 bg-gradient-to-b from-slate-900 to-slate-950 p-3.5 transition-all hover:border-[#38bdf8] hover:bg-[#38bdf8]/15 active:scale-95 shadow-lg"
+                onClick={() => triggerShoot('right')}
+                className="group flex flex-col items-center justify-center rounded-2xl border-2 border-slate-700 bg-gradient-to-b from-slate-900 to-slate-950 p-3.5 transition-all hover:border-[#38bdf8] hover:bg-[#38bdf8]/15 active:scale-95 shadow-xl"
               >
-                <ChevronRight size={24} className="text-[#38bdf8]" />
-                <span className="mt-1 font-mono-custom text-xs font-black text-white">RIGHT</span>
+                <ChevronRight size={26} className="text-[#38bdf8] group-hover:translate-x-1 transition-transform" />
+                <span className="mt-1 font-mono-custom text-xs font-black text-white">RIGHT CORNER</span>
                 <span className="text-[9px] text-slate-400 font-mono-custom">Правый угол</span>
               </button>
             </div>
@@ -1396,7 +1502,7 @@ export function PenaltyShootoutPage() {
               <Flame size={14} className="animate-pulse" />
               <span>
                 {phase === 'runup'
-                  ? 'Striker is running up to the ball...'
+                  ? 'Striker is running up to strike the ball...'
                   : phase === 'ball_flight'
                   ? 'Ball in flight towards the goal!'
                   : 'Penalty outcome recorded!'}
@@ -1429,6 +1535,13 @@ export function PenaltyShootoutPage() {
           </div>
         </div>
       </div>
+
+      <BallGateModal
+        isOpen={ballModalOpen}
+        onClose={() => setBallModalOpen(false)}
+        gameTitle="Penalty Shootout Arena"
+        ballsMinedToday={ballState.ballsMinedToday}
+      />
     </div>
   );
 }

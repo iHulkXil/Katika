@@ -5,6 +5,8 @@ import { WalletAuthButton } from '@/components/wallet-auth';
 import { RolloverStrip } from '@/components/rollover-strip';
 import { fireWinConfetti } from '@/lib/confetti';
 import { playTableTone } from '@/lib/table-sound';
+import { useBallEconomy } from '@/hooks/use-ball-economy';
+import { BallGateModal } from '@/components/ball-gate-modal';
 import { Sparkles, RefreshCw, SlidersHorizontal } from 'lucide-react';
 
 type FlipResult = { result: 'heads' | 'tails'; side: 'heads' | 'tails'; wager: number; won: boolean; payout: number; demoCredits: number };
@@ -95,6 +97,9 @@ export function CoinFlipPage() {
   const [history, setHistory] = useState<FlipResult[]>([]);
   const stopRef = useRef(false);
 
+  const { state: ballState, consumeBall } = useBallEconomy();
+  const [ballModalOpen, setBallModalOpen] = useState(false);
+
   const balance = Number(serverUser?.ktk ?? serverUser?.demoCredits ?? 0);
 
   const playOnce = async () => {
@@ -123,6 +128,12 @@ export function CoinFlipPage() {
   };
 
   const play = async () => {
+    if (ballState.balls < 1) {
+      setBallModalOpen(true);
+      return;
+    }
+    void consumeBall('Sovereign Coin Flip');
+
     setError(null);
     setBusy(true);
     try {
@@ -367,6 +378,13 @@ export function CoinFlipPage() {
       )}
 
       {error && <p className="mt-2.5 text-center text-xs text-red-400 font-semibold">{error}</p>}
+
+      <BallGateModal
+        isOpen={ballModalOpen}
+        onClose={() => setBallModalOpen(false)}
+        gameTitle="Sovereign Coin Flip"
+        ballsMinedToday={ballState.ballsMinedToday}
+      />
     </div>
   );
 }

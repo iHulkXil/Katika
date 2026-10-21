@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { useServerSession } from '@/components/server-session';
 import { useToast } from '@/hooks/use-toast';
+import { useBallEconomy } from '@/hooks/use-ball-economy';
+import { BallGateModal } from '@/components/ball-gate-modal';
 import {
   AlertCircle,
   Check,
@@ -74,6 +76,9 @@ export function ClubLudoPage() {
   const matchId = paramsPvp?.id || paramsClub?.id;
   const { session, refresh: refreshSession } = useServerSession();
   const { toast } = useToast();
+  const { state: ballState, consumeBall } = useBallEconomy();
+  const [ballModalOpen, setBallModalOpen] = useState(false);
+  const matchBallConsumedRef = useRef(false);
 
   const [data, setData] = useState<ClubMatchResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -148,6 +153,19 @@ export function ClubLudoPage() {
 
   const handleRoll = async () => {
     if (!matchId || busy || !myTurn || board?.phase !== 'await_roll') return;
+
+    if (!matchBallConsumedRef.current) {
+      if (ballState.balls < 1) {
+        setBallModalOpen(true);
+        return;
+      }
+      void consumeBall('Club Ludo');
+      matchBallConsumedRef.current = true;
+      toast({
+        title: '⚽ 1 $BALL Consumed',
+        description: `Match dice activated! (${ballState.balls - 1} $BALL remaining)`,
+      });
+    }
 
     try {
       setBusy(true);
@@ -615,6 +633,13 @@ export function ClubLudoPage() {
           </button>
         </div>
       )}
+
+      <BallGateModal
+        isOpen={ballModalOpen}
+        onClose={() => setBallModalOpen(false)}
+        gameTitle="Club Ludo"
+        ballsMinedToday={ballState.ballsMinedToday}
+      />
     </div>
   );
 }

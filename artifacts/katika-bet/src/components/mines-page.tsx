@@ -8,6 +8,8 @@ import { RolloverStrip } from '@/components/rollover-strip';
 import { WagerRow } from '@/components/wager-row';
 import { clampStake } from '@/lib/wager-cap';
 import { fireWinConfetti } from '@/lib/confetti';
+import { useBallEconomy } from '@/hooks/use-ball-economy';
+import { BallGateModal } from '@/components/ball-gate-modal';
 
 const TILES = 25;
 async function api(path: string, token: string, body?: object, method = 'POST') {
@@ -44,6 +46,9 @@ export function MinesPage() {
   const [note, setNote] = useState<string | null>(null);
   const balance = Number(serverUser?.ktk ?? serverUser?.demoCredits ?? 0);
 
+  const { state: ballState, consumeBall } = useBallEconomy();
+  const [ballModalOpen, setBallModalOpen] = useState(false);
+
   const token = async () => {
     const value = await getAccessToken();
     if (!value) throw new Error('Sign in first');
@@ -70,6 +75,12 @@ export function MinesPage() {
   }, [authenticated]);
 
   const start = async () => {
+    if (ballState.balls < 1) {
+      setBallModalOpen(true);
+      return;
+    }
+    void consumeBall('Katika Mines');
+
     setError(null); setNote(null); setBusy(true);
     try {
       const stake = clampStake(wager, serverUser?.maxWager, balance);
@@ -162,6 +173,13 @@ export function MinesPage() {
         </button>
       )}
       {error && <p className="mt-2 text-center text-xs text-red-400">{error}</p>}
+
+      <BallGateModal
+        isOpen={ballModalOpen}
+        onClose={() => setBallModalOpen(false)}
+        gameTitle="Katika Mines"
+        ballsMinedToday={ballState.ballsMinedToday}
+      />
     </div>
   );
 }
