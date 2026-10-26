@@ -1,13 +1,19 @@
 # SIDEBET — handover
 
-Repo: `iHulkXil/Katika` (rebranded to SIDEBET, ticker $SBET kept in background only).
+Repo: `iHulkXil/Katika` (rebranded to SIDEBET).
 - API: Render `https://katika-w8bs.onrender.com`
 - Web: Vercel frontend.
 - DB: Neon. Auth: Privy (multi-chain: EVM + Solana; BTC via expansion).
-- Visible unit: none. $SBET internal only. No Legend / point allocation / unlocking UI.
+- Visible unit: none. $SBET internal only.
 
-Legend system, card allocation, and point-based unlocking removed from UI and routes.
+## Current focus
 
-Wallet connect activated for real EVM, Solana, and BTC play.
+Homepage and core economy are Polymarket-style prediction markets.
+- Users create events (mints an NFT with event details as proof of bet).
+- Others buy Yes or No shares into the event.
+- Mining system fully removed from UI and routes.
+- Color scheme unchanged (dark emerald).
 
-Read order: this file → remaining specs → code.
+Legend system previously removed. PvP and classic casino tables remain available under their nav items.
+
+Read order: this file → code (markets-home.tsx is the new home).
