@@ -1,8 +1,19 @@
 import { useState } from 'react';
-import { Link } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { WalletAuthButton } from '@/components/wallet-auth';
-import { Plus, TrendingUp, Users, Calendar, CheckCircle2 } from 'lucide-react';
+import { Plus, TrendingUp, Users, Calendar } from 'lucide-react';
+import { usePrivy } from '@privy-io/react-auth';
+import { useWallets as useSolanaWallets, useSignAndSendTransaction } from '@privy-io/react-auth/solana';
+import { Connection, PublicKey, Keypair, SystemProgram, Transaction } from '@solana/web3.js';
+import {
+  createInitializeMintInstruction,
+  createAssociatedTokenAccountInstruction,
+  createMintToInstruction,
+  getAssociatedTokenAddress,
+  TOKEN_PROGRAM_ID,
+  MINT_SIZE,
+  getMinimumBalanceForRentExemptMint,
+} from '@solana/spl-token';
 
 type Outcome = 'yes' | 'no';
 
@@ -17,6 +28,8 @@ type Market = {
   noShares: number;
   volume: number;
   nftMinted: boolean;
+  mintAddress?: string;
+  txSig?: string;
   createdAt: number;
 };
 
@@ -49,10 +62,16 @@ const INITIAL_MARKETS: Market[] = [
   },
 ];
 
+const SOLANA_RPC = 'https://api.devnet.solana.com';
+
 export function MarketsHome() {
   const { toast } = useToast();
+  const { authenticated, user } = usePrivy();
+  const { wallets: solanaWallets } = useSolanaWallets();
+  const { signAndSendTransaction } = useSignAndSendTransaction();
   const [markets, setMarkets] = useState<Market[]>(INITIAL_MARKETS);
   const [showCreate, setShowCreate] = useState(false);
+  const [minting, setMinting] = useState(false);
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -60,32 +79,84 @@ export function MarketsHome() {
     resolution: '',
   });
 
-  const createEvent = () => {
+  const createEvent = async () => {
     if (!form.title.trim() || !form.endDate) {
       toast({ title: 'Missing fields', description: 'Title and end date required.', variant: 'destructive' });
       return;
     }
-    const id = 'm' + Date.now().toString(36);
-    const newMarket: Market = {
-      id,
-      title: form.title.trim(),
-      description: form.description.trim() || 'No additional description.',
-      creator: 'You',
-      endDate: form.endDate,
-      resolution: form.resolution.trim() || 'Creator resolution',
-      yesShares: 0,
-      noShares: 0,
-      volume: 0,
-      nftMinted: true,
-      createdAt: Date.now(),
-    };
-    setMarkets((prev) => [newMarket, ...prev]);
-    setShowCreate(false);
-    setForm({ title: '', description: '', endDate: '', resolution: '' });
-    toast({
-      title: 'Event created',
-      description: 'NFT minted as proof of bet. Others can now buy in.',
-    });
+    if (!authenticated) {
+      toast({ title: 'Connect wallet', description: 'Sign in to mint on Solana.', variant: 'destructive' });
+      return;
+    }
+    const solWallet = solanaWallets?.[0];
+    if (!solWallet) {
+      toast({ title: 'No Solana wallet', description: 'Create or connect a Solana wallet first.', variant: 'destructive' });
+      return;
+    }
+
+    setMinting(true);
+    try {
+      const connection = new Connection(SOLANA_RPC, 'confirmed');
+      const payer = new PublicKey(solWallet.address);
+      const mintKeypair = Keypair.generate();
+      const lamports = await getMinimumBalanceForRentExemptMint(connection);
+      const tokenAccount = await getAssociatedTokenAddress(mintKeypair.publicKey, payer);
+
+      const tx = new Transaction().add(
+        SystemProgram.createAccount({
+          fromPubkey: payer,
+          newAccountPubkey: mintKeypair.publicKey,
+          space: MINT_SIZE,
+          lamports,
+          programId: TOKEN_PROGRAM_ID,
+        }),
+        createInitializeMintInstruction(mintKeypair.publicKey, 0, payer, payer),
+        createAssociatedTokenAccountInstruction(payer, tokenAccount, payer, mintKeypair.publicKey),
+        createMintToInstruction(mintKeypair.publicKey, tokenAccount, payer, 1),
+      );
+
+      tx.feePayer = payer;
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+      tx.partialSign(mintKeypair);
+
+      const sig = await signAndSendTransaction({
+        transaction: tx,
+        wallet: solWallet,
+        connection,
+      });
+
+      const id = 'm' + Date.now().toString(36);
+      const newMarket: Market = {
+        id,
+        title: form.title.trim(),
+        description: form.description.trim() || 'No additional description.',
+        creator: solWallet.address.slice(0, 6) + '...' + solWallet.address.slice(-4),
+        endDate: form.endDate,
+        resolution: form.resolution.trim() || 'Creator resolution',
+        yesShares: 0,
+        noShares: 0,
+        volume: 0,
+        nftMinted: true,
+        mintAddress: mintKeypair.publicKey.toBase58(),
+        txSig: typeof sig === 'string' ? sig : (sig as any).signature,
+        createdAt: Date.now(),
+      };
+      setMarkets((prev) => [newMarket, ...prev]);
+      setShowCreate(false);
+      setForm({ title: '', description: '', endDate: '', resolution: '' });
+      toast({
+        title: 'Minted on Solana',
+        description: `Proof-of-bet NFT created. Mint: ${mintKeypair.publicKey.toBase58().slice(0, 8)}...`,
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Mint failed',
+        description: err?.message || 'Could not mint on Solana. Ensure wallet has SOL on devnet.',
+        variant: 'destructive',
+      });
+    } finally {
+      setMinting(false);
+    }
   };
 
   const buyIn = (id: string, outcome: Outcome, amount: number) => {
@@ -118,12 +189,12 @@ export function MarketsHome() {
         </button>
       </div>
       <p className="text-xs text-[#8FA39A]">
-        Create an event to mint an NFT with the bet details. Others buy Yes or No shares. Current color scheme preserved.
+        Create an event to mint a Solana NFT as proof of bet. Others buy Yes or No shares.
       </p>
 
       {showCreate && (
         <div className="rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] p-4 space-y-3">
-          <h2 className="text-sm font-bold text-white">Create Event (mints NFT)</h2>
+          <h2 className="text-sm font-bold text-white">Create Event (mints Solana NFT)</h2>
           <input
             className="w-full rounded-lg border border-[#1C3A2E] bg-[#07110E] px-3 py-2 text-sm text-white"
             placeholder="Event title"
@@ -154,10 +225,11 @@ export function MarketsHome() {
           <div className="flex gap-2">
             <button
               type="button"
+              disabled={minting}
               onClick={createEvent}
-              className="flex-1 rounded-lg bg-[#35D399] py-2 text-sm font-bold text-black"
+              className="flex-1 rounded-lg bg-[#35D399] py-2 text-sm font-bold text-black disabled:opacity-50"
             >
-              Mint NFT & Create
+              {minting ? 'Minting on Solana...' : 'Mint NFT & Create'}
             </button>
             <button
               type="button"
@@ -167,6 +239,7 @@ export function MarketsHome() {
               Cancel
             </button>
           </div>
+          <p className="text-[10px] text-[#8FA39A]">Requires a Solana wallet with SOL on devnet. Mint creates a 0-decimal token as the proof NFT.</p>
         </div>
       )}
 
@@ -180,11 +253,14 @@ export function MarketsHome() {
                 <h3 className="text-base font-bold text-[#E8F2EC]">{m.title}</h3>
                 {m.nftMinted && (
                   <span className="shrink-0 rounded-full bg-[#35D399]/15 px-2 py-0.5 text-[10px] font-bold text-[#35D399]">
-                    NFT
+                    SOL NFT
                   </span>
                 )}
               </div>
               <p className="mt-1 text-[11px] text-[#8FA39A]">{m.description}</p>
+              {m.mintAddress && (
+                <p className="mt-1 font-mono-custom text-[9px] text-[#35D399]">Mint: {m.mintAddress.slice(0, 8)}...{m.mintAddress.slice(-4)}</p>
+              )}
               <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-[#8FA39A]">
                 <span className="flex items-center gap-1"><Calendar size={12} /> {m.endDate}</span>
                 <span className="flex items-center gap-1"><Users size={12} /> {m.creator}</span>
