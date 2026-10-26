@@ -11,7 +11,7 @@ import { CoinFlipPage } from '@/components/coinflip-page';
 import { MinesPage } from '@/components/mines-page';
 import { RoulettePage } from '@/components/roulette-page';
 import { PoolGamePage } from '@/components/pool-game';
-import { MiningStation } from '@/components/mining-station';
+import { MarketsHome } from '@/components/markets-home';
 import { PlayPage } from '@/components/play-page';
 import { LeaderboardPage } from '@/components/leaderboard-page';
 import { CashierPage } from '@/components/cashier-page';
@@ -75,7 +75,7 @@ function GameTile({ game }: { game: Game }) {
 }
 
 function Home() {
-  return <MiningStation defaultTab="mine" />;
+  return <MarketsHome />;
 }
 
 function Games() {
@@ -133,9 +133,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/dashboard" component={Home} />
-        <Route path="/mine">{() => <MiningStation defaultTab="mine" />}</Route>
-        <Route path="/tap">{() => <MiningStation defaultTab="mine" />}</Route>
-        <Route path="/swap">{() => <MiningStation defaultTab="upgrades" />}</Route>
+        <Route path="/markets" component={Home} />
         <Route path="/play" component={PlayPage} />
 
         {/* Redirects for legacy routes /clash and /club */}
