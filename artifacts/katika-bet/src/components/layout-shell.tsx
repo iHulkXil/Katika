@@ -23,7 +23,7 @@ export function Brand() {
         <KatikaLogo className="h-8 w-8" />
       </div>
       <span className="text-[16px] font-black tracking-[-.03em] text-white">
-        Katika<span className="text-[#35D399]">.</span>Bet
+        SIDE<span className="text-[#35D399]">BET</span>
       </span>
     </Link>
   );
@@ -46,18 +46,10 @@ export function LayoutShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { serverUser, loading, error } = useServerSession();
   const { state: ballState } = useBallEconomy();
-  const credits = serverUser?.ktk ?? serverUser?.demoCredits;
-  const label = loading
-    ? '...'
-    : typeof credits === 'number'
-      ? credits.toLocaleString() + ' KTK'
-      : error
-        ? 'API'
-        : '0 KTK';
 
   return (
     <div className="min-h-[100dvh] bg-[#07110E] text-[#E8F2EC]">
-      {/* Sticky Header with Official Brand Logo, Cashier Balance, and $BALL Token Counter */}
+      {/* Sticky Header with Official Brand Logo and $BALL Token Counter */}
       <header className="sticky top-0 z-40 border-b border-[#1C3A2E]/60 bg-[#07110E]/95 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-[520px] items-center justify-between px-3">
           <Brand />
@@ -72,15 +64,6 @@ export function LayoutShell({ children }: { children: ReactNode }) {
               <span>{ballState.balls} BALL</span>
             </Link>
 
-            {/* Clickable Balance navigating to Cashier */}
-            <Link
-              href="/cashier"
-              className="flex items-center gap-1.5 rounded-full border border-[#35D399]/40 bg-[#0E1A16] px-3 py-1 font-mono-custom text-[11px] font-bold text-[#35D399] shadow-sm hover:border-[#35D399] hover:bg-[#35D399]/15 active:scale-95 transition-all"
-              title="Click to open Cashier & Top Up"
-            >
-              <span>{label}</span>
-              <span className="rounded-full bg-[#35D399]/20 px-1 text-[9px] font-black text-[#35D399]">+</span>
-            </Link>
             <WalletAuthButton compact className="hidden sm:flex" />
           </div>
         </div>
@@ -89,7 +72,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
       <main className="mx-auto max-w-[520px] pb-24">{children}</main>
 
       <footer className="mx-auto max-w-[520px] px-4 pb-28 text-center text-[11px] text-[#5C7368]">
-        18+ KTK is gaming test credit. Play responsibly.
+        18+ Play responsibly. Multi-chain wallet support.
       </footer>
 
       {/* Primary Bottom Navigation (Mine, PvP, Casino, Profile) */}
@@ -98,7 +81,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
           {bottom.map((item) => {
             const active =
               item.href === '/mine'
-                ? location === '/mine' || location === '/tap' || location === '/legend' || location === '/swap' || location === '/'
+                ? location === '/mine' || location === '/tap' || location === '/swap' || location === '/'
                 : item.href === '/pvp'
                   ? location === '/pvp' || location.startsWith('/pvp/') || location.startsWith('/games/pool')
                   : item.href === '/games'
