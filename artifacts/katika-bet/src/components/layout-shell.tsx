@@ -9,16 +9,15 @@ import {
   Swords,
   UserRound,
   Zap,
-  Pickaxe,
+  TrendingUp,
 } from 'lucide-react';
 import { useServerSession } from '@/components/server-session';
-import { useBallEconomy } from '@/hooks/use-ball-economy';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { KatikaLogo } from '@/components/katika-logo';
 
 export function Brand() {
   return (
-    <Link href="/mine" className="flex items-center gap-2 group">
+    <Link href="/" className="flex items-center gap-2 group">
       <div className="transition-transform group-hover:scale-105 active:scale-95">
         <KatikaLogo className="h-8 w-8" />
       </div>
@@ -30,7 +29,7 @@ export function Brand() {
 }
 
 const bottom = [
-  { href: '/mine', label: 'Mine', icon: Pickaxe },
+  { href: '/', label: 'Markets', icon: TrendingUp },
   { href: '/pvp', label: 'PvP', icon: Swords },
   { href: '/games', label: 'Casino', icon: Gamepad2 },
   { href: '/profile', label: 'Profile', icon: UserRound },
@@ -45,25 +44,13 @@ function tabClass(active: boolean) {
 export function LayoutShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { serverUser, loading, error } = useServerSession();
-  const { state: ballState } = useBallEconomy();
 
   return (
     <div className="min-h-[100dvh] bg-[#07110E] text-[#E8F2EC]">
-      {/* Sticky Header with Official Brand Logo and $BALL Token Counter */}
       <header className="sticky top-0 z-40 border-b border-[#1C3A2E]/60 bg-[#07110E]/95 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-[520px] items-center justify-between px-3">
           <Brand />
           <div className="flex items-center gap-2">
-            {/* $BALL Token Game Pass Counter */}
-            <Link
-              href="/mine"
-              className="flex items-center gap-1.5 rounded-full border border-yellow-500/40 bg-[#0E1A16] px-2.5 py-1 font-mono-custom text-[11px] font-bold text-yellow-400 shadow-sm hover:border-yellow-400 hover:bg-yellow-400/15 active:scale-95 transition-all"
-              title="Available $BALL tokens for matches (1 $BALL per game)"
-            >
-              <span>⚽</span>
-              <span>{ballState.balls} BALL</span>
-            </Link>
-
             <WalletAuthButton compact className="hidden sm:flex" />
           </div>
         </div>
@@ -75,13 +62,12 @@ export function LayoutShell({ children }: { children: ReactNode }) {
         18+ Play responsibly. Multi-chain wallet support.
       </footer>
 
-      {/* Primary Bottom Navigation (Mine, PvP, Casino, Profile) */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#1C3A2E] bg-[#07110E]/98 backdrop-blur-lg pb-[max(10px,env(safe-area-inset-bottom))] pt-2">
         <div className="mx-auto flex max-w-md items-center justify-around px-2">
           {bottom.map((item) => {
             const active =
-              item.href === '/mine'
-                ? location === '/mine' || location === '/tap' || location === '/swap' || location === '/'
+              item.href === '/'
+                ? location === '/' || location === '/dashboard' || location === '/markets'
                 : item.href === '/pvp'
                   ? location === '/pvp' || location.startsWith('/pvp/') || location.startsWith('/games/pool')
                   : item.href === '/games'
