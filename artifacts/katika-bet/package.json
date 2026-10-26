@@ -74,6 +74,8 @@
   },
   "dependencies": {
     "@privy-io/react-auth": "^3.37.0",
+    "@solana/web3.js": "^1.95.3",
+    "@solana/spl-token": "^0.4.8",
     "@stripe/stripe-js": "^9.13.0",
     "three": "^0.180.0"
   }
