@@ -32,14 +32,16 @@ createRoot(document.getElementById('root')!).render(
           appearance: {
             theme: 'dark',
             accentColor: '#35d399',
-            showWalletLoginFirst: false,
-            walletChainType: 'ethereum-only',
+            showWalletLoginFirst: true,
+            walletChainType: 'ethereum-and-solana',
           },
           defaultChain: sepolia,
           supportedChains: [sepolia, baseSepolia, arbitrumSepolia, polygonAmoy],
           embeddedWallets: {
             ethereum: { createOnLogin: 'users-without-wallets' },
+            solana: { createOnLogin: 'users-without-wallets' },
           },
+          // BTC support can be enabled via Privy dashboard + additional config if available
         }}
       >
         <ServerSessionSync>
