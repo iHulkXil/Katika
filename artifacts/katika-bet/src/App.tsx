@@ -13,14 +13,12 @@ import { RoulettePage } from '@/components/roulette-page';
 import { PoolGamePage } from '@/components/pool-game';
 import { MiningStation } from '@/components/mining-station';
 import { PlayPage } from '@/components/play-page';
-import { LegendPage } from '@/components/legend-page';
 import { LeaderboardPage } from '@/components/leaderboard-page';
 import { CashierPage } from '@/components/cashier-page';
 import { PvPLobby } from '@/components/pvp-lobby';
 import { ClubLudoPage } from '@/components/club-ludo';
 import { PenaltyShootoutPage } from '@/components/penalty-shootout';
 import { ProfilePage } from '@/components/profile-page';
-import { HomeLegendHero, LegendCard, useLegend } from '@/components/legend-card';
 import { AuthGate } from '@/components/auth-gate';
 import { DemoNotice, LayoutShell, MenuRow } from '@/components/layout-shell';
 import { useServerSession } from '@/components/server-session';
@@ -50,7 +48,7 @@ type Game = {
 };
 const games: Game[] = [
   { name: 'Dice Table', description: 'Over/Under Precision Roller', badge: '1-100', payout: '94% RTP', href: '/games/dice', icon: <Dices /> },
-  { name: 'Coin Flip', description: '3D Katika Gold Coin', badge: '50/50', payout: '1.88× Fixed', href: '/games/coinflip', icon: <CircleDollarSign /> },
+  { name: 'Coin Flip', description: '3D Gold Coin', badge: '50/50', payout: '1.88× Fixed', href: '/games/coinflip', icon: <CircleDollarSign /> },
   { name: 'Mines Vault', description: '5×5 Diamond Grid • Cash Out Anytime', badge: '1-24 Mines', payout: 'Up to 24×', href: '/games/mines', icon: <Bomb /> },
   { name: 'Roulette', description: 'European Single Zero • Street & Straight Bets', badge: '0-36 Wheel', payout: '97.3% RTP', href: '/games/roulette', icon: <CircleDollarSign /> },
 ];
@@ -92,7 +90,7 @@ function Games() {
           4 Live Tables
         </span>
       </div>
-      <p className="mt-1 text-xs text-[#8FA39A]">All tables settle instantly in $KTK off-chain credits with verified RNG.</p>
+      <p className="mt-1 text-xs text-[#8FA39A]">All tables settle instantly with verified RNG. Connect your wallet for multi-chain play.</p>
       <div className="mt-3.5 grid grid-cols-2 gap-2.5 md:grid-cols-4">{games.map((game) => <GameTile key={game.name} game={game} />)}</div>
     </div>
   );
@@ -102,7 +100,7 @@ function Wallet() {
   return (
     <div className="px-3 pt-3">
       <h1 className="text-2xl font-semibold">Wallet</h1>
-      <p className="mt-1 text-sm text-muted-foreground">$KTK is the house ledger for cards and tables.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Connect EVM, Solana, or Bitcoin wallets for real play.</p>
       <div className="mt-4"><ConnectedWalletStatus /></div>
       <h2 className="mt-6 text-sm font-semibold uppercase tracking-[.16em] text-secondary">Bet history</h2>
       <BetHistory />
@@ -138,7 +136,6 @@ function Router() {
         <Route path="/mine">{() => <MiningStation defaultTab="mine" />}</Route>
         <Route path="/tap">{() => <MiningStation defaultTab="mine" />}</Route>
         <Route path="/swap">{() => <MiningStation defaultTab="upgrades" />}</Route>
-        <Route path="/legend">{() => <MiningStation defaultTab="legend" />}</Route>
         <Route path="/play" component={PlayPage} />
 
         {/* Redirects for legacy routes /clash and /club */}
