@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useServerSession } from './server-session';
-import { useLegend } from './legend-card';
-import { useBallEconomy } from '@/hooks/use-ball-economy';
-import { BallGateModal } from '@/components/ball-gate-modal';
 import {
   CircleDollarSign,
   Gamepad2,
@@ -22,9 +19,6 @@ import {
 export function PvPLobby() {
   const [, setLocation] = useLocation();
   const { serverUser } = useServerSession();
-  const { legend } = useLegend();
-  const { state: ballState, consumeBall } = useBallEconomy();
-  const [ballModalOpen, setBallModalOpen] = useState(false);
 
   const [selectedGame, setSelectedGame] = useState<'penalty' | 'pool' | 'ludo'>('penalty');
   const [mode, setMode] = useState<'queue' | 'challenge'>('queue');
@@ -33,7 +27,7 @@ export function PvPLobby() {
   const [error, setError] = useState<string | null>(null);
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
 
-  const maxWager = legend?.perkId === 'whale' ? 75 : 50;
+  const maxWager = 50;
 
   useEffect(() => {
     fetchRecent();
@@ -54,27 +48,13 @@ export function PvPLobby() {
   };
 
   const handleStart = async () => {
-    // Check 1 $BALL cost for PvP entry
-    if (ballState.balls < 1) {
-      setBallModalOpen(true);
-      return;
-    }
-
     if (selectedGame === 'penalty') {
-      // Launch 3v3 Penalty Shootout Arena directly
       setLocation(`/pvp/penalty?stake=${stake}&mode=${mode}`);
       return;
     }
 
-    void consumeBall(`PvP ${selectedGame}`);
-
     if (!serverUser) {
       setError('Please connect your wallet first');
-      return;
-    }
-
-    if (!legend?.profileComplete) {
-      setError('Complete your Legend card attributes before entering PvP');
       return;
     }
 
@@ -113,7 +93,6 @@ export function PvPLobby() {
 
   return (
     <div className="px-3 pt-3 pb-12">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <span className="font-mono-custom text-[10px] uppercase tracking-[.18em] text-[#35D399]">
@@ -127,10 +106,9 @@ export function PvPLobby() {
         </div>
       </div>
       <p className="mt-1 text-xs text-[#8FA39A]">
-        Play 1v1 against other players. Settle instant pots in $KTK off-chain credits.
+        Play 1v1 against other players. Multi-chain wallet support.
       </p>
 
-      {/* Game Selector Tabs (Penalty 3v3, Pool, Ludo) */}
       <div className="mt-4 grid grid-cols-3 gap-2">
         <button
           type="button"
@@ -150,7 +128,7 @@ export function PvPLobby() {
           <h3 className="mt-1 text-xs font-bold text-[#E8F2EC] flex items-center gap-1">
             <span>⚽ Shootout</span>
           </h3>
-          <p className="mt-0.5 text-[9px] text-[#8FA39A] truncate">3v3 Shoot &amp; Save</p>
+          <p className="mt-0.5 text-[9px] text-[#8FA39A] truncate">3v3 Shoot & Save</p>
         </button>
 
         <button
@@ -168,7 +146,7 @@ export function PvPLobby() {
               Table
             </span>
           </div>
-          <h3 className="mt-1 text-xs font-bold text-[#E8F2EC]">Katika Pool</h3>
+          <h3 className="mt-1 text-xs font-bold text-[#E8F2EC]">Pool</h3>
           <p className="mt-0.5 text-[9px] text-[#8FA39A] truncate">Solids vs Stripes</p>
         </button>
 
@@ -187,29 +165,28 @@ export function PvPLobby() {
               Board
             </span>
           </div>
-          <h3 className="mt-1 text-xs font-bold text-[#E8F2EC]">Club Ludo</h3>
+          <h3 className="mt-1 text-xs font-bold text-[#E8F2EC]">Ludo</h3>
           <p className="mt-0.5 text-[9px] text-[#8FA39A] truncate">2-Token Sprint</p>
         </button>
       </div>
 
-      {/* Game Details Banner */}
       <div className="mt-3 rounded-xl border border-[#1C3A2E] bg-[#0A1612] p-3">
         {selectedGame === 'penalty' && (
           <div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-[#35D399]">
                 <Swords size={14} className="text-[#35D399]" />
-                <span>3v3 Penalty Shootout: Multiplayer Squad Matchmaking</span>
+                <span>3v3 Penalty Shootout</span>
               </div>
               <Link
                 href="/pvp/penalty"
                 className="rounded-lg border border-[#35D399]/60 bg-[#35D399]/15 px-2.5 py-1 font-mono-custom text-[10px] font-bold text-[#35D399] hover:bg-[#35D399]/25 transition-all"
               >
-                Enter Stadium Queue →
+                Enter Stadium →
               </Link>
             </div>
             <p className="mt-1 text-[11px] text-[#8FA39A] leading-relaxed">
-              Join cue with 6 players. Teams take turns shooting and saving in a 3v3 shootout! Strictly 3 directions (Left, Centre, Right). Procedural power (75–124 km/h), varied pitch elevations (low, mid, high, panenka), and dynamic player motions. 4% pot rake.
+              Join cue with 6 players. Teams take turns shooting and saving in a 3v3 shootout.
             </p>
           </div>
         )}
@@ -218,17 +195,17 @@ export function PvPLobby() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-[#fef08a]">
                 <Trophy size={14} />
-                <span>Katika 8-Ball Pool: Realistic Billiards Arena</span>
+                <span>8-Ball Pool</span>
               </div>
               <Link
                 href="/games/pool"
                 className="rounded-lg border border-[#fef08a]/60 bg-[#fef08a]/15 px-2.5 py-1 font-mono-custom text-[10px] font-bold text-[#fef08a] hover:bg-[#fef08a]/25 transition-all"
               >
-                Solo / AI Practice →
+                Practice →
               </Link>
             </div>
             <p className="mt-1 text-[11px] text-[#8FA39A] leading-relaxed">
-              Standard 8-ball rules on emerald baize cloth. Aim with precision laser guides and control stroke power. Sink your assigned set (Solids or Stripes) and pocket the 8-ball clean to win the pot! 4% house rake.
+              Standard 8-ball rules. Sink your set and pocket the 8-ball to win.
             </p>
           </div>
         )}
@@ -239,15 +216,13 @@ export function PvPLobby() {
               <span>Ludo Quick: 2 Tokens to Home</span>
             </div>
             <p className="mt-1 text-[11px] text-[#8FA39A] leading-relaxed">
-              Need a 6 to exit yard. Exact roll to home. Capture opponent off safe tiles. 2-token own-stacks form impassable blocks. Extra turn on 6, capture, or finish (max 3 in a row).
+              Need a 6 to exit yard. Exact roll to home. Capture opponent off safe tiles.
             </p>
           </div>
         )}
       </div>
 
-      {/* Matchmaking Mode & Stake Setup */}
       <div className="mt-4 rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] p-4">
-        {/* Mode Selector */}
         <div className="flex items-center justify-between border-b border-[#1C3A2E]/60 pb-3">
           <span className="text-xs font-semibold text-[#E8F2EC]">Match Type</span>
           <div className="flex rounded-lg border border-[#1C3A2E] bg-[#07110E] p-0.5">
@@ -276,12 +251,11 @@ export function PvPLobby() {
           </div>
         </div>
 
-        {/* Stake Selector */}
         <div className="mt-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[#E8F2EC]">Wager Stake</span>
             <span className="font-mono-custom text-xs font-bold text-[#35D399]">
-              {stake} KTK (Pot: {stake * 2} KTK)
+              {stake} (Pot: {stake * 2})
             </span>
           </div>
 
@@ -300,7 +274,7 @@ export function PvPLobby() {
                     : 'border-[#1C3A2E] bg-[#07110E] text-[#8FA39A] hover:text-[#E8F2EC]'
                 }`}
               >
-                {amt} KTK
+                {amt}
               </button>
             ))}
           </div>
@@ -312,7 +286,6 @@ export function PvPLobby() {
           </div>
         )}
 
-        {/* Start Button */}
         <button
           type="button"
           onClick={handleStart}
@@ -330,7 +303,6 @@ export function PvPLobby() {
         </button>
       </div>
 
-      {/* Recent Matches */}
       <div className="mt-6">
         <div className="flex items-center justify-between">
           <span className="font-mono-custom text-[10px] uppercase tracking-[.18em] text-[#8FA39A]">
@@ -359,9 +331,9 @@ export function PvPLobby() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2 font-mono-custom">
-                  <span className="text-[#8FA39A]">{m.stake} KTK</span>
+                  <span className="text-[#8FA39A]">{m.stake}</span>
                   {m.prize > 0 && (
-                    <span className="font-bold text-[#f3d37a]">+{m.prize} KTK</span>
+                    <span className="font-bold text-[#f3d37a]">+{m.prize}</span>
                   )}
                 </div>
               </div>
@@ -369,13 +341,6 @@ export function PvPLobby() {
           )}
         </div>
       </div>
-
-      <BallGateModal
-        isOpen={ballModalOpen}
-        onClose={() => setBallModalOpen(false)}
-        gameTitle="PvP Arena"
-        ballsMinedToday={ballState.ballsMinedToday}
-      />
     </div>
   );
 }
