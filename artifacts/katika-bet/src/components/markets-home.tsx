@@ -33,9 +33,45 @@ type Market = {
   txSig?: string;
   createdAt: number;
   live: boolean;
+  shortTerm?: boolean;
 };
 
+const now = Date.now();
+const in15min = new Date(now + 15 * 60 * 1000).toISOString().slice(0, 16);
+
 const INITIAL_MARKETS: Market[] = [
+  {
+    id: 'btc15',
+    title: 'BTC up or down in the next 15 minutes?',
+    description: 'Resolves Yes if BTC price is higher than the open of this window on major exchanges.',
+    creator: 'system',
+    endDate: in15min,
+    resolution: 'Binance / Coinbase mid-price at window close',
+    category: 'Crypto',
+    yesShares: 180,
+    noShares: 120,
+    volume: 4200,
+    nftMinted: true,
+    createdAt: now - 60000,
+    live: true,
+    shortTerm: true,
+  },
+  {
+    id: 'sol15',
+    title: 'SOL up or down in the next 15 minutes?',
+    description: 'Resolves Yes if SOL price is higher than the open of this window on major exchanges.',
+    creator: 'system',
+    endDate: in15min,
+    resolution: 'Binance / Coinbase mid-price at window close',
+    category: 'Crypto',
+    yesShares: 140,
+    noShares: 160,
+    volume: 3100,
+    nftMinted: true,
+    createdAt: now - 120000,
+    live: true,
+    shortTerm: true,
+  },
   {
     id: 'm1',
     title: 'Will BTC close above $100k this month?',
@@ -181,7 +217,11 @@ export function MarketsHome() {
   const sorted = useMemo(() => {
     return [...markets]
       .filter((m) => filter === 'All' || m.category === filter)
-      .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
+      .sort((a, b) => {
+        if (a.shortTerm && !b.shortTerm) return -1;
+        if (!a.shortTerm && b.shortTerm) return 1;
+        return new Date(a.endDate).getTime() - new Date(b.endDate).getTime();
+      });
   }, [markets, filter]);
 
   const createEvent = async () => {
@@ -319,7 +359,7 @@ export function MarketsHome() {
       </div>
 
       <p className="text-xs text-[#8FA39A]">
-        Live prediction markets. Create an event to mint a Solana NFT proof of bet. Others buy Yes or No.
+        Live prediction markets including 15-minute BTC and SOL windows. Create an event to mint a Solana NFT.
       </p>
 
       {showCreate && (
@@ -391,12 +431,15 @@ export function MarketsHome() {
         {sorted.map((m) => {
           const total = m.yesShares + m.noShares || 1;
           const yesPct = Math.round((m.yesShares / total) * 100);
-          const daysLeft = Math.max(0, Math.ceil((new Date(m.endDate).getTime() - Date.now()) / 86400000));
+          const end = new Date(m.endDate).getTime();
+          const minsLeft = Math.max(0, Math.round((end - Date.now()) / 60000));
+          const daysLeft = Math.max(0, Math.ceil((end - Date.now()) / 86400000));
+          const timeLabel = m.shortTerm ? `${minsLeft}m left` : `${daysLeft}d left`;
           return (
             <div key={m.id} className="relative overflow-hidden rounded-2xl border border-[#1C3A2E] bg-gradient-to-br from-[#0E1A16] to-[#07110E] p-4">
               {m.live && (
                 <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-red-500/20 px-2 py-0.5 text-[9px] font-bold text-red-400">
-                  <Zap size={10} /> LIVE
+                  <Zap size={10} /> {m.shortTerm ? '15m' : 'LIVE'}
                 </div>
               )}
               <div className="pr-12">
@@ -404,6 +447,11 @@ export function MarketsHome() {
                   <span className="rounded-full bg-[#35D399]/15 px-2 py-0.5 text-[9px] font-bold text-[#35D399]">
                     {m.category}
                   </span>
+                  {m.shortTerm && (
+                    <span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-[9px] font-bold text-orange-400">
+                      15 MIN
+                    </span>
+                  )}
                   {m.nftMinted && (
                     <span className="rounded-full bg-[#35D399]/15 px-2 py-0.5 text-[9px] font-bold text-[#35D399]">
                       SOL NFT
@@ -417,8 +465,8 @@ export function MarketsHome() {
                 <p className="mt-1 font-mono-custom text-[9px] text-[#35D399]">Mint: {m.mintAddress.slice(0, 8)}...{m.mintAddress.slice(-4)}</p>
               )}
               <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-[#8FA39A]">
-                <span className="flex items-center gap-1"><Calendar size={12} /> {m.endDate}</span>
-                <span className="flex items-center gap-1"><Clock size={12} /> {daysLeft}d left</span>
+                <span className="flex items-center gap-1"><Calendar size={12} /> {m.shortTerm ? '15 min window' : m.endDate}</span>
+                <span className="flex items-center gap-1"><Clock size={12} /> {timeLabel}</span>
                 <span className="flex items-center gap-1"><Users size={12} /> {m.creator}</span>
                 <span className="flex items-center gap-1"><TrendingUp size={12} /> Vol {m.volume.toLocaleString()}</span>
               </div>
