@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { WalletAuthButton } from '@/components/wallet-auth';
-import { Plus, TrendingUp, Users, Calendar } from 'lucide-react';
+import { Plus, TrendingUp, Users, Calendar, Zap, Filter, Clock } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets as useSolanaWallets, useSignAndSendTransaction } from '@privy-io/react-auth/solana';
 import { Connection, PublicKey, Keypair, SystemProgram, Transaction } from '@solana/web3.js';
@@ -24,6 +24,7 @@ type Market = {
   creator: string;
   endDate: string;
   resolution: string;
+  category: string;
   yesShares: number;
   noShares: number;
   volume: number;
@@ -31,6 +32,7 @@ type Market = {
   mintAddress?: string;
   txSig?: string;
   createdAt: number;
+  live: boolean;
 };
 
 const INITIAL_MARKETS: Market[] = [
@@ -41,11 +43,13 @@ const INITIAL_MARKETS: Market[] = [
     creator: '0xab12...cd34',
     endDate: '2026-11-30',
     resolution: 'Coinbase or Binance close price',
+    category: 'Crypto',
     yesShares: 420,
     noShares: 180,
     volume: 12500,
     nftMinted: true,
     createdAt: Date.now() - 86400000,
+    live: true,
   },
   {
     id: 'm2',
@@ -54,30 +58,56 @@ const INITIAL_MARKETS: Market[] = [
     creator: '0xef56...gh78',
     endDate: '2026-12-31',
     resolution: 'Official Solana blog or status page',
+    category: 'Crypto',
     yesShares: 310,
     noShares: 290,
     volume: 8400,
     nftMinted: true,
     createdAt: Date.now() - 172800000,
+    live: true,
+  },
+  {
+    id: 'm3',
+    title: 'Will Ethereum ETF inflows exceed $5B this quarter?',
+    description: 'Resolves based on cumulative net inflows reported by major data providers.',
+    creator: '0x9911...aa22',
+    endDate: '2026-12-31',
+    resolution: 'Bloomberg / SoSoValue aggregate',
+    category: 'Finance',
+    yesShares: 210,
+    noShares: 90,
+    volume: 5600,
+    nftMinted: true,
+    createdAt: Date.now() - 43200000,
+    live: true,
   },
 ];
 
+const CATEGORIES = ['All', 'Crypto', 'Finance', 'Sports', 'Politics', 'Other'];
 const SOLANA_RPC = 'https://api.devnet.solana.com';
 
 export function MarketsHome() {
   const { toast } = useToast();
-  const { authenticated, user } = usePrivy();
+  const { authenticated } = usePrivy();
   const { wallets: solanaWallets } = useSolanaWallets();
   const { signAndSendTransaction } = useSignAndSendTransaction();
   const [markets, setMarkets] = useState<Market[]>(INITIAL_MARKETS);
   const [showCreate, setShowCreate] = useState(false);
   const [minting, setMinting] = useState(false);
+  const [filter, setFilter] = useState('All');
   const [form, setForm] = useState({
     title: '',
     description: '',
     endDate: '',
     resolution: '',
+    category: 'Crypto',
   });
+
+  const sorted = useMemo(() => {
+    return [...markets]
+      .filter((m) => filter === 'All' || m.category === filter)
+      .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
+  }, [markets, filter]);
 
   const createEvent = async () => {
     if (!form.title.trim() || !form.endDate) {
@@ -133,6 +163,7 @@ export function MarketsHome() {
         creator: solWallet.address.slice(0, 6) + '...' + solWallet.address.slice(-4),
         endDate: form.endDate,
         resolution: form.resolution.trim() || 'Creator resolution',
+        category: form.category,
         yesShares: 0,
         noShares: 0,
         volume: 0,
@@ -140,10 +171,11 @@ export function MarketsHome() {
         mintAddress: mintKeypair.publicKey.toBase58(),
         txSig: typeof sig === 'string' ? sig : (sig as any).signature,
         createdAt: Date.now(),
+        live: true,
       };
       setMarkets((prev) => [newMarket, ...prev]);
       setShowCreate(false);
-      setForm({ title: '', description: '', endDate: '', resolution: '' });
+      setForm({ title: '', description: '', endDate: '', resolution: '', category: 'Crypto' });
       toast({
         title: 'Minted on Solana',
         description: `Proof-of-bet NFT created. Mint: ${mintKeypair.publicKey.toBase58().slice(0, 8)}...`,
@@ -176,8 +208,13 @@ export function MarketsHome() {
     <div className="px-3 pt-3 pb-8 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <span className="font-mono-custom text-[10px] uppercase tracking-[.18em] text-[#35D399]">Prediction Markets</span>
-          <h1 className="text-xl font-bold tracking-tight text-[#E8F2EC]">SIDEBET</h1>
+          <div className="flex items-center gap-2">
+            <span className="font-mono-custom text-[10px] uppercase tracking-[.18em] text-[#35D399]">Live Feed</span>
+            <span className="flex items-center gap-1 rounded-full bg-red-500/20 px-2 py-0.5 text-[9px] font-bold text-red-400">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" /> LIVE
+            </span>
+          </div>
+          <h1 className="text-xl font-bold tracking-tight text-[#E8F2EC]">Upcoming Events</h1>
         </div>
         <button
           type="button"
@@ -185,11 +222,29 @@ export function MarketsHome() {
           className="flex items-center gap-1.5 rounded-full border border-[#35D399]/40 bg-[#35D399]/15 px-3 py-1.5 text-xs font-bold text-[#35D399] hover:bg-[#35D399]/25 active:scale-95"
         >
           <Plus size={14} />
-          Create Event
+          Create
         </button>
       </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {CATEGORIES.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setFilter(c)}
+            className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-bold transition-all ${
+              filter === c
+                ? 'bg-[#35D399] text-black'
+                : 'border border-[#1C3A2E] bg-[#0E1A16] text-[#8FA39A] hover:text-white'
+            }`}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+
       <p className="text-xs text-[#8FA39A]">
-        Create an event to mint a Solana NFT as proof of bet. Others buy Yes or No shares.
+        Rich live feed of prediction events. Create one to mint a Solana NFT proof of bet. Others buy Yes or No.
       </p>
 
       {showCreate && (
@@ -215,13 +270,22 @@ export function MarketsHome() {
               value={form.endDate}
               onChange={(e) => setForm({ ...form, endDate: e.target.value })}
             />
-            <input
+            <select
               className="rounded-lg border border-[#1C3A2E] bg-[#07110E] px-3 py-2 text-sm text-white"
-              placeholder="Resolution source"
-              value={form.resolution}
-              onChange={(e) => setForm({ ...form, resolution: e.target.value })}
-            />
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+            >
+              {CATEGORIES.filter((c) => c !== 'All').map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
           </div>
+          <input
+            className="w-full rounded-lg border border-[#1C3A2E] bg-[#07110E] px-3 py-2 text-sm text-white"
+            placeholder="Resolution source"
+            value={form.resolution}
+            onChange={(e) => setForm({ ...form, resolution: e.target.value })}
+          />
           <div className="flex gap-2">
             <button
               type="button"
@@ -239,23 +303,39 @@ export function MarketsHome() {
               Cancel
             </button>
           </div>
-          <p className="text-[10px] text-[#8FA39A]">Requires a Solana wallet with SOL on devnet. Mint creates a 0-decimal token as the proof NFT.</p>
+          <p className="text-[10px] text-[#8FA39A]">Requires a Solana wallet with SOL on devnet.</p>
         </div>
       )}
 
       <div className="space-y-3">
-        {markets.map((m) => {
+        {sorted.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-[#1C3A2E] bg-[#0E1A16]/50 p-8 text-center text-sm text-[#8FA39A]">
+            No events in this category yet. Create one.
+          </div>
+        )}
+        {sorted.map((m) => {
           const total = m.yesShares + m.noShares || 1;
           const yesPct = Math.round((m.yesShares / total) * 100);
+          const daysLeft = Math.max(0, Math.ceil((new Date(m.endDate).getTime() - Date.now()) / 86400000));
           return (
-            <div key={m.id} className="rounded-2xl border border-[#1C3A2E] bg-gradient-to-br from-[#0E1A16] to-[#07110E] p-4">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="text-base font-bold text-[#E8F2EC]">{m.title}</h3>
-                {m.nftMinted && (
-                  <span className="shrink-0 rounded-full bg-[#35D399]/15 px-2 py-0.5 text-[10px] font-bold text-[#35D399]">
-                    SOL NFT
+            <div key={m.id} className="relative overflow-hidden rounded-2xl border border-[#1C3A2E] bg-gradient-to-br from-[#0E1A16] to-[#07110E] p-4">
+              {m.live && (
+                <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-red-500/20 px-2 py-0.5 text-[9px] font-bold text-red-400">
+                  <Zap size={10} /> LIVE
+                </div>
+              )}
+              <div className="pr-12">
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="rounded-full bg-[#35D399]/15 px-2 py-0.5 text-[9px] font-bold text-[#35D399]">
+                    {m.category}
                   </span>
-                )}
+                  {m.nftMinted && (
+                    <span className="rounded-full bg-[#35D399]/15 px-2 py-0.5 text-[9px] font-bold text-[#35D399]">
+                      SOL NFT
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-base font-bold text-[#E8F2EC]">{m.title}</h3>
               </div>
               <p className="mt-1 text-[11px] text-[#8FA39A]">{m.description}</p>
               {m.mintAddress && (
@@ -263,8 +343,9 @@ export function MarketsHome() {
               )}
               <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-[#8FA39A]">
                 <span className="flex items-center gap-1"><Calendar size={12} /> {m.endDate}</span>
+                <span className="flex items-center gap-1"><Clock size={12} /> {daysLeft}d left</span>
                 <span className="flex items-center gap-1"><Users size={12} /> {m.creator}</span>
-                <span className="flex items-center gap-1"><TrendingUp size={12} /> Vol {m.volume}</span>
+                <span className="flex items-center gap-1"><TrendingUp size={12} /> Vol {m.volume.toLocaleString()}</span>
               </div>
               <div className="mt-3">
                 <div className="flex h-2 overflow-hidden rounded-full bg-black/40">
