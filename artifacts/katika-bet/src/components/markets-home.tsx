@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { WalletAuthButton } from '@/components/wallet-auth';
-import { Plus, TrendingUp, Users, Calendar, Zap, Filter, Clock } from 'lucide-react';
+import { Plus, TrendingUp, Users, Calendar, Zap, Clock } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets as useSolanaWallets, useSignAndSendTransaction } from '@privy-io/react-auth/solana';
 import { Connection, PublicKey, Keypair, SystemProgram, Transaction } from '@solana/web3.js';
@@ -79,6 +79,81 @@ const INITIAL_MARKETS: Market[] = [
     volume: 5600,
     nftMinted: true,
     createdAt: Date.now() - 43200000,
+    live: true,
+  },
+  {
+    id: 'm4',
+    title: 'Will the US presidential candidate lead by >5 points in the final poll?',
+    description: 'Resolves based on the average of the final five national polls released before election day.',
+    creator: '0xcc33...dd44',
+    endDate: '2026-11-05',
+    resolution: 'FiveThirtyEight / RealClearPolitics average',
+    category: 'Politics',
+    yesShares: 560,
+    noShares: 340,
+    volume: 28400,
+    nftMinted: true,
+    createdAt: Date.now() - 259200000,
+    live: true,
+  },
+  {
+    id: 'm5',
+    title: 'Will Manchester City win the Premier League this season?',
+    description: 'Resolves Yes if Manchester City finishes top of the table at the end of the 2026-27 season.',
+    creator: '0xaa99...bb00',
+    endDate: '2027-05-25',
+    resolution: 'Official Premier League final standings',
+    category: 'Sports',
+    yesShares: 380,
+    noShares: 220,
+    volume: 15200,
+    nftMinted: true,
+    createdAt: Date.now() - 432000000,
+    live: true,
+  },
+  {
+    id: 'm6',
+    title: 'Will OpenAI release a model that scores >90% on GPQA Diamond before July 2027?',
+    description: 'Resolves based on official OpenAI or independent benchmark reports.',
+    creator: '0x1122...3344',
+    endDate: '2027-07-01',
+    resolution: 'OpenAI blog or verified third-party benchmark',
+    category: 'Other',
+    yesShares: 290,
+    noShares: 410,
+    volume: 9800,
+    nftMinted: true,
+    createdAt: Date.now() - 86400000,
+    live: true,
+  },
+  {
+    id: 'm7',
+    title: 'Will the Fed cut rates by at least 50bps by March 2027?',
+    description: 'Resolves Yes if the cumulative federal funds rate reduction reaches 50bps or more by the March 2027 meeting.',
+    creator: '0x5566...7788',
+    endDate: '2027-03-20',
+    resolution: 'Federal Reserve official statements',
+    category: 'Finance',
+    yesShares: 340,
+    noShares: 160,
+    volume: 11200,
+    nftMinted: true,
+    createdAt: Date.now() - 172800000,
+    live: true,
+  },
+  {
+    id: 'm8',
+    title: 'Will SOL hit a new all-time high before the end of 2026?',
+    description: 'Resolves Yes if any major exchange records a new SOL ATH before 31 Dec 2026.',
+    creator: '0x9988...7766',
+    endDate: '2026-12-31',
+    resolution: 'CoinGecko or Binance ATH record',
+    category: 'Crypto',
+    yesShares: 270,
+    noShares: 330,
+    volume: 7600,
+    nftMinted: true,
+    createdAt: Date.now() - 86400000,
     live: true,
   },
 ];
@@ -244,7 +319,7 @@ export function MarketsHome() {
       </div>
 
       <p className="text-xs text-[#8FA39A]">
-        Rich live feed of prediction events. Create one to mint a Solana NFT proof of bet. Others buy Yes or No.
+        Live prediction markets. Create an event to mint a Solana NFT proof of bet. Others buy Yes or No.
       </p>
 
       {showCreate && (
