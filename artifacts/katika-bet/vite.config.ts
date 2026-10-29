@@ -1,7 +1,11 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type PluginOption } from 'vite';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = typeof import.meta.dirname !== 'undefined' ? import.meta.dirname : path.dirname(__filename);
 
 const rawPort = process.env.PORT ?? '5173';
 const port = Number(rawPort);
@@ -27,10 +31,10 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': path.resolve(import.meta.dirname, 'src'),
-      'cross-fetch': path.resolve(import.meta.dirname, 'src/lib/cross-fetch.ts'),
+      '@': path.resolve(__dirname, 'src'),
+      'cross-fetch': path.resolve(__dirname, 'src/lib/cross-fetch.ts'),
       '@assets': path.resolve(
-        import.meta.dirname,
+        __dirname,
         '..',
         '..',
         'attached_assets',
@@ -38,9 +42,9 @@ export default defineConfig({
     },
     dedupe: ['react', 'react-dom'],
   },
-  root: path.resolve(import.meta.dirname),
+  root: path.resolve(__dirname),
   build: {
-    outDir: path.resolve(import.meta.dirname, 'dist/public'),
+    outDir: path.resolve(__dirname, 'dist/public'),
     emptyOutDir: true,
   },
   server: {
