@@ -79,9 +79,10 @@
     "@privy-io/react-auth": "^3.37.0",
     "@solana/web3.js": "^1.95.3",
     "@solana/spl-token": "^0.4.8",
-    "@solana/kit": "^2.0.0",
-    "@solana-program/memo": "^0.6.0",
-    "@solana-program/system": "^0.6.0",
+    "@solana/kit": "^3.0.3",
+    "@solana-program/memo": "^0.8.0",
+    "@solana-program/system": "^0.8.0",
+    "fastestsmallesttextencoderdecoder": "^1.0.22",
     "@stripe/stripe-js": "^9.13.0",
     "three": "^0.180.0"
   }
