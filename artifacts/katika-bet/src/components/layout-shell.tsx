@@ -28,10 +28,9 @@ export function Brand() {
   );
 }
 
+// MVP: only Markets + Profile. Casino and PvP hidden until rebuilt.
 const bottom = [
   { href: '/', label: 'Markets', icon: TrendingUp },
-  { href: '/pvp', label: 'PvP', icon: Swords },
-  { href: '/games', label: 'Casino', icon: Gamepad2 },
   { href: '/profile', label: 'Profile', icon: UserRound },
 ];
 
@@ -59,7 +58,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
       <main className="mx-auto max-w-[520px] pb-24">{children}</main>
 
       <footer className="mx-auto max-w-[520px] px-4 pb-28 text-center text-[11px] text-[#5C7368]">
-        18+ Play responsibly. Multi-chain wallet support.
+        18+ Play responsibly. Prediction markets on Solana.
       </footer>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#1C3A2E] bg-[#07110E]/98 backdrop-blur-lg pb-[max(10px,env(safe-area-inset-bottom))] pt-2">
@@ -68,11 +67,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
             const active =
               item.href === '/'
                 ? location === '/' || location === '/dashboard' || location === '/markets'
-                : item.href === '/pvp'
-                  ? location === '/pvp' || location.startsWith('/pvp/') || location.startsWith('/games/pool')
-                  : item.href === '/games'
-                    ? location === '/games' || location.startsWith('/games/dice') || location.startsWith('/games/coinflip') || location.startsWith('/games/mines') || location.startsWith('/games/roulette')
-                    : location === item.href || location.startsWith(item.href + '/') || location === '/cashier' || location === '/wallet' || location === '/kit' || location === '/menu';
+                : location === item.href || location.startsWith(item.href + '/') || location === '/cashier' || location === '/wallet';
             const Icon = item.icon;
             return (
               <Link key={item.href} href={item.href} className={tabClass(active)}>
