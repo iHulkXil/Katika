@@ -3,7 +3,7 @@
   "framework": null,
   "installCommand": "npx --yes pnpm@9.15.9 install --filter @workspace/sidebet... --no-frozen-lockfile",
   "buildCommand": "npx --yes pnpm@9.15.9 --filter @workspace/sidebet run build",
-  "outputDirectory": "artifacts/katika-bet/dist",
+  "outputDirectory": "artifacts/katika-bet/dist/public",
   "rewrites": [
     {
       "source": "/api/:path*",
