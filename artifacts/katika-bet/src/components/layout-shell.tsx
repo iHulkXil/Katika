@@ -4,6 +4,7 @@ import {
   ChevronRight,
   UserRound,
   TrendingUp,
+  Receipt,
 } from 'lucide-react';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
@@ -24,6 +25,7 @@ export function Brand() {
 
 const bottom = [
   { href: '/', label: 'Markets', icon: TrendingUp },
+  { href: '/my-bets', label: 'My Bets', icon: Receipt },
   { href: '/profile', label: 'Profile', icon: UserRound },
 ];
 
@@ -40,7 +42,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-[100dvh] bg-[#0B1120] text-slate-100">
       <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-[#0B1120]/90 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-[520px] items-center justify-between px-4">
+        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <Brand />
           <div className="flex items-center gap-2">
             <WalletAuthButton compact className="hidden sm:flex" />
@@ -48,10 +50,10 @@ export function LayoutShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[520px] pb-24">{children}</main>
+      <main className="mx-auto max-w-5xl pb-24">{children}</main>
 
-      <footer className="mx-auto max-w-[520px] px-4 pb-28 text-center text-[11px] text-slate-500">
-        18+ Trade responsibly. Prediction markets on Solana.
+      <footer className="mx-auto max-w-5xl px-4 pb-28 text-center text-[11px] text-slate-500">
+        18+ Trade responsibly. Prediction markets on Solana devnet.
       </footer>
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-800 bg-[#0B1120]/95 backdrop-blur-lg pb-[max(10px,env(safe-area-inset-bottom))] pt-2">
@@ -60,7 +62,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
             const active =
               item.href === '/'
                 ? location === '/' || location === '/dashboard' || location === '/markets'
-                : location === item.href || location.startsWith(item.href + '/') || location === '/cashier' || location === '/wallet';
+                : location === item.href || location.startsWith(item.href + '/');
             const Icon = item.icon;
             return (
               <Link key={item.href} href={item.href} className={tabClass(active)}>
