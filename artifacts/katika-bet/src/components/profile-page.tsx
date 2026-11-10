@@ -4,7 +4,7 @@ import { usePrivy, useLogout } from '@privy-io/react-auth';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { BetHistory } from '@/components/bet-history';
-import { KatikaLogo } from '@/components/katika-logo';
+import { SidebetLogo } from '@/components/katika-logo';
 import { getTelegramUser, isTelegramWebApp } from '@/lib/telegram';
 import {
   CreditCard,
@@ -41,7 +41,7 @@ export function ProfilePage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative grid h-12 w-12 place-items-center rounded-xl border border-blue-500/30 bg-slate-800 p-1.5">
-              <KatikaLogo className="h-full w-full" />
+              <SidebetLogo className="h-full w-full" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
