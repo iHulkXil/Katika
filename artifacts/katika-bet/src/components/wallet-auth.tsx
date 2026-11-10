@@ -54,7 +54,7 @@ export function WalletAuthButton({
   }
 
   return (
-    <button type="button" onClick={() => void login()} className={`inline-flex items-center justify-center gap-2 rounded-lg bg-secondary px-4 py-2.5 text-xs font-semibold text-secondary-foreground ${className}`}>
+    <button type="button" onClick={() => void login()} className={`inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#F59E0B] to-[#FACC15] px-4 py-2.5 text-xs font-bold text-[#080C0A] shadow-[0_2px_12px_rgba(245,158,11,0.25)] hover:brightness-105 active:scale-95 transition-all ${className}`}>
       <WalletCards size={15} />
       Connect Wallet
     </button>

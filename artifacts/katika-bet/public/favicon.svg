@@ -1,40 +1,98 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
-  <rect width="500" height="500" rx="100" fill="#07110E"/>
   <defs>
-    <linearGradient id="limeMetal" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#bef264"/>
-      <stop offset="25%" stop-color="#84cc16"/>
-      <stop offset="60%" stop-color="#4ade80"/>
-      <stop offset="100%" stop-color="#16a34a"/>
+    <linearGradient id="favGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF066"/>
+      <stop offset="50%" stop-color="#FACC15"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
     </linearGradient>
-    <linearGradient id="emeraldDeep" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#22c55e"/>
-      <stop offset="40%" stop-color="#15803d"/>
-      <stop offset="80%" stop-color="#166534"/>
-      <stop offset="100%" stop-color="#052e16"/>
+    <linearGradient id="favRed" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F87171"/>
+      <stop offset="100%" stop-color="#DC2626"/>
     </linearGradient>
-    <filter id="shadow">
-      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.8"/>
+    <linearGradient id="favGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="favBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60A5FA"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <filter id="favShadow">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.8"/>
     </filter>
   </defs>
-  <g filter="url(#shadow)">
-    <!-- Crown -->
-    <path d="M 250 50 L 220 120 L 175 65 L 185 145 L 250 145 Z" fill="url(#limeMetal)"/>
-    <path d="M 250 50 L 280 120 L 325 65 L 315 145 L 250 145 Z" fill="url(#emeraldDeep)"/>
-    <path d="M 175 145 L 325 145 L 320 160 L 180 160 Z" fill="url(#limeMetal)"/>
-    <!-- Shield -->
-    <path d="M 180 125 C 145 150, 130 210, 135 295 C 140 360, 185 410, 235 440 L 215 460 C 160 425, 110 365, 105 285 C 100 195, 130 135, 175 110 Z" fill="url(#emeraldDeep)"/>
-    <path d="M 320 125 C 355 150, 370 210, 365 295 C 360 360, 315 410, 265 440 L 250 480 L 215 450 L 235 430 L 250 450 C 290 415, 335 375, 340 300 C 345 220, 325 165, 290 125 Z" fill="url(#limeMetal)"/>
-    <!-- K Stem -->
-    <rect x="180" y="180" width="36" height="190" rx="4" fill="url(#limeMetal)"/>
-    <!-- K Upper Joint -->
-    <path d="M 216 260 L 275 180 L 315 180 L 245 275 Z" fill="url(#limeMetal)"/>
-    <!-- Arrow Head (↗) -->
-    <g transform="translate(250, 195)">
-      <polygon points="15,45 60,-5 45,-15 0,35" fill="url(#limeMetal)"/>
-      <polygon points="50,-35 80,-30 75,0 60,-12 40,8 30,-2 50,-22" fill="url(#limeMetal)"/>
-    </g>
-    <!-- K Lower Leg -->
-    <path d="M 230 260 L 315 375 L 270 375 L 205 285 Z" fill="url(#emeraldDeep)"/>
+
+  <!-- Deep Obsidian Badge Background -->
+  <rect width="500" height="500" rx="120" fill="#0A0E0C" stroke="#F59E0B" stroke-width="12"/>
+
+  <!-- Tribal Color Corner Wedges -->
+  <path d="M 500 0 L 360 0 L 500 140 Z" fill="url(#favRed)"/>
+  <path d="M 500 500 L 500 360 L 360 500 Z" fill="url(#favGreen)"/>
+  <path d="M 0 500 L 140 500 L 0 360 Z" fill="url(#favBlue)"/>
+  <path d="M 0 0 L 0 140 L 140 0 Z" fill="url(#favGold)"/>
+
+  <!-- Inner Dark Circle -->
+  <circle cx="250" cy="250" r="190" fill="#0A0F0D" stroke="#FFFFFF" stroke-width="3" stroke-opacity="0.25"/>
+
+  <!-- African Sunburst Crest -->
+  <polygon points="250,28 238,62 262,62" fill="url(#favGold)" stroke="#000000" stroke-width="3"/>
+  <polygon points="214,40 210,72 232,68" fill="url(#favRed)" stroke="#000000" stroke-width="3"/>
+  <polygon points="286,40 268,68 290,72" fill="url(#favGreen)" stroke="#000000" stroke-width="3"/>
+  <polygon points="182,60 188,88 208,80" fill="url(#favBlue)" stroke="#000000" stroke-width="3"/>
+  <polygon points="318,60 292,80 312,88" fill="url(#favGold)" stroke="#000000" stroke-width="3"/>
+
+  <!-- Cartoon "S" Body -->
+  <g filter="url(#favShadow)">
+    <!-- Drop Shadow behind S -->
+    <path
+      d="M 338 152 C 338 116, 298 96, 246 96 C 188 96, 142 128, 142 178 C 142 226, 186 244, 242 258 C 292 270, 324 286, 324 322 C 324 366, 278 394, 226 394 C 170 394, 126 364, 120 318 L 174 308 C 178 336, 198 352, 230 352 C 260 352, 280 336, 280 316 C 280 286, 246 274, 194 260 C 150 248, 102 228, 102 176 C 102 122, 154 66, 246 66 C 324 66, 376 108, 376 160 Z"
+      fill="#000000"
+      transform="translate(6, 8)"
+    />
+
+    <!-- Top Hook (Gold Yellow) -->
+    <path
+      d="M 346 150 C 346 110, 306 90, 252 90 C 194 90, 150 120, 150 172 C 150 216, 192 236, 246 250 L 254 210 C 214 200, 196 186, 196 170 C 196 142, 222 128, 254 128 C 288 128, 304 140, 304 158 Z"
+      fill="url(#favGold)"
+      stroke="#000000"
+      stroke-width="7"
+    />
+
+    <!-- Mid Section (Crimson Red) -->
+    <path
+      d="M 246 250 C 294 262, 328 280, 328 320 C 328 344, 314 364, 288 376 L 274 340 C 286 332, 290 322, 290 314 C 290 290, 260 278, 214 266 L 164 252 C 186 242, 216 242, 246 250 Z"
+      fill="url(#favRed)"
+      stroke="#000000"
+      stroke-width="7"
+    />
+
+    <!-- Bottom Tail (Emerald Green) -->
+    <path
+      d="M 288 376 C 268 386, 246 390, 224 390 C 166 390, 126 358, 120 312 L 174 302 C 178 330, 200 348, 230 348 C 252 348, 268 342, 274 340 Z"
+      fill="url(#favGreen)"
+      stroke="#000000"
+      stroke-width="7"
+    />
+
+    <!-- Royal Blue Dynamic Flash -->
+    <path
+      d="M 248 190 L 286 160 L 242 248 L 278 274 L 204 330 L 230 268 L 194 246 Z"
+      fill="url(#favBlue)"
+      stroke="#FFFFFF"
+      stroke-width="3"
+    />
+
+    <!-- Eyes (Playful Cartoon Persona) -->
+    <ellipse cx="228" cy="154" rx="16" ry="22" fill="#FFFFFF" stroke="#000000" stroke-width="5"/>
+    <ellipse cx="266" cy="150" rx="15" ry="21" fill="#FFFFFF" stroke="#000000" stroke-width="5"/>
+    <ellipse cx="233" cy="154" rx="8" ry="11" fill="#000000"/>
+    <circle cx="236" cy="150" r="3.5" fill="#FFFFFF"/>
+    <ellipse cx="270" cy="150" rx="8" ry="11" fill="#000000"/>
+    <circle cx="273" cy="146" r="3.5" fill="#FFFFFF"/>
+
+    <!-- Eyebrows & Smile -->
+    <path d="M 212 136 Q 228 130 244 138" stroke="#000000" stroke-width="5" stroke-linecap="round"/>
+    <path d="M 254 134 Q 270 126 284 132" stroke="#000000" stroke-width="5" stroke-linecap="round"/>
+    <path d="M 230 186 Q 248 200 270 184" stroke="#000000" stroke-width="5" stroke-linecap="round" fill="none"/>
   </g>
 </svg>

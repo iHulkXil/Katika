@@ -47,34 +47,34 @@ function CoinDisplay({
             transition: busy ? 'none' : 'transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1)',
           }}
         >
-          {/* Front Face: HEADS (Gold Sovereign) */}
+          {/* Front Face: HEADS (African Gold Sovereign with Cartoon S Mascot) */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center rounded-full border-4 border-[#eab308] bg-gradient-to-br from-[#fef08a] via-[#eab308] to-[#854d0e] shadow-[0_8px_20px_rgba(234,179,8,0.35),inset_0_2px_4px_rgba(255,255,255,0.6)]"
+            className="absolute inset-0 flex flex-col items-center justify-center rounded-full border-4 border-[#F59E0B] bg-gradient-to-br from-[#FEF08A] via-[#F59E0B] to-[#78350F] shadow-[0_8px_24px_rgba(245,158,11,0.4),inset_0_2px_4px_rgba(255,255,255,0.6)]"
             style={{
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
             }}
           >
-            <div className="flex h-[88%] w-[88%] flex-col items-center justify-center rounded-full border border-[#ca8a04]/70 bg-gradient-to-b from-[#fde047] via-[#eab308] to-[#a16207] p-1 text-[#422006]">
-              <span className="font-mono-custom text-[8px] font-black tracking-widest text-[#713f12]">KATIKA</span>
-              <span className="font-serif text-3xl font-black text-[#422006] leading-none my-0.5">K</span>
-              <span className="font-mono-custom text-[8px] font-black tracking-wider text-[#713f12]">HEADS</span>
+            <div className="flex h-[88%] w-[88%] flex-col items-center justify-center rounded-full border border-[#D97706]/80 bg-gradient-to-b from-[#FEF08A] via-[#F59E0B] to-[#92400E] p-1 text-[#451A03]">
+              <span className="font-mono-custom text-[8px] font-black tracking-widest text-[#78350F]">SIDEBET</span>
+              <span className="font-display text-3xl font-black text-[#1F1300] leading-none my-0.5 drop-shadow-sm">S</span>
+              <span className="font-mono-custom text-[8px] font-black tracking-wider text-[#78350F]">HEADS · 1.98×</span>
             </div>
           </div>
 
-          {/* Back Face: TAILS (Emerald Sovereign) */}
+          {/* Back Face: TAILS (African Emerald Crown Sovereign) */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center rounded-full border-4 border-[#35D399] bg-gradient-to-br from-[#86efac] via-[#10b981] to-[#064e3b] shadow-[0_8px_20px_rgba(53,211,153,0.35),inset_0_2px_4px_rgba(255,255,255,0.6)]"
+            className="absolute inset-0 flex flex-col items-center justify-center rounded-full border-4 border-[#10B981] bg-gradient-to-br from-[#A7F3D0] via-[#10B981] to-[#064E3B] shadow-[0_8px_24px_rgba(16,185,129,0.4),inset_0_2px_4px_rgba(255,255,255,0.6)]"
             style={{
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
             }}
           >
-            <div className="flex h-[88%] w-[88%] flex-col items-center justify-center rounded-full border border-[#059669]/70 bg-gradient-to-b from-[#6ee7b7] via-[#10b981] to-[#047857] p-1 text-[#022c22]">
-              <span className="font-mono-custom text-[8px] font-black tracking-widest text-[#064e3b]">1.98×</span>
-              <span className="text-2xl leading-none my-0.5">⚽</span>
-              <span className="font-mono-custom text-[8px] font-black tracking-wider text-[#064e3b]">TAILS</span>
+            <div className="flex h-[88%] w-[88%] flex-col items-center justify-center rounded-full border border-[#059669]/80 bg-gradient-to-b from-[#6EE7B7] via-[#10B981] to-[#047857] p-1 text-[#022C22]">
+              <span className="font-mono-custom text-[8px] font-black tracking-widest text-[#064E3B]">AFRICA</span>
+              <span className="text-2xl leading-none my-0.5 filter drop-shadow">⚽</span>
+              <span className="font-mono-custom text-[8px] font-black tracking-wider text-[#064E3B]">TAILS · 1.98×</span>
             </div>
           </div>
         </div>

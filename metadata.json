@@ -1,6 +1,6 @@
 {
-  "name": "Katika.Bet",
-  "description": "Katika.Bet crypto casino and football legends floor featuring Katika Emerald Elite Cards, 8-Ball Pool, Club Ludo, and classic House games (Dice, Coin Flip) settled in $KTK.",
+  "name": "SIDEBET",
+  "description": "SIDEBET — Premier prediction markets, sports wagering, and casino games with vibrant cultural colors, fast multi-chain crypto settlement, and instant play.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

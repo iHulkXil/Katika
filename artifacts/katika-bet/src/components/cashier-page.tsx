@@ -123,25 +123,26 @@ export function CashierPage() {
   return (
     <div className="px-3 pt-2 pb-16">
       {/* Header Banner */}
-      <div className="rounded-2xl border border-[#35D399]/30 bg-gradient-to-br from-[#0E1A16] via-[#091511] to-[#050C0A] p-4 shadow-lg">
+      <div className="rounded-2xl border border-[#F59E0B]/30 bg-gradient-to-br from-[#121A16] via-[#0A1612] to-[#040A07] p-4 shadow-lg relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#DC2626] via-[#F59E0B] via-[#10B981] to-[#2563EB]" />
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-[#35D399]/20 p-1">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#F59E0B]/20 to-[#10B981]/10 border border-[#F59E0B]/30 p-1">
               <KatikaLogo className="h-full w-full" />
             </div>
             <div>
-              <span className="font-mono-custom text-[10px] font-bold uppercase tracking-widest text-[#35D399]">
-                Secure Cashier
+              <span className="font-mono-custom text-[10px] font-bold uppercase tracking-widest text-[#F59E0B]">
+                Instant Cashier
               </span>
-              <h1 className="text-lg font-bold text-[#E8F2EC]">Top Up KTK</h1>
+              <h1 className="text-lg font-bold font-display text-[#FDFDFD]">Top Up KTK Bankroll</h1>
             </div>
           </div>
-          <span className="rounded-full border border-[#1C3A2E] bg-[#07110E] px-2.5 py-1 font-mono-custom text-[10px] text-[#35D399]">
-            {feeMode === 'stripe' ? 'Stripe Gateway' : 'Instant Demo Deposit'}
+          <span className="rounded-full border border-[#10B981]/40 bg-[#071610] px-2.5 py-1 font-mono-custom text-[10px] font-bold text-[#10B981]">
+            {feeMode === 'stripe' ? 'Card Gateway' : 'Instant KTK Desk'}
           </span>
         </div>
-        <p className="mt-2 text-xs text-[#8FA39A] leading-relaxed">
-          Fund your KTK bankroll instantly. Purchased tokens are prioritized for play and directly credited to your floor balance.
+        <p className="mt-2 text-xs text-[#9CA3AF] leading-relaxed">
+          Fund your Pan-African prediction bankroll instantly. Purchased tokens are prioritized for live wagers, sports markets, and PvP tables.
         </p>
       </div>
 
@@ -155,12 +156,12 @@ export function CashierPage() {
               onClick={() => setSelectedPkg(pkg.id)}
               className={`relative cursor-pointer rounded-2xl border p-4 transition-all duration-200 ${
                 isSelected
-                  ? 'border-[#35D399] bg-[#0E1A16] shadow-[0_4px_20px_rgba(53,211,153,0.15)]'
-                  : 'border-[#1C3A2E] bg-[#07110E] hover:border-[#1C3A2E]/80'
+                  ? 'border-[#F59E0B] bg-[#141B18] shadow-[0_4px_24px_rgba(245,158,11,0.2)]'
+                  : 'border-[#1E2E28] bg-[#0A1410] hover:border-[#10B981]/60'
               }`}
             >
               {pkg.popular && (
-                <span className="absolute -top-2.5 right-4 rounded-full bg-gradient-to-r from-[#d4af37] to-[#f3d37a] px-2 py-0.5 font-mono-custom text-[9px] font-bold text-black shadow">
+                <span className="absolute -top-2.5 right-4 rounded-full bg-gradient-to-r from-[#DC2626] via-[#F59E0B] to-[#10B981] px-2.5 py-0.5 font-mono-custom text-[9px] font-black text-black shadow">
                   MOST POPULAR
                 </span>
               )}
@@ -168,20 +169,20 @@ export function CashierPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-[#E8F2EC]">{pkg.name}</h3>
+                    <h3 className="text-base font-bold font-display text-[#FDFDFD]">{pkg.name}</h3>
                     {pkg.bonus && (
-                      <span className="rounded bg-[#35D399]/20 px-1.5 py-0.5 font-mono-custom text-[10px] font-bold text-[#35D399]">
+                      <span className="rounded bg-[#10B981]/20 border border-[#10B981]/40 px-1.5 py-0.5 font-mono-custom text-[10px] font-bold text-[#10B981]">
                         {pkg.bonus}
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 font-mono-custom text-2xl font-black text-[#f3d37a]">
-                    {pkg.ktkAmount.toLocaleString()} <span className="text-sm font-semibold text-[#8FA39A]">KTK</span>
+                  <p className="mt-1 font-mono-custom text-2xl font-black text-[#F59E0B]">
+                    {pkg.ktkAmount.toLocaleString()} <span className="text-sm font-semibold text-[#9CA3AF]">KTK</span>
                   </p>
                 </div>
 
                 <div className="text-right">
-                  <div className="font-mono-custom text-xl font-bold text-[#E8F2EC]">
+                  <div className="font-mono-custom text-xl font-bold text-[#FDFDFD]">
                     ${(pkg.priceUsdCents / 100).toFixed(2)}
                   </div>
                   <button
@@ -191,7 +192,7 @@ export function CashierPage() {
                       e.stopPropagation();
                       void handleCheckout(pkg.id);
                     }}
-                    className="mt-2 rounded-xl bg-[#35D399] px-4 py-2 text-xs font-bold text-[#062018] shadow hover:opacity-95 disabled:opacity-50"
+                    className="mt-2 rounded-xl bg-gradient-to-r from-[#F59E0B] to-[#D97706] hover:from-[#FBBF24] hover:to-[#F59E0B] px-4 py-2 text-xs font-black text-[#0B0F0D] shadow transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                   >
                     {loading && selectedPkg === pkg.id ? 'Processing...' : 'Deposit'}
                   </button>
@@ -203,13 +204,13 @@ export function CashierPage() {
       </div>
 
       {/* Security notice */}
-      <div className="mt-5 rounded-2xl border border-[#1C3A2E] bg-[#0E1A16] p-4 text-xs text-[#8FA39A] space-y-2">
-        <div className="flex items-center gap-2 font-semibold text-[#E8F2EC]">
-          <ShieldCheck size={16} className="text-[#35D399]" />
-          <span>Fair & Secure Protocol</span>
+      <div className="mt-5 rounded-2xl border border-[#1E2E28] bg-[#0E1A16] p-4 text-xs text-[#9CA3AF] space-y-2">
+        <div className="flex items-center gap-2 font-semibold text-[#FDFDFD]">
+          <ShieldCheck size={16} className="text-[#10B981]" />
+          <span>Verified Protocol Security</span>
         </div>
         <p>
-          All transactions are signed cryptographically via Privy wallet session. Wagers strictly follow the prioritized spend order (purchased funds first).
+          All wagers and deposits operate transparently via Privy multi-chain authentication and cryptographic state verification.
         </p>
       </div>
 
