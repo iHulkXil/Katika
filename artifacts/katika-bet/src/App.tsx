@@ -1,19 +1,16 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { useToast } from '@/hooks/use-toast';
 import { ConnectedWalletStatus, WalletAuthButton } from '@/components/wallet-auth';
 import { BetHistory } from '@/components/bet-history';
 import { MarketsHome } from '@/components/markets-home';
 import { ProfilePage } from '@/components/profile-page';
 import { AuthGate } from '@/components/auth-gate';
 import { ComingSoon } from '@/components/coming-soon';
-import { DemoNotice, LayoutShell, MenuRow } from '@/components/layout-shell';
-import { useServerSession } from '@/components/server-session';
+import { LayoutShell } from '@/components/layout-shell';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
-import { useLogout, usePrivy } from '@privy-io/react-auth';
 
 const queryClient = new QueryClient();
 
@@ -68,7 +65,7 @@ function Router() {
         <Route path="/dashboard" component={Home} />
         <Route path="/markets" component={Home} />
 
-        {/* Legacy / hidden sections redirect to Coming Soon */}
+        {/* Legacy game / casino / pvp routes — Coming Soon */}
         <Route path="/play">{() => <ComingSoon title="Play" />}</Route>
         <Route path="/clash">{() => <ComingSoon title="Clash" />}</Route>
         <Route path="/club">{() => <ComingSoon title="Club" />}</Route>
@@ -77,7 +74,6 @@ function Router() {
         <Route path="/games">{() => <ComingSoon title="Casino" />}</Route>
         <Route path="/games/:rest*">{() => <ComingSoon title="Casino" />}</Route>
 
-        {/* Profile, Cashier & Wallet */}
         <Route path="/cashier" component={Wallet} />
         <Route path="/leaderboard">{() => <ComingSoon title="Leaderboard" />}</Route>
         <Route path="/profile" component={ProfilePage} />
