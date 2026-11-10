@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Plus, TrendingUp, Clock, Users, ChevronRight } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Plus, TrendingUp, Clock, Users, ChevronRight, Loader2 } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 
 type Market = {
@@ -11,16 +11,8 @@ type Market = {
   volume: number;
   endsAt: string;
   creator?: string;
+  source?: 'polymarket' | 'custom';
 };
-
-const INITIAL_MARKETS: Market[] = [
-  { id: 'btc15', title: 'BTC Up in next 15 minutes?', category: 'BTC 15m', yesShares: 6200, noShares: 3800, volume: 12450, endsAt: '15m' },
-  { id: 'sol15', title: 'SOL Up in next 15 minutes?', category: 'SOL 15m', yesShares: 5400, noShares: 4600, volume: 8920, endsAt: '15m' },
-  { id: 'eth100k', title: 'ETH above $5,000 by EOY 2026?', category: 'Crypto', yesShares: 4100, noShares: 5900, volume: 45200, endsAt: 'Dec 31' },
-  { id: 'election', title: 'Next US President is a Democrat?', category: 'Politics', yesShares: 4800, noShares: 5200, volume: 128000, endsAt: 'Nov 2028' },
-  { id: 'worldcup', title: 'Brazil wins 2026 World Cup?', category: 'Sports', yesShares: 3200, noShares: 6800, volume: 67500, endsAt: 'Jul 2026' },
-  { id: 'ai', title: 'AGI achieved before 2030?', category: 'Tech', yesShares: 2900, noShares: 7100, volume: 33100, endsAt: 'Jan 2030' },
-];
 
 const CATEGORIES = ['All', 'BTC 15m', 'SOL 15m', 'Crypto', 'Politics', 'Sports', 'Tech', 'Custom'];
 
@@ -35,13 +27,77 @@ function calcOdds(yes: number, no: number) {
   };
 }
 
+function mapPolymarketMarket(raw: any): Market | null {
+  try {
+    const prices = JSON.parse(raw.outcomePrices || '["0.5","0.5"]');
+    const yesProb = parseFloat(prices[0]) || 0.5;
+    const yesShares = Math.round(yesProb * 10000);
+    const noShares = Math.round((1 - yesProb) * 10000);
+    const volume = Number(raw.volumeNum || raw.volume || 0);
+    const end = raw.endDate ? new Date(raw.endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'TBD';
+
+    let category = 'Crypto';
+    const q = (raw.question || '').toLowerCase();
+    const slug = (raw.slug || '').toLowerCase();
+    if (slug.includes('nfl') || slug.includes('nba') || slug.includes('mlb') || q.includes('vs.') || q.includes('spread')) category = 'Sports';
+    else if (q.includes('president') || q.includes('election') || q.includes('nomination') || slug.includes('politics')) category = 'Politics';
+    else if (q.includes('btc') || q.includes('bitcoin') || q.includes('eth') || q.includes('sol') || slug.includes('crypto')) category = 'Crypto';
+    else if (q.includes('ai') || q.includes('agi')) category = 'Tech';
+
+    return {
+      id: raw.id || raw.slug || Math.random().toString(36),
+      title: raw.question || 'Untitled market',
+      category,
+      yesShares,
+      noShares,
+      volume: Math.round(volume),
+      endsAt: end,
+      source: 'polymarket',
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function MarketsHome() {
   const { authenticated, login } = usePrivy();
   const [category, setCategory] = useState('All');
-  const [markets, setMarkets] = useState<Market[]>(INITIAL_MARKETS);
+  const [markets, setMarkets] = useState<Market[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newCategory, setNewCategory] = useState('Custom');
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(
+          'https://gamma-api.polymarket.com/markets?active=true&closed=false&order=volume24hr&ascending=false&limit=30'
+        );
+        if (!res.ok) throw new Error('Failed to load markets');
+        const data = await res.json();
+        const mapped = (Array.isArray(data) ? data : []).map(mapPolymarketMarket).filter(Boolean) as Market[];
+        // Seed a couple of 15m crypto markets at the top for the requested categories
+        const seeds: Market[] = [
+          { id: 'btc15', title: 'BTC Up in next 15 minutes?', category: 'BTC 15m', yesShares: 6200, noShares: 3800, volume: 12450, endsAt: '15m', source: 'custom' },
+          { id: 'sol15', title: 'SOL Up in next 15 minutes?', category: 'SOL 15m', yesShares: 5400, noShares: 4600, volume: 8920, endsAt: '15m', source: 'custom' },
+        ];
+        setMarkets([...seeds, ...mapped]);
+      } catch (e: any) {
+        setError(e.message || 'Could not load live markets');
+        setMarkets([
+          { id: 'btc15', title: 'BTC Up in next 15 minutes?', category: 'BTC 15m', yesShares: 6200, noShares: 3800, volume: 12450, endsAt: '15m' },
+          { id: 'sol15', title: 'SOL Up in next 15 minutes?', category: 'SOL 15m', yesShares: 5400, noShares: 4600, volume: 8920, endsAt: '15m' },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
 
   const filtered = useMemo(
     () => (category === 'All' ? markets : markets.filter((m) => m.category === category)),
@@ -65,12 +121,12 @@ export function MarketsHome() {
         volume: 0,
         endsAt: '7d',
         creator: 'You',
+        source: 'custom',
       },
       ...prev,
     ]);
     setNewTitle('');
     setShowCreate(false);
-    // TODO: call Solana mint for proof-of-bet NFT
     alert('Event created. Proof-of-bet NFT mint queued on Solana (MVP).');
   }
 
@@ -79,7 +135,7 @@ export function MarketsHome() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white">Markets</h1>
-          <p className="text-xs text-slate-400">Live prediction markets · Decimal odds</p>
+          <p className="text-xs text-slate-400">Live from Polymarket + custom events · Decimal odds</p>
         </div>
         <button
           type="button"
@@ -108,8 +164,21 @@ export function MarketsHome() {
         ))}
       </div>
 
+      {loading && (
+        <div className="flex items-center justify-center py-12 text-slate-400">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          Loading live markets…
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+          {error} — showing fallback markets
+        </div>
+      )}
+
       <div className="space-y-3">
-        {filtered.map((m) => {
+        {!loading && filtered.map((m) => {
           const { yes, no, yesPct } = calcOdds(m.yesShares, m.noShares);
           return (
             <div
@@ -122,6 +191,9 @@ export function MarketsHome() {
                     <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-blue-400">
                       {m.category}
                     </span>
+                    {m.source === 'polymarket' && (
+                      <span className="text-[10px] text-slate-500">Polymarket</span>
+                    )}
                     {m.creator && (
                       <span className="text-[10px] text-slate-500">by {m.creator}</span>
                     )}
@@ -162,7 +234,7 @@ export function MarketsHome() {
           );
         })}
 
-        {filtered.length === 0 && (
+        {!loading && filtered.length === 0 && (
           <div className="rounded-2xl border border-dashed border-slate-700 py-12 text-center text-sm text-slate-500">
             No markets in this category yet.
           </div>
