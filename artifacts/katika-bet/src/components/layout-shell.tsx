@@ -7,13 +7,13 @@ import {
 } from 'lucide-react';
 import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
-import { KatikaLogo } from '@/components/katika-logo';
+import { SidebetLogo } from '@/components/katika-logo';
 
 export function Brand() {
   return (
     <Link href="/" className="flex items-center gap-2.5 group">
       <div className="transition-transform group-hover:scale-105 active:scale-95">
-        <KatikaLogo className="h-8 w-8" />
+        <SidebetLogo className="h-8 w-8" />
       </div>
       <span className="text-[17px] font-bold tracking-tight text-white">
         SIDE<span className="text-blue-400">BET</span>
