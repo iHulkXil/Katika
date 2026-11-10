@@ -7,6 +7,7 @@ import { ConnectedWalletStatus, WalletAuthButton } from '@/components/wallet-aut
 import { BetHistory } from '@/components/bet-history';
 import { MarketsHome } from '@/components/markets-home';
 import { ProfilePage } from '@/components/profile-page';
+import { MyBets } from '@/components/my-bets';
 import { AuthGate } from '@/components/auth-gate';
 import { ComingSoon } from '@/components/coming-soon';
 import { LayoutShell } from '@/components/layout-shell';
@@ -64,6 +65,7 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/dashboard" component={Home} />
         <Route path="/markets" component={Home} />
+        <Route path="/my-bets" component={MyBets} />
 
         {/* Legacy game / casino / pvp routes — Coming Soon */}
         <Route path="/play">{() => <ComingSoon title="Play" />}</Route>
