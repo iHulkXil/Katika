@@ -1,12 +1,12 @@
 import React from 'react';
 
-interface KatikaLogoProps {
+interface SidebetLogoProps {
   className?: string;
   size?: number | string;
   showText?: boolean;
 }
 
-export function KatikaLogo({ className = 'h-8 w-8', size, showText = false }: KatikaLogoProps) {
+export function SidebetLogo({ className = 'h-8 w-8', size, showText = false }: SidebetLogoProps) {
   const dimension = size ? (typeof size === 'number' ? `${size}px` : size) : undefined;
 
   return (
@@ -43,3 +43,6 @@ export function KatikaLogo({ className = 'h-8 w-8', size, showText = false }: Ka
     </div>
   );
 }
+
+// Legacy alias so old imports don't break during transition
+export const KatikaLogo = SidebetLogo;
