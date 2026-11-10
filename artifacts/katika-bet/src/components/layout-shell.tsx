@@ -2,13 +2,7 @@ import { type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
   ChevronRight,
-  CreditCard,
-  Gamepad2,
-  Gift,
-  Play,
-  Swords,
   UserRound,
-  Zap,
   TrendingUp,
 } from 'lucide-react';
 import { useServerSession } from '@/components/server-session';
@@ -17,18 +11,17 @@ import { KatikaLogo } from '@/components/katika-logo';
 
 export function Brand() {
   return (
-    <Link href="/" className="flex items-center gap-2 group">
+    <Link href="/" className="flex items-center gap-2.5 group">
       <div className="transition-transform group-hover:scale-105 active:scale-95">
         <KatikaLogo className="h-8 w-8" />
       </div>
-      <span className="text-[16px] font-black tracking-[-.03em] text-white">
-        SIDE<span className="text-[#35D399]">BET</span>
+      <span className="text-[17px] font-bold tracking-tight text-white">
+        SIDE<span className="text-blue-400">BET</span>
       </span>
     </Link>
   );
 }
 
-// MVP: only Markets + Profile. Casino and PvP hidden until rebuilt.
 const bottom = [
   { href: '/', label: 'Markets', icon: TrendingUp },
   { href: '/profile', label: 'Profile', icon: UserRound },
@@ -36,8 +29,8 @@ const bottom = [
 
 function tabClass(active: boolean) {
   return active
-    ? 'flex min-w-[64px] flex-col items-center gap-1 rounded-xl py-1 text-[11px] font-bold text-[#35D399] transition-all'
-    : 'flex min-w-[64px] flex-col items-center gap-1 rounded-xl py-1 text-[11px] font-medium text-[#648074] hover:text-[#9bb2a7] transition-all';
+    ? 'flex min-w-[72px] flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-semibold text-blue-400 transition-all'
+    : 'flex min-w-[72px] flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-all';
 }
 
 export function LayoutShell({ children }: { children: ReactNode }) {
@@ -45,9 +38,9 @@ export function LayoutShell({ children }: { children: ReactNode }) {
   const { serverUser, loading, error } = useServerSession();
 
   return (
-    <div className="min-h-[100dvh] bg-[#07110E] text-[#E8F2EC]">
-      <header className="sticky top-0 z-40 border-b border-[#1C3A2E]/60 bg-[#07110E]/95 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-[520px] items-center justify-between px-3">
+    <div className="min-h-[100dvh] bg-[#0B1120] text-slate-100">
+      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-[#0B1120]/90 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-[520px] items-center justify-between px-4">
           <Brand />
           <div className="flex items-center gap-2">
             <WalletAuthButton compact className="hidden sm:flex" />
@@ -57,12 +50,12 @@ export function LayoutShell({ children }: { children: ReactNode }) {
 
       <main className="mx-auto max-w-[520px] pb-24">{children}</main>
 
-      <footer className="mx-auto max-w-[520px] px-4 pb-28 text-center text-[11px] text-[#5C7368]">
-        18+ Play responsibly. Prediction markets on Solana.
+      <footer className="mx-auto max-w-[520px] px-4 pb-28 text-center text-[11px] text-slate-500">
+        18+ Trade responsibly. Prediction markets on Solana.
       </footer>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#1C3A2E] bg-[#07110E]/98 backdrop-blur-lg pb-[max(10px,env(safe-area-inset-bottom))] pt-2">
-        <div className="mx-auto flex max-w-md items-center justify-around px-2">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-800 bg-[#0B1120]/95 backdrop-blur-lg pb-[max(10px,env(safe-area-inset-bottom))] pt-2">
+        <div className="mx-auto flex max-w-md items-center justify-around px-4">
           {bottom.map((item) => {
             const active =
               item.href === '/'
@@ -71,7 +64,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
             const Icon = item.icon;
             return (
               <Link key={item.href} href={item.href} className={tabClass(active)}>
-                <Icon size={20} className={active ? 'scale-110 transition-transform' : ''} />
+                <Icon size={22} className={active ? 'scale-110 transition-transform' : ''} />
                 <span>{item.label}</span>
               </Link>
             );
@@ -84,7 +77,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
 
 export function DemoNotice({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-[#1C3A2E] bg-[#0E1A16] px-3 py-2 text-xs text-[#8FA39A]">
+    <div className="rounded-xl border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs text-slate-400">
       {children}
     </div>
   );
@@ -106,24 +99,24 @@ export function MenuRow({
   return (
     <Link
       href={href}
-      className="flex items-center justify-between rounded-xl border border-[#1C3A2E] bg-[#0E1A16] p-3 transition-colors hover:border-[#35D399]/40 hover:bg-[#11241C]"
+      className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-900/60 p-3 transition-colors hover:border-blue-500/40 hover:bg-slate-800/80"
     >
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#07110E] text-[#35D399]">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-blue-400">
           <Icon size={18} />
         </div>
         <div>
-          <div className="text-sm font-semibold text-[#E8F2EC]">{title}</div>
-          {subtitle && <div className="text-xs text-[#8FA39A]">{subtitle}</div>}
+          <div className="text-sm font-semibold text-slate-100">{title}</div>
+          {subtitle && <div className="text-xs text-slate-400">{subtitle}</div>}
         </div>
       </div>
       <div className="flex items-center gap-2">
         {badge && (
-          <span className="rounded-full bg-[#35D399]/15 px-2 py-0.5 text-[10px] font-semibold text-[#35D399]">
+          <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-semibold text-blue-400">
             {badge}
           </span>
         )}
-        <ChevronRight size={16} className="text-[#8FA39A]" />
+        <ChevronRight size={16} className="text-slate-400" />
       </div>
     </Link>
   );
