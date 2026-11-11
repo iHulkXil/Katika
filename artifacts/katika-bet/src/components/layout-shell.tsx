@@ -1,125 +1,143 @@
 import { type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
-  ChevronRight,
-  UserRound,
-  TrendingUp,
+  Compass,
+  Flame,
+  Trophy,
+  Bitcoin,
+  Landmark,
+  LineChart,
   Receipt,
+  PieChart,
+  Wallet,
+  Medal,
+  Search,
+  Bell,
+  UserRound,
 } from 'lucide-react';
-import { useServerSession } from '@/components/server-session';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { SidebetLogo } from '@/components/katika-logo';
 
-export function Brand() {
-  return (
-    <Link href="/" className="flex items-center gap-2.5 group">
-      <div className="transition-transform group-hover:scale-105 active:scale-95">
-        <SidebetLogo className="h-8 w-8" />
-      </div>
-      <span className="text-[17px] font-bold tracking-tight text-white">
-        SIDE<span className="text-blue-400">BET</span>
-      </span>
-    </Link>
-  );
-}
+const sidebar = [
+  { href: '/', label: 'Discover', icon: Compass },
+  { href: '/trending', label: 'Trending', icon: Flame },
+  { href: '/sports', label: 'Sports', icon: Trophy },
+  { href: '/crypto', label: 'Crypto', icon: Bitcoin },
+  { href: '/politics', label: 'Politics', icon: Landmark },
+  { href: '/finance', label: 'Finance', icon: LineChart },
+  { href: '/my-bets', label: 'My Bets', icon: Receipt },
+  { href: '/portfolio', label: 'Portfolio', icon: PieChart },
+  { href: '/wallet', label: 'Wallet', icon: Wallet },
+  { href: '/leaderboard', label: 'Leaderboard', icon: Medal },
+];
 
 const bottom = [
-  { href: '/', label: 'Markets', icon: TrendingUp },
-  { href: '/my-bets', label: 'My Bets', icon: Receipt },
+  { href: '/', label: 'Home', icon: Compass },
+  { href: '/markets', label: 'Markets', icon: Flame },
+  { href: '/portfolio', label: 'Portfolio', icon: PieChart },
+  { href: '/wallet', label: 'Wallet', icon: Wallet },
   { href: '/profile', label: 'Profile', icon: UserRound },
 ];
 
-function tabClass(active: boolean) {
-  return active
-    ? 'flex min-w-[72px] flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-semibold text-blue-400 transition-all'
-    : 'flex min-w-[72px] flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-all';
+function isActive(href: string, location: string) {
+  if (href === '/') return location === '/' || location === '/dashboard' || location === '/markets';
+  return location === href || location.startsWith(href + '/');
 }
 
 export function LayoutShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
-  const { serverUser, loading, error } = useServerSession();
 
   return (
-    <div className="min-h-[100dvh] bg-[#0B1120] text-slate-100">
-      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-[#0B1120]/90 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <Brand />
-          <div className="flex items-center gap-2">
-            <WalletAuthButton compact className="hidden sm:flex" />
-          </div>
+    <div className="min-h-[100dvh] bg-[#050A0A] text-slate-100">
+      {/* Desktop sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-emerald-900/40 bg-[#071210] lg:block">
+        <div className="flex h-16 items-center gap-2.5 border-b border-emerald-900/40 px-5">
+          <SidebetLogo className="h-9 w-9" />
+          <span className="text-lg font-bold tracking-tight">SIDE<span className="text-emerald-400">BET</span></span>
         </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl pb-24">{children}</main>
-
-      <footer className="mx-auto max-w-5xl px-4 pb-28 text-center text-[11px] text-slate-500">
-        18+ Trade responsibly. Prediction markets on Solana devnet.
-      </footer>
-
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-800 bg-[#0B1120]/95 backdrop-blur-lg pb-[max(10px,env(safe-area-inset-bottom))] pt-2">
-        <div className="mx-auto flex max-w-md items-center justify-around px-4">
-          {bottom.map((item) => {
-            const active =
-              item.href === '/'
-                ? location === '/' || location === '/dashboard' || location === '/markets'
-                : location === item.href || location.startsWith(item.href + '/');
+        <nav className="space-y-1 p-3">
+          {sidebar.map((item) => {
+            const active = isActive(item.href, location);
             const Icon = item.icon;
             return (
-              <Link key={item.href} href={item.href} className={tabClass(active)}>
-                <Icon size={22} className={active ? 'scale-110 transition-transform' : ''} />
-                <span>{item.label}</span>
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                  active
+                    ? 'bg-emerald-500/15 text-emerald-400'
+                    : 'text-slate-400 hover:bg-emerald-500/10 hover:text-slate-200'
+                }`}
+              >
+                <Icon size={18} />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="absolute bottom-4 left-3 right-3 rounded-xl border border-emerald-700/40 bg-emerald-950/40 p-3 text-xs">
+          <div className="font-semibold text-emerald-300">Level 12 · 1,250 XP</div>
+          <div className="mt-1 text-slate-400">Trade more to level up</div>
+        </div>
+      </aside>
+
+      {/* Main area */}
+      <div className="lg:pl-64">
+        <header className="sticky top-0 z-40 border-b border-emerald-900/40 bg-[#050A0A]/90 backdrop-blur-md">
+          <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-6">
+            <div className="flex items-center gap-2 lg:hidden">
+              <SidebetLogo className="h-8 w-8" />
+              <span className="font-bold">SIDE<span className="text-emerald-400">BET</span></span>
+            </div>
+            <div className="relative mx-auto hidden max-w-md flex-1 md:block">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                placeholder="Search predictions…"
+                className="w-full rounded-xl border border-emerald-900/50 bg-[#0A1815] py-2 pl-10 pr-4 text-sm placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <button className="rounded-lg p-2 text-slate-400 hover:bg-emerald-500/10 hover:text-emerald-400">
+                <Bell size={18} />
+              </button>
+              <div className="hidden items-center gap-1.5 rounded-lg border border-emerald-700/40 bg-emerald-950/40 px-2.5 py-1.5 text-xs font-medium text-emerald-300 sm:flex">
+                <Wallet size={14} />
+                ₦12,450
+              </div>
+              <WalletAuthButton compact />
+            </div>
+          </div>
+        </header>
+
+        <main className="min-h-[calc(100dvh-4rem)] pb-20 lg:pb-6">{children}</main>
+
+        <footer className="hidden border-t border-emerald-900/40 px-6 py-4 text-center text-[11px] text-slate-500 lg:block">
+          18+ Trade responsibly. Prediction markets on Solana.
+        </footer>
+      </div>
+
+      {/* Mobile bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-emerald-900/40 bg-[#050A0A]/95 backdrop-blur-lg pb-[max(8px,env(safe-area-inset-bottom))] pt-1 lg:hidden">
+        <div className="flex items-center justify-around">
+          {bottom.map((item) => {
+            const active = isActive(item.href, location);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-col items-center gap-0.5 px-2 py-1 text-[10px] font-medium ${
+                  active ? 'text-emerald-400' : 'text-slate-500'
+                }`}
+              >
+                <Icon size={20} />
+                {item.label}
               </Link>
             );
           })}
         </div>
       </nav>
     </div>
-  );
-}
-
-export function DemoNotice({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-xl border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs text-slate-400">
-      {children}
-    </div>
-  );
-}
-
-export function MenuRow({
-  icon: Icon,
-  title,
-  subtitle,
-  href,
-  badge,
-}: {
-  icon: any;
-  title: string;
-  subtitle?: string;
-  href: string;
-  badge?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-900/60 p-3 transition-colors hover:border-blue-500/40 hover:bg-slate-800/80"
-    >
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-blue-400">
-          <Icon size={18} />
-        </div>
-        <div>
-          <div className="text-sm font-semibold text-slate-100">{title}</div>
-          {subtitle && <div className="text-xs text-slate-400">{subtitle}</div>}
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {badge && (
-          <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-semibold text-blue-400">
-            {badge}
-          </span>
-        )}
-        <ChevronRight size={16} className="text-slate-400" />
-      </div>
-    </Link>
   );
 }
