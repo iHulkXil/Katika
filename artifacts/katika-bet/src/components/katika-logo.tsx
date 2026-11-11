@@ -10,33 +10,48 @@ export function SidebetLogo({ className = 'h-8 w-8', size, showText = false }: S
   const dimension = size ? (typeof size === 'number' ? `${size}px` : size) : undefined;
 
   return (
-    <div className={`inline-flex items-center gap-2 ${className}`}>
+    <div className={`inline-flex items-center gap-2.5 ${className}`}>
       <svg
         viewBox="0 0 40 40"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         style={dimension ? { width: dimension, height: dimension } : undefined}
-        className="h-full w-auto"
+        className="h-full w-auto shrink-0 drop-shadow-[0_2px_8px_rgba(59,130,246,0.3)]"
       >
         <defs>
-          <linearGradient id="sbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id="sbBase" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1E293B" />
+            <stop offset="100%" stopColor="#0F172A" />
+          </linearGradient>
+          <linearGradient id="sbAccent" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#60A5FA" />
-            <stop offset="50%" stopColor="#3B82F6" />
-            <stop offset="100%" stopColor="#1D4ED8" />
+            <stop offset="100%" stopColor="#2563EB" />
+          </linearGradient>
+          <linearGradient id="sbSpecular" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
           </linearGradient>
         </defs>
-        <rect width="40" height="40" rx="10" fill="url(#sbGrad)" />
+
+        {/* Outer squircle base */}
+        <rect width="40" height="40" rx="10" fill="url(#sbBase)" stroke="#334155" strokeWidth="1" />
+        <rect x="0.5" y="0.5" width="39" height="19.5" rx="9.5" fill="url(#sbSpecular)" />
+
+        {/* Dynamic angled S-lightning brand glyph */}
         <path
-          d="M12 26V14h6.5c2.2 0 4 1.6 4 3.6 0 1.4-.7 2.5-1.8 3.1L23 26h-3.2l-2.1-4.6H15.2V26H12zm3.2-7.2h3c1.1 0 1.8-.6 1.8-1.6s-.7-1.6-1.8-1.6h-3v3.2z"
-          fill="white"
+          d="M 26 12 L 15.5 12 C 13.5 12 12 13.5 12 15.5 C 12 17.5 13.5 19 15.5 19 L 24.5 21 C 26.5 21 28 22.5 28 24.5 C 28 26.5 26.5 28 24.5 28 L 14 28"
+          stroke="url(#sbAccent)"
+          strokeWidth="3.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         />
-        <path
-          d="M22 26l4.2-12h3.1L33 26h-3.1l-.7-2.1h-3.5l-.7 2.1H22zm3.6-4.4h2.2l-1.1-3.3-1.1 3.3z"
-          fill="white"
-        />
+
+        {/* Directional upward micro-arrow showing prediction & odds growth */}
+        <circle cx="27" cy="12" r="2.2" fill="#38BDF8" />
+        <circle cx="13" cy="28" r="2.2" fill="#3B82F6" />
       </svg>
       {showText && (
-        <span className="font-bold tracking-tight text-white">
+        <span className="font-bold tracking-tight text-white text-[15px]">
           SIDE<span className="text-blue-400">BET</span>
         </span>
       )}

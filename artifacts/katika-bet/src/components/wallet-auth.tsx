@@ -32,9 +32,9 @@ export function WalletAuthButton({
 
   if (!ready) {
     return (
-      <button type="button" disabled className={`inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-xs font-semibold text-muted-foreground opacity-70 ${className}`}>
-        <WalletCards size={15} />
-        Loading
+      <button type="button" disabled className={`inline-flex items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-900/60 px-3.5 py-2 text-xs font-medium text-slate-400 opacity-70 ${className}`}>
+        <WalletCards size={14} />
+        Loading...
       </button>
     );
   }
@@ -42,11 +42,12 @@ export function WalletAuthButton({
   if (authenticated) {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
-        <span className={`inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-accent px-3 py-2 font-mono-custom text-xs ${compact ? 'hidden sm:inline-flex' : ''}`}>
+        <span className={`inline-flex items-center gap-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 font-mono text-xs font-semibold text-blue-400 ${compact ? 'hidden sm:inline-flex' : ''}`}>
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
           {accountLabel(user)}
         </span>
-        <button type="button" onClick={() => void logout()} className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold">
-          <LogOut size={14} />
+        <button type="button" onClick={() => void logout()} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+          <LogOut size={13} />
           <span className={compact ? 'hidden sm:inline' : ''}>Sign out</span>
         </button>
       </div>
@@ -54,8 +55,8 @@ export function WalletAuthButton({
   }
 
   return (
-    <button type="button" onClick={() => void login()} className={`inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#F59E0B] to-[#FACC15] px-4 py-2.5 text-xs font-bold text-[#080C0A] shadow-[0_2px_12px_rgba(245,158,11,0.25)] hover:brightness-105 active:scale-95 transition-all ${className}`}>
-      <WalletCards size={15} />
+    <button type="button" onClick={() => void login()} className={`inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-blue-500/20 active:scale-95 transition-all ${className}`}>
+      <WalletCards size={14} />
       Connect Wallet
     </button>
   );
