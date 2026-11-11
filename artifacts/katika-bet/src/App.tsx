@@ -15,45 +15,83 @@ import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter
 
 const queryClient = new QueryClient();
 
-function RedirectTo({ to }: { to: string }) {
-  const [, setLocation] = useLocation();
-  useEffect(() => {
-    setLocation(to);
-  }, [to, setLocation]);
-  return null;
-}
-
 function Home() {
   return <MarketsHome />;
 }
 
 function Wallet() {
   return (
-    <div className="px-3 pt-3">
+    <div className="p-4 lg:p-6">
       <h1 className="text-2xl font-semibold">Wallet</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Connect EVM, Solana, or Bitcoin wallets for real play.</p>
+      <p className="mt-1 text-sm text-slate-400">Connect Solana or EVM for real play on SIDEBET.</p>
       <div className="mt-4"><ConnectedWalletStatus /></div>
-      <h2 className="mt-6 text-sm font-semibold uppercase tracking-[.16em] text-secondary">Bet history</h2>
+      <div className="mt-6 rounded-2xl border border-emerald-900/40 bg-[#0A1512] p-4">
+        <div className="text-xs text-slate-400">Available Balance</div>
+        <div className="mt-1 text-2xl font-bold text-emerald-400">₦12,450</div>
+        <div className="mt-3 flex gap-2">
+          <button className="rounded-lg bg-emerald-500 px-4 py-2 text-xs font-semibold text-black">Deposit</button>
+          <button className="rounded-lg border border-emerald-700 px-4 py-2 text-xs">Withdraw</button>
+        </div>
+      </div>
+      <h2 className="mt-6 text-sm font-semibold uppercase tracking-wider text-slate-400">Recent Activity</h2>
       <BetHistory />
     </div>
   );
 }
 
-function Placeholder({ title }: { title: string }) {
-  return <div className="px-3 pt-6"><h1 className="text-2xl font-semibold">{title}</h1></div>;
+function Portfolio() {
+  return (
+    <div className="p-4 lg:p-6">
+      <h1 className="text-2xl font-semibold">Your Portfolio</h1>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl border border-emerald-900/40 bg-[#0A1512] p-4">
+          <div className="text-xs text-slate-400">Total Value</div>
+          <div className="mt-1 text-2xl font-bold">₦42,500</div>
+          <div className="text-xs text-emerald-400">+12.5%</div>
+        </div>
+        <div className="rounded-2xl border border-emerald-900/40 bg-[#0A1512] p-4">
+          <div className="text-xs text-slate-400">Open Positions</div>
+          <div className="mt-1 text-2xl font-bold">8</div>
+        </div>
+      </div>
+      <p className="mt-6 text-sm text-slate-400">Positions appear here after you place bets from Markets.</p>
+    </div>
+  );
 }
 
-function RewardsPage() {
-  return <Placeholder title="Rewards" />;
+function Leaderboard() {
+  return (
+    <div className="p-4 lg:p-6">
+      <h1 className="text-2xl font-semibold">Leaderboard</h1>
+      <div className="mt-4 space-y-2">
+        {['Adaeze · ₦12.4M', 'Chinedu · ₦9.8M', 'You · ₦42.5K', 'Fatima · ₦28.1K'].map((row, i) => (
+          <div key={i} className="flex items-center justify-between rounded-xl border border-emerald-900/40 bg-[#0A1512] px-4 py-3 text-sm">
+            <span>#{i + 1} {row}</span>
+            <span className="text-emerald-400">+{12 - i}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CategoryPage({ title }: { title: string }) {
+  return (
+    <div className="p-4 lg:p-6">
+      <h1 className="text-2xl font-semibold">{title}</h1>
+      <p className="mt-2 text-sm text-slate-400">Browse {title.toLowerCase()} prediction markets. All local + Solana backed.</p>
+      <div className="mt-6">
+        <MarketsHome />
+      </div>
+    </div>
+  );
 }
 
 function NotFoundPage() {
   return (
     <div className="px-3 pt-16 text-center">
-      <p className="text-sm text-[#8FA39A]">Page not found</p>
-      <Link href="/" className="mt-2 inline-block text-sm text-[#35D399] underline">
-        Return Home
-      </Link>
+      <p className="text-sm text-slate-400">Page not found</p>
+      <Link href="/" className="mt-2 inline-block text-sm text-emerald-400 underline">Return Home</Link>
     </div>
   );
 }
@@ -65,24 +103,17 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/dashboard" component={Home} />
         <Route path="/markets" component={Home} />
+        <Route path="/trending">{() => <CategoryPage title="Trending" />}</Route>
+        <Route path="/sports">{() => <CategoryPage title="Sports" />}</Route>
+        <Route path="/crypto">{() => <CategoryPage title="Crypto" />}</Route>
+        <Route path="/politics">{() => <CategoryPage title="Politics" />}</Route>
+        <Route path="/finance">{() => <CategoryPage title="Finance" />}</Route>
         <Route path="/my-bets" component={MyBets} />
-
-        {/* Legacy game / casino / pvp routes — Coming Soon */}
-        <Route path="/play">{() => <ComingSoon title="Play" />}</Route>
-        <Route path="/clash">{() => <ComingSoon title="Clash" />}</Route>
-        <Route path="/club">{() => <ComingSoon title="Club" />}</Route>
-        <Route path="/pvp">{() => <ComingSoon title="PvP" />}</Route>
-        <Route path="/pvp/:rest*">{() => <ComingSoon title="PvP" />}</Route>
-        <Route path="/games">{() => <ComingSoon title="Casino" />}</Route>
-        <Route path="/games/:rest*">{() => <ComingSoon title="Casino" />}</Route>
-
-        <Route path="/cashier" component={Wallet} />
-        <Route path="/leaderboard">{() => <ComingSoon title="Leaderboard" />}</Route>
-        <Route path="/profile" component={ProfilePage} />
-        <Route path="/kit" component={ProfilePage} />
-        <Route path="/menu" component={ProfilePage} />
+        <Route path="/portfolio" component={Portfolio} />
         <Route path="/wallet" component={Wallet} />
-        <Route path="/rewards" component={RewardsPage} />
+        <Route path="/leaderboard" component={Leaderboard} />
+        <Route path="/profile" component={ProfilePage} />
+        <Route path="/cashier" component={Wallet} />
         <Route component={NotFoundPage} />
       </Switch>
     </ErrorRouted>
