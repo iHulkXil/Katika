@@ -15,6 +15,8 @@ import { MainnetDepositWithdrawModal } from '@/components/mainnet-deposit-modal'
 import { CryptoWalletDashboard } from '@/components/crypto-wallet-dashboard';
 import { PvPLobby } from '@/components/pvp-lobby';
 import { PoolGamePage } from '@/components/pool-game';
+import { PotWheelGamePage } from '@/components/pot-wheel-game';
+import { LudoGamePage } from '@/components/ludo-game';
 import { AdminResolverPage } from '@/components/admin-resolver';
 import { ComplianceModal } from '@/components/compliance-modal';
 import { fetchPositions, fetchStats, type Position, type PlatformStats } from '@/lib/markets-api';
@@ -213,6 +215,12 @@ function Router() {
         <Route path="/games/pool" component={PoolGamePage} />
         <Route path="/pvp/pool" component={PoolGamePage} />
         <Route path="/pvp/pool/:id" component={PoolGamePage} />
+        <Route path="/games/wheel" component={PotWheelGamePage} />
+        <Route path="/pvp/wheel" component={PotWheelGamePage} />
+        <Route path="/pvp/wheel/:id" component={PotWheelGamePage} />
+        <Route path="/games/ludo" component={LudoGamePage} />
+        <Route path="/pvp/ludo" component={LudoGamePage} />
+        <Route path="/pvp/ludo/:id" component={LudoGamePage} />
         <Route path="/trending">{() => <CategoryPage title="Trending" />}</Route>
         <Route path="/sports">{() => <CategoryPage title="Sports" />}</Route>
         <Route path="/crypto">{() => <CategoryPage title="Crypto" />}</Route>

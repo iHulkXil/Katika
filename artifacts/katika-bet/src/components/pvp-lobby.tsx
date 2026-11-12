@@ -32,9 +32,9 @@ export function PvPLobby() {
   const [, setLocation] = useLocation();
   const { serverUser } = useServerSession();
 
-  const [selectedGame, setSelectedGame] = useState<'pool' | 'penalty' | 'twentyone' | 'ludo'>('pool');
+  const [selectedGame, setSelectedGame] = useState<'pool' | 'wheel' | 'ludo'>('pool');
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoChain>('SOL');
-  const [stakeUsd, setStakeUsd] = useState<number>(10);
+  const [stakeUsd, setStakeUsd] = useState<number>(25);
   const [mode, setMode] = useState<'queue' | 'challenge'>('queue');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,16 +52,12 @@ export function PvPLobby() {
       setLocation(`/games/pool?stake=${stakeUsd}&crypto=${selectedCrypto}`);
       return;
     }
-    if (selectedGame === 'penalty') {
-      setLocation(`/pvp/penalty?stake=${stakeUsd}&crypto=${selectedCrypto}`);
-      return;
-    }
-    if (selectedGame === 'twentyone') {
-      setLocation(`/pvp/21/table-1?stake=${stakeUsd}&crypto=${selectedCrypto}`);
+    if (selectedGame === 'wheel') {
+      setLocation(`/games/wheel?stake=${stakeUsd}&crypto=${selectedCrypto}`);
       return;
     }
     if (selectedGame === 'ludo') {
-      setLocation(`/pvp/ludo/quick?stake=${stakeUsd}&crypto=${selectedCrypto}`);
+      setLocation(`/games/ludo?stake=${stakeUsd}&crypto=${selectedCrypto}`);
       return;
     }
   };
@@ -110,104 +106,113 @@ export function PvPLobby() {
             <Gamepad2 size={16} className="text-[#4ADE80]" />
             <span>Select PvP Game</span>
           </h2>
-          <span className="text-[11px] font-mono text-slate-400">4 Active Arenas</span>
+          <span className="text-[11px] font-mono text-slate-400">3 Active PvP Arenas</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* 8-Ball Pool */}
           <div
             onClick={() => setSelectedGame('pool')}
-            className={`cursor-pointer rounded-3xl border p-5 transition-all duration-200 relative overflow-hidden ${
+            className={`cursor-pointer rounded-3xl border p-5 transition-all duration-200 relative overflow-hidden flex flex-col justify-between ${
               selectedGame === 'pool'
-                ? 'border-[#22C55E] bg-[#121B16] shadow-[0_0_20px_rgba(34,197,94,0.15)] ring-1 ring-[#22C55E]/40'
+                ? 'border-[#22C55E] bg-[#121B16] shadow-[0_0_24px_rgba(34,197,94,0.18)] ring-1 ring-[#22C55E]/40'
                 : 'border-white/[0.08] bg-[#0E1318] hover:border-white/20 hover:bg-[#121820]'
             }`}
           >
-            <div className="flex items-center justify-between mb-3">
-              <span className="rounded-full bg-[#22C55E]/20 px-2 py-0.5 text-[10px] font-mono font-bold text-[#4ADE80]">
-                8-BALL
-              </span>
-              <span className="text-[10px] font-mono text-slate-400">1v1 Table</span>
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="rounded-full bg-[#22C55E]/20 px-2 py-0.5 text-[10px] font-mono font-bold text-[#4ADE80]">
+                  1V1 SKILL
+                </span>
+                <span className="text-[10px] font-mono text-slate-400">Real-Time Table</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#080C0F] border border-white/10 text-2xl shrink-0 shadow-inner">
+                  🎱
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">8-Ball Pool</h3>
+                  <p className="mt-1 text-xs text-slate-400 leading-snug">
+                    Classic billiards physics. Aim cue, meter power, pot solids or stripes, and sink the 8-ball!
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#080C0F] border border-white/10 text-2xl mb-2">
-              🎱
+            <div className="mt-3 flex items-center gap-2 text-[10px] font-mono text-[#4ADE80]">
+              <span>Instant 1v1</span>
+              <span>·</span>
+              <span>Sound Effects</span>
             </div>
-            <h3 className="text-base font-bold text-white">8-Ball Pool</h3>
-            <p className="mt-1 text-xs text-slate-400 leading-snug">
-              Classic billiards. Drag to aim, pull back for cue force, clear solids or stripes, and sink the 8-ball!
-            </p>
           </div>
 
-          {/* 3v3 Penalty Shootout */}
+          {/* Wheel of the Pot (3-Minute Pot Wheel) */}
           <div
-            onClick={() => setSelectedGame('penalty')}
-            className={`cursor-pointer rounded-3xl border p-5 transition-all duration-200 relative overflow-hidden ${
-              selectedGame === 'penalty'
-                ? 'border-[#22C55E] bg-[#121B16] shadow-[0_0_20px_rgba(34,197,94,0.15)] ring-1 ring-[#22C55E]/40'
+            onClick={() => setSelectedGame('wheel')}
+            className={`cursor-pointer rounded-3xl border p-5 transition-all duration-200 relative overflow-hidden flex flex-col justify-between ${
+              selectedGame === 'wheel'
+                ? 'border-[#FACC15] bg-[#17160F] shadow-[0_0_24px_rgba(250,204,21,0.18)] ring-1 ring-[#FACC15]/40'
                 : 'border-white/[0.08] bg-[#0E1318] hover:border-white/20 hover:bg-[#121820]'
             }`}
           >
-            <div className="flex items-center justify-between mb-3">
-              <span className="rounded-full bg-[#FACC15]/20 px-2 py-0.5 text-[10px] font-mono font-bold text-[#FACC15]">
-                SHOOTOUT
-              </span>
-              <span className="text-[10px] font-mono text-slate-400">3v3 Squad</span>
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="rounded-full bg-[#FACC15]/20 px-2 py-0.5 text-[10px] font-mono font-bold text-[#FACC15]">
+                  3-MIN CYCLE
+                </span>
+                <span className="text-[10px] font-mono text-slate-400">Pot Share Pool</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#080C0F] border border-white/10 text-2xl shrink-0 shadow-inner">
+                  🎡
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Wheel of the Pot</h3>
+                  <p className="mt-1 text-xs text-slate-400 leading-snug">
+                    Stake represents your share. Every 3 minutes, wheel spins & winner takes the entire accumulated pot!
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#080C0F] border border-white/10 text-2xl mb-2">
-              ⚽
+            <div className="mt-3 flex items-center gap-2 text-[10px] font-mono text-[#FACC15]">
+              <span>Stake = % Chance</span>
+              <span>·</span>
+              <span>Winner Takes All</span>
             </div>
-            <h3 className="text-base font-bold text-white">Penalty Shootout</h3>
-            <p className="mt-1 text-xs text-slate-400 leading-snug">
-              Shoot & save penalty kicks. 3 rounds of nerve-testing reflex shots.
-            </p>
           </div>
 
-          {/* Katika 21 */}
-          <div
-            onClick={() => setSelectedGame('twentyone')}
-            className={`cursor-pointer rounded-3xl border p-5 transition-all duration-200 relative overflow-hidden ${
-              selectedGame === 'twentyone'
-                ? 'border-[#22C55E] bg-[#121B16] shadow-[0_0_20px_rgba(34,197,94,0.15)] ring-1 ring-[#22C55E]/40'
-                : 'border-white/[0.08] bg-[#0E1318] hover:border-white/20 hover:bg-[#121820]'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="rounded-full bg-[#EC4899]/20 px-2 py-0.5 text-[10px] font-mono font-bold text-[#F472B6]">
-                CARDS
-              </span>
-              <span className="text-[10px] font-mono text-slate-400">Closest to 21</span>
-            </div>
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#080C0F] border border-white/10 text-2xl mb-2">
-              🃏
-            </div>
-            <h3 className="text-base font-bold text-white">Katika 21</h3>
-            <p className="mt-1 text-xs text-slate-400 leading-snug">
-              Closest to 21 without busting. Hit, Stand, Double, or Split against real opponents.
-            </p>
-          </div>
-
-          {/* Ludo Sprint */}
+          {/* Ludo Quick (2-Token Sprint) */}
           <div
             onClick={() => setSelectedGame('ludo')}
-            className={`cursor-pointer rounded-3xl border p-5 transition-all duration-200 relative overflow-hidden ${
+            className={`cursor-pointer rounded-3xl border p-5 transition-all duration-200 relative overflow-hidden flex flex-col justify-between ${
               selectedGame === 'ludo'
-                ? 'border-[#22C55E] bg-[#121B16] shadow-[0_0_20px_rgba(34,197,94,0.15)] ring-1 ring-[#22C55E]/40'
+                ? 'border-[#A855F7] bg-[#171120] shadow-[0_0_24px_rgba(168,85,247,0.18)] ring-1 ring-[#A855F7]/40'
                 : 'border-white/[0.08] bg-[#0E1318] hover:border-white/20 hover:bg-[#121820]'
             }`}
           >
-            <div className="flex items-center justify-between mb-3">
-              <span className="rounded-full bg-[#A855F7]/20 px-2 py-0.5 text-[10px] font-mono font-bold text-[#C084FC]">
-                BOARD
-              </span>
-              <span className="text-[10px] font-mono text-slate-400">2-Token Sprint</span>
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="rounded-full bg-[#A855F7]/20 px-2 py-0.5 text-[10px] font-mono font-bold text-[#C084FC]">
+                  LUDO SPRINT
+                </span>
+                <span className="text-[10px] font-mono text-slate-400">2-Token Dash</span>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#080C0F] border border-white/10 text-2xl shrink-0 shadow-inner">
+                  🎲
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Ludo Quick</h3>
+                  <p className="mt-1 text-xs text-slate-400 leading-snug">
+                    Roll 6 to exit yard, capture opponents, advance 52-tile track with safe tiles, and race home!
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#080C0F] border border-white/10 text-2xl mb-2">
-              🎲
+            <div className="mt-3 flex items-center gap-2 text-[10px] font-mono text-[#C084FC]">
+              <span>Safe Tiles & Blocks</span>
+              <span>·</span>
+              <span>Extra Rolls on 6</span>
             </div>
-            <h3 className="text-base font-bold text-white">Ludo Quick</h3>
-            <p className="mt-1 text-xs text-slate-400 leading-snug">
-              Fast-paced board dash. Roll 6 to exit yard, capture opponents, and sprint to home.
-            </p>
           </div>
         </div>
       </div>
@@ -305,7 +310,7 @@ export function PvPLobby() {
             onClick={handleLaunch}
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#22C55E] hover:bg-[#16A34A] px-7 py-3.5 text-xs font-black text-black shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
-            <span>PLAY {selectedGame.toUpperCase()} ({cryptoEquivalent} {selectedCrypto})</span>
+            <span>PLAY {selectedGame === 'pool' ? '8-BALL POOL' : selectedGame === 'wheel' ? 'WHEEL OF THE POT' : 'LUDO QUICK'} ({cryptoEquivalent} {selectedCrypto})</span>
             <ArrowRight size={15} />
           </button>
         </div>
