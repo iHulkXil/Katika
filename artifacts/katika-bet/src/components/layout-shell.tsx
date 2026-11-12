@@ -16,12 +16,15 @@ import {
   LayoutGrid,
   Settings,
   ChevronRight,
+  Swords,
 } from 'lucide-react';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { SidebetLogo } from '@/components/katika-logo';
 
 const navItems = [
   { href: '/', label: 'Discover', icon: Compass },
+  { href: '/markets', label: 'Markets', icon: Flame },
+  { href: '/pvp', label: 'PvP Arena', icon: Swords },
   { href: '/trending', label: 'Trending', icon: Flame },
   { href: '/sports', label: 'Sports', icon: Trophy },
   { href: '/crypto', label: 'Crypto', icon: Bitcoin },
@@ -31,11 +34,13 @@ const navItems = [
   { href: '/portfolio', label: 'Portfolio', icon: PieChart },
   { href: '/wallet', label: 'Wallet', icon: Wallet },
   { href: '/leaderboard', label: 'Leaderboard', icon: Medal },
+  { href: '/admin', label: 'Admin Oracle', icon: Landmark },
 ];
 
 const mobileBottomNav = [
   { href: '/', label: 'Home', icon: Compass },
   { href: '/markets', label: 'Markets', icon: Flame },
+  { href: '/pvp', label: 'PvP', icon: Swords },
   { href: '/wallet', label: 'Wallet', icon: Wallet },
   { href: '/portfolio', label: 'Portfolio', icon: PieChart },
   { href: '/profile', label: 'Profile', icon: Settings },

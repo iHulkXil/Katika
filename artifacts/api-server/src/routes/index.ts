@@ -13,10 +13,12 @@ import walletRouter from "./wallet";
 import legendsRouter from "./legends";
 import tapRouter from "./tap";
 import ballRouter from "./ball";
+import marketsRouter from "./markets";
 
 const router: IRouter = Router();
 router.use(healthRouter);
 router.use(meRouter);
+router.use(marketsRouter);
 router.use(kchipRouter);
 router.use(walletRouter);
 router.use(legendsRouter);
