@@ -13,12 +13,14 @@ import {
   Medal,
   Search,
   Bell,
-  UserRound,
+  LayoutGrid,
+  Settings,
+  ChevronRight,
 } from 'lucide-react';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { SidebetLogo } from '@/components/katika-logo';
 
-const sidebar = [
+const navItems = [
   { href: '/', label: 'Discover', icon: Compass },
   { href: '/trending', label: 'Trending', icon: Flame },
   { href: '/sports', label: 'Sports', icon: Trophy },
@@ -31,12 +33,12 @@ const sidebar = [
   { href: '/leaderboard', label: 'Leaderboard', icon: Medal },
 ];
 
-const bottom = [
+const mobileBottomNav = [
   { href: '/', label: 'Home', icon: Compass },
   { href: '/markets', label: 'Markets', icon: Flame },
-  { href: '/portfolio', label: 'Portfolio', icon: PieChart },
   { href: '/wallet', label: 'Wallet', icon: Wallet },
-  { href: '/profile', label: 'Profile', icon: UserRound },
+  { href: '/portfolio', label: 'Portfolio', icon: PieChart },
+  { href: '/profile', label: 'Profile', icon: Settings },
 ];
 
 function isActive(href: string, location: string) {
@@ -47,92 +49,196 @@ function isActive(href: string, location: string) {
 export function LayoutShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
 
+  const balance = Number(localStorage.getItem('sidebet_wallet_balance') || '4011');
+
   return (
-    <div className="min-h-[100dvh] bg-[#050A0A] text-slate-100">
-      {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-emerald-900/40 bg-[#071210] lg:block">
-        <div className="flex h-16 items-center gap-2.5 border-b border-emerald-900/40 px-5">
-          <SidebetLogo className="h-9 w-9" />
-          <span className="text-lg font-bold tracking-tight">SIDE<span className="text-emerald-400">BET</span></span>
+    <div className="min-h-screen bg-[#080C0F] text-[#F3F4F6] selection:bg-[#22c55e]/30 selection:text-white">
+      {/* Sleek Floating / Dock Sidebar matching the reference design */}
+      <aside className="fixed inset-y-4 left-4 z-40 hidden w-64 flex-col justify-between rounded-3xl border border-white/[0.08] bg-[#0D1217]/95 p-4 shadow-2xl backdrop-blur-xl lg:flex">
+        {/* Top Brand Logo with neon glow */}
+        <div>
+          <Link href="/" className="flex items-center gap-3 px-2 py-2 group">
+            <div className="relative grid h-11 w-11 place-items-center rounded-2xl bg-[#121820] border border-[#22c55e]/30 p-1.5 shadow-[0_0_15px_rgba(34,197,94,0.2)] group-hover:border-[#22c55e] transition-all">
+              <SidebetLogo className="h-full w-full" />
+              <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#22c55e] ring-2 ring-[#0D1217]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1">
+                <span className="font-display text-base font-extrabold tracking-tight text-white">
+                  SIDE<span className="text-[#22c55e]">BET</span>
+                </span>
+              </div>
+              <p className="text-[10px] font-mono font-medium text-slate-400">
+                PRO TERMINAL
+              </p>
+            </div>
+          </Link>
+
+          {/* Navigation Links with circular active badge from reference screenshot */}
+          <nav className="mt-6 space-y-1">
+            {navItems.map((item) => {
+              const active = isActive(item.href, location);
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-xs font-semibold transition-all duration-200 ${
+                    active
+                      ? 'bg-[#141C24] text-white shadow-sm border border-white/[0.08]'
+                      : 'text-slate-400 hover:bg-[#121820] hover:text-slate-200'
+                  }`}
+                >
+                  {/* Circular icon pill: When active, bright neon lime background */}
+                  <div
+                    className={`grid h-8 w-8 place-items-center rounded-xl transition-all ${
+                      active
+                        ? 'bg-[#22c55e] text-black shadow-[0_0_16px_rgba(34,197,94,0.4)]'
+                        : 'bg-[#121820] text-slate-400 group-hover:text-white group-hover:bg-[#18222b]'
+                    }`}
+                  >
+                    <Icon size={16} />
+                  </div>
+                  <span>{item.label}</span>
+
+                  {active && (
+                    <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#22c55e] shadow-[0_0_6px_#22c55e]" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
-        <nav className="space-y-1 p-3">
-          {sidebar.map((item) => {
-            const active = isActive(item.href, location);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                  active
-                    ? 'bg-emerald-500/15 text-emerald-400'
-                    : 'text-slate-400 hover:bg-emerald-500/10 hover:text-slate-200'
-                }`}
-              >
-                <Icon size={18} />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="absolute bottom-4 left-3 right-3 rounded-xl border border-emerald-700/40 bg-emerald-950/40 p-3 text-xs">
-          <div className="font-semibold text-emerald-300">Level 12 · 1,250 XP</div>
-          <div className="mt-1 text-slate-400">Trade more to level up</div>
+
+        {/* Bottom Level / Tier Widget */}
+        <div className="rounded-2xl border border-white/5 bg-[#121820] p-3">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-slate-200">Trader Tier 3</span>
+            <span className="font-mono text-[10px] text-[#4ade80]">Level 12</span>
+          </div>
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#080C0F]">
+            <div className="h-full w-3/4 rounded-full bg-gradient-to-r from-[#22c55e] via-[#4ade80] to-[#facc15]" />
+          </div>
+          <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <span>2,450 XP</span>
+            <Link href="/wallet" className="text-[#4ade80] hover:underline">
+              Top up
+            </Link>
+          </div>
         </div>
       </aside>
 
-      {/* Main area */}
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-40 border-b border-emerald-900/40 bg-[#050A0A]/90 backdrop-blur-md">
-          <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-6">
-            <div className="flex items-center gap-2 lg:hidden">
-              <SidebetLogo className="h-8 w-8" />
-              <span className="font-bold">SIDE<span className="text-emerald-400">BET</span></span>
-            </div>
+      {/* Main Content Area */}
+      <div className="lg:pl-72">
+        {/* Top Header Bar */}
+        <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#080C0F]/85 backdrop-blur-xl">
+          <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-8">
+            {/* Mobile Brand */}
+            <Link href="/" className="flex items-center gap-2 lg:hidden">
+              <div className="grid h-8 w-8 place-items-center rounded-xl bg-[#121820] border border-[#22c55e]/40 p-1">
+                <SidebetLogo className="h-full w-full" />
+              </div>
+              <span className="font-bold text-sm tracking-tight text-white">
+                SIDE<span className="text-[#22c55e]">BET</span>
+              </span>
+            </Link>
+
+            {/* Search Input matching reference palette */}
             <div className="relative mx-auto hidden max-w-md flex-1 md:block">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
                 type="text"
-                placeholder="Search predictions…"
-                className="w-full rounded-xl border border-emerald-900/50 bg-[#0A1815] py-2 pl-10 pr-4 text-sm placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none"
+                placeholder="Search prediction markets, assets, sports..."
+                className="w-full rounded-2xl border border-white/[0.08] bg-[#0E1318] py-2 pl-10 pr-4 text-xs text-white placeholder:text-slate-500 focus:border-[#22c55e]/60 focus:bg-[#121820] focus:outline-none focus:ring-1 focus:ring-[#22c55e]/30 transition-all"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <button className="rounded-lg p-2 text-slate-400 hover:bg-emerald-500/10 hover:text-emerald-400">
-                <Bell size={18} />
-              </button>
-              <div className="hidden items-center gap-1.5 rounded-lg border border-emerald-700/40 bg-emerald-950/40 px-2.5 py-1.5 text-xs font-medium text-emerald-300 sm:flex">
-                <Wallet size={14} />
-                ₦12,450
+
+            {/* Right Action Icons & Profile matching reference screenshot */}
+            <div className="flex items-center gap-2.5">
+              {/* Wallet Quick Balance Button */}
+              <Link
+                href="/wallet"
+                className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-[#0F1713] px-3.5 py-1.5 text-xs font-mono font-bold text-white hover:border-[#22c55e] transition-all shadow-[0_0_12px_rgba(34,197,94,0.15)]"
+              >
+                <div className="h-2 w-2 rounded-full bg-[#22c55e] animate-pulse" />
+                <span>${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </Link>
+
+              {/* Notification Button with red dot */}
+              <div className="relative">
+                <button
+                  type="button"
+                  className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-[#121820] text-slate-300 hover:text-white hover:border-white/20 transition-colors"
+                >
+                  <Bell size={15} />
+                </button>
+                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-[#ef4444] ring-2 ring-[#080C0F]" />
               </div>
-              <WalletAuthButton compact />
+
+              {/* Grid app switcher */}
+              <button
+                type="button"
+                className="hidden sm:grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-[#121820] text-slate-300 hover:text-white hover:border-white/20 transition-colors"
+              >
+                <LayoutGrid size={15} />
+              </button>
+
+              {/* User Avatar with green online dot */}
+              <Link href="/profile" className="relative cursor-pointer">
+                <div className="h-9 w-9 overflow-hidden rounded-full border border-[#22c55e]/50 ring-2 ring-black/50">
+                  <img
+                    src="/assets/images/avatar_crypto_trader_1794496493828.jpg"
+                    alt="Trader Profile"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-[#22c55e] ring-2 ring-[#080C0F]" />
+              </Link>
+
+              <div className="hidden xl:block">
+                <WalletAuthButton compact />
+              </div>
             </div>
           </div>
         </header>
 
-        <main className="min-h-[calc(100dvh-4rem)] pb-20 lg:pb-6">{children}</main>
+        {/* Main Body */}
+        <main className="min-h-[calc(100vh-4rem)] pb-24 lg:pb-8">{children}</main>
 
-        <footer className="hidden border-t border-emerald-900/40 px-6 py-4 text-center text-[11px] text-slate-500 lg:block">
-          18+ Trade responsibly. Prediction markets on Solana.
+        {/* Footer */}
+        <footer className="hidden border-t border-white/[0.06] px-8 py-5 text-center text-xs text-slate-500 lg:flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-[#22c55e]" />
+            <span>Solana Mainnet-Beta & EVM Segregated Vaults Live</span>
+          </div>
+          <div>18+ Decentralized Wagering & Automated Prediction Settlement</div>
         </footer>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-emerald-900/40 bg-[#050A0A]/95 backdrop-blur-lg pb-[max(8px,env(safe-area-inset-bottom))] pt-1 lg:hidden">
+      {/* Mobile Bottom Dock Bar */}
+      <nav className="fixed bottom-3 left-4 right-4 z-40 rounded-2xl border border-white/[0.08] bg-[#0D1217]/95 p-2 shadow-2xl backdrop-blur-xl lg:hidden">
         <div className="flex items-center justify-around">
-          {bottom.map((item) => {
+          {mobileBottomNav.map((item) => {
             const active = isActive(item.href, location);
             const Icon = item.icon;
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center gap-0.5 px-2 py-1 text-[10px] font-medium ${
-                  active ? 'text-emerald-400' : 'text-slate-500'
+                className={`flex flex-col items-center gap-1 py-1 text-[10px] font-semibold transition-all ${
+                  active ? 'text-[#4ade80]' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Icon size={20} />
-                {item.label}
+                <div
+                  className={`grid h-8 w-8 place-items-center rounded-xl transition-all ${
+                    active ? 'bg-[#22c55e] text-black shadow-[0_0_12px_rgba(34,197,94,0.4)]' : 'bg-transparent'
+                  }`}
+                >
+                  <Icon size={17} />
+                </div>
+                <span>{item.label}</span>
               </Link>
             );
           })}

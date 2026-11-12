@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -11,6 +11,8 @@ import { MyBets } from '@/components/my-bets';
 import { AuthGate } from '@/components/auth-gate';
 import { ComingSoon } from '@/components/coming-soon';
 import { LayoutShell } from '@/components/layout-shell';
+import { MainnetDepositWithdrawModal } from '@/components/mainnet-deposit-modal';
+import { CryptoWalletDashboard } from '@/components/crypto-wallet-dashboard';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 
 const queryClient = new QueryClient();
@@ -20,54 +22,94 @@ function Home() {
 }
 
 function Wallet() {
-  return (
-    <div className="p-4 lg:p-6">
-      <h1 className="text-2xl font-semibold">Wallet</h1>
-      <p className="mt-1 text-sm text-slate-400">Connect Solana or EVM for real play on SIDEBET.</p>
-      <div className="mt-4"><ConnectedWalletStatus /></div>
-      <div className="mt-6 rounded-2xl border border-emerald-900/40 bg-[#0A1512] p-4">
-        <div className="text-xs text-slate-400">Available Balance</div>
-        <div className="mt-1 text-2xl font-bold text-emerald-400">₦12,450</div>
-        <div className="mt-3 flex gap-2">
-          <button className="rounded-lg bg-emerald-500 px-4 py-2 text-xs font-semibold text-black">Deposit</button>
-          <button className="rounded-lg border border-emerald-700 px-4 py-2 text-xs">Withdraw</button>
-        </div>
-      </div>
-      <h2 className="mt-6 text-sm font-semibold uppercase tracking-wider text-slate-400">Recent Activity</h2>
-      <BetHistory />
-    </div>
-  );
+  return <CryptoWalletDashboard />;
 }
 
 function Portfolio() {
   return (
-    <div className="p-4 lg:p-6">
-      <h1 className="text-2xl font-semibold">Your Portfolio</h1>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-emerald-900/40 bg-[#0A1512] p-4">
-          <div className="text-xs text-slate-400">Total Value</div>
-          <div className="mt-1 text-2xl font-bold">₦42,500</div>
-          <div className="text-xs text-emerald-400">+12.5%</div>
+    <div className="p-4 lg:p-8 max-w-6xl space-y-6">
+      <div>
+        <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight font-display text-white">Your Portfolio</h1>
+        <p className="mt-1 text-xs text-slate-400">Real-time valuation of your active prediction contracts and multi-chain holdings.</p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-3xl border border-white/[0.08] bg-[#0E1318] p-5 shadow-lg">
+          <div className="text-xs text-slate-400 font-mono uppercase">Total Portfolio Value</div>
+          <div className="mt-2 text-3xl font-black font-mono text-white tabular-nums">$42,500.00</div>
+          <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#22c55e]/15 px-2.5 py-0.5 text-xs font-mono font-bold text-[#4ade80]">
+            ▲ +12.5% past 30d
+          </div>
         </div>
-        <div className="rounded-2xl border border-emerald-900/40 bg-[#0A1512] p-4">
-          <div className="text-xs text-slate-400">Open Positions</div>
-          <div className="mt-1 text-2xl font-bold">8</div>
+
+        <div className="rounded-3xl border border-white/[0.08] bg-[#0E1318] p-5 shadow-lg">
+          <div className="text-xs text-slate-400 font-mono uppercase">Open Positions</div>
+          <div className="mt-2 text-3xl font-black font-mono text-white tabular-nums">8 Contracts</div>
+          <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#facc15]/15 px-2.5 py-0.5 text-xs font-mono font-bold text-[#facc15]">
+            5 In Profit · 3 Pending
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-white/[0.08] bg-[#0E1318] p-5 shadow-lg">
+          <div className="text-xs text-slate-400 font-mono uppercase">Settled Win Rate</div>
+          <div className="mt-2 text-3xl font-black font-mono text-[#4ade80] tabular-nums">68.4%</div>
+          <div className="mt-2 text-xs text-slate-400 font-mono">
+            42 Won / 19 Lost
+          </div>
         </div>
       </div>
-      <p className="mt-6 text-sm text-slate-400">Positions appear here after you place bets from Markets.</p>
+
+      <div className="rounded-3xl border border-white/[0.08] bg-[#0E1318] p-6 shadow-lg">
+        <h2 className="text-sm font-semibold tracking-wide text-white mb-4">Active Positions & Stakes</h2>
+        <MyBets />
+      </div>
     </div>
   );
 }
 
 function Leaderboard() {
+  const leaders = [
+    { rank: 1, name: 'Adaeze (Top Bull)', returnVal: '+$124,500', pct: '+412%', color: '#facc15' },
+    { rank: 2, name: 'Chinedu (SOL Whale)', returnVal: '+$98,200', pct: '+285%', color: '#4ade80' },
+    { rank: 3, name: 'Kofi Alpha', returnVal: '+$64,300', pct: '+194%', color: '#a855f7' },
+    { rank: 4, name: 'You (Current Session)', returnVal: '+$4,011', pct: '+14.4%', color: '#22c55e' },
+    { rank: 5, name: 'Fatima Market Maker', returnVal: '+$28,100', pct: '+96%', color: '#ec4899' },
+  ];
+
   return (
-    <div className="p-4 lg:p-6">
-      <h1 className="text-2xl font-semibold">Leaderboard</h1>
-      <div className="mt-4 space-y-2">
-        {['Adaeze · ₦12.4M', 'Chinedu · ₦9.8M', 'You · ₦42.5K', 'Fatima · ₦28.1K'].map((row, i) => (
-          <div key={i} className="flex items-center justify-between rounded-xl border border-emerald-900/40 bg-[#0A1512] px-4 py-3 text-sm">
-            <span>#{i + 1} {row}</span>
-            <span className="text-emerald-400">+{12 - i}%</span>
+    <div className="p-4 lg:p-8 max-w-5xl space-y-6">
+      <div>
+        <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight font-display text-white">Trader Leaderboard</h1>
+        <p className="mt-1 text-xs text-slate-400">Top prediction market traders ranked by verified on-chain PnL and volume.</p>
+      </div>
+
+      <div className="space-y-3">
+        {leaders.map((leader) => (
+          <div
+            key={leader.rank}
+            className={`flex items-center justify-between rounded-2xl border p-4 transition-all ${
+              leader.name.includes('You')
+                ? 'border-[#22c55e]/60 bg-[#121A20] shadow-[0_4px_24px_rgba(34,197,94,0.15)] ring-1 ring-[#22c55e]/30'
+                : 'border-white/[0.08] bg-[#0E1318] hover:bg-[#121820]'
+            }`}
+          >
+            <div className="flex items-center gap-3.5">
+              <div
+                className="grid h-9 w-9 place-items-center rounded-xl font-mono text-xs font-black"
+                style={{ background: `${leader.color}20`, color: leader.color, border: `1px solid ${leader.color}40` }}
+              >
+                #{leader.rank}
+              </div>
+              <div>
+                <span className="text-sm font-semibold text-white">{leader.name}</span>
+                <p className="text-[10px] font-mono text-slate-400">Verified Onchain Trader</p>
+              </div>
+            </div>
+
+            <div className="text-right">
+              <span className="font-mono text-sm font-extrabold text-white">{leader.returnVal}</span>
+              <p className="text-[11px] font-mono font-bold text-[#4ade80]">{leader.pct}</p>
+            </div>
           </div>
         ))}
       </div>
@@ -77,11 +119,13 @@ function Leaderboard() {
 
 function CategoryPage({ title }: { title: string }) {
   return (
-    <div className="p-4 lg:p-6">
-      <h1 className="text-2xl font-semibold">{title}</h1>
-      <p className="mt-2 text-sm text-slate-400">Browse {title.toLowerCase()} prediction markets. All local + Solana backed.</p>
-      <div className="mt-6">
-        <MarketsHome />
+    <div className="p-4 lg:p-8 max-w-7xl space-y-6">
+      <div>
+        <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight font-display text-white">{title} Markets</h1>
+        <p className="mt-1 text-xs text-slate-400">Live {title.toLowerCase()} contracts settled instantly with high-frequency order books.</p>
+      </div>
+      <div>
+        <MarketsHome defaultCategory={title} />
       </div>
     </div>
   );

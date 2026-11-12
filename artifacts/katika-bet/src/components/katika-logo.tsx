@@ -12,52 +12,56 @@ export function SidebetLogo({ className = 'h-8 w-8', size, showText = false }: S
   return (
     <div className={`inline-flex items-center gap-2.5 ${className}`}>
       <svg
-        viewBox="0 0 40 40"
+        viewBox="0 0 44 44"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         style={dimension ? { width: dimension, height: dimension } : undefined}
-        className="h-full w-auto shrink-0 drop-shadow-[0_2px_8px_rgba(59,130,246,0.3)]"
+        className="h-full w-auto shrink-0 drop-shadow-[0_0_12px_rgba(34,197,94,0.35)]"
       >
         <defs>
-          <linearGradient id="sbBase" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#1E293B" />
-            <stop offset="100%" stopColor="#0F172A" />
+          <linearGradient id="sbDarkBase" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#141C24" />
+            <stop offset="100%" stopColor="#0B1015" />
           </linearGradient>
-          <linearGradient id="sbAccent" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#60A5FA" />
-            <stop offset="100%" stopColor="#2563EB" />
+          <linearGradient id="sbCartoonS" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#4ADE80" />
+            <stop offset="35%" stopColor="#22C55E" />
+            <stop offset="70%" stopColor="#FACC15" />
+            <stop offset="100%" stopColor="#3B82F6" />
           </linearGradient>
-          <linearGradient id="sbSpecular" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.25" />
+          <linearGradient id="sbGlassGleam" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.2" />
             <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
           </linearGradient>
         </defs>
 
         {/* Outer squircle base */}
-        <rect width="40" height="40" rx="10" fill="url(#sbBase)" stroke="#334155" strokeWidth="1" />
-        <rect x="0.5" y="0.5" width="39" height="19.5" rx="9.5" fill="url(#sbSpecular)" />
+        <rect width="44" height="44" rx="12" fill="url(#sbDarkBase)" stroke="#22C55E" strokeWidth="1.2" strokeOpacity="0.4" />
+        <rect x="1" y="1" width="42" height="20" rx="11" fill="url(#sbGlassGleam)" />
 
-        {/* Dynamic angled S-lightning brand glyph */}
+        {/* Energetic cartoon S glyph with cultural colors (green, yellow, blue, crimson) */}
         <path
-          d="M 26 12 L 15.5 12 C 13.5 12 12 13.5 12 15.5 C 12 17.5 13.5 19 15.5 19 L 24.5 21 C 26.5 21 28 22.5 28 24.5 C 28 26.5 26.5 28 24.5 28 L 14 28"
-          stroke="url(#sbAccent)"
-          strokeWidth="3.2"
+          d="M 29 13.5 C 29 13.5 17 13.5 15.5 13.5 C 13 13.5 11.5 15.5 11.5 17.5 C 11.5 20 13.5 21.5 16.5 21.8 L 27.5 22.5 C 30.5 23 32.5 24.5 32.5 27 C 32.5 29.5 30.5 31.5 27.5 31.5 L 14.5 31.5"
+          stroke="url(#sbCartoonS)"
+          strokeWidth="4.2"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
 
-        {/* Directional upward micro-arrow showing prediction & odds growth */}
-        <circle cx="27" cy="12" r="2.2" fill="#38BDF8" />
-        <circle cx="13" cy="28" r="2.2" fill="#3B82F6" />
+        {/* Cultural accent orbs */}
+        <circle cx="30" cy="13.5" r="2.6" fill="#FACC15" />
+        <circle cx="13" cy="31.5" r="2.6" fill="#EF4444" />
+        <circle cx="22" cy="22" r="1.8" fill="#3B82F6" />
       </svg>
+
       {showText && (
-        <span className="font-bold tracking-tight text-white text-[15px]">
-          SIDE<span className="text-blue-400">BET</span>
+        <span className="font-display font-extrabold tracking-tight text-white text-base">
+          SIDE<span className="text-[#22C55E]">BET</span>
         </span>
       )}
     </div>
   );
 }
 
-// Legacy alias so old imports don't break during transition
+// Legacy alias
 export const KatikaLogo = SidebetLogo;

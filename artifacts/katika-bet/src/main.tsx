@@ -4,7 +4,7 @@ import { PrivyProvider } from '@privy-io/react-auth';
 import App from './App';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { ServerSessionSync } from '@/components/server-session';
-import { arbitrumSepolia, baseSepolia, polygonAmoy, sepolia } from '@/lib/testnet-chains';
+import { base, mainnet, arbitrum, polygon } from '@/lib/mainnet-chains';
 
 import './index.css';
 import './game-motion.css';
@@ -31,17 +31,22 @@ createRoot(document.getElementById('root')!).render(
           loginMethods: ['email', 'google', 'wallet'],
           appearance: {
             theme: 'dark',
-            accentColor: '#35d399',
+            accentColor: '#10B981',
             showWalletLoginFirst: true,
             walletChainType: 'ethereum-and-solana',
           },
-          defaultChain: sepolia,
-          supportedChains: [sepolia, baseSepolia, arbitrumSepolia, polygonAmoy],
+          defaultChain: base,
+          supportedChains: [base, mainnet, arbitrum, polygon],
           embeddedWallets: {
             ethereum: { createOnLogin: 'users-without-wallets' },
             solana: { createOnLogin: 'users-without-wallets' },
           },
-          // BTC support can be enabled via Privy dashboard + additional config if available
+          solanaClusters: [
+            {
+              name: 'mainnet-beta',
+              rpcUrl: 'https://api.mainnet-beta.solana.com',
+            },
+          ],
         }}
       >
         <ServerSessionSync>
