@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'wouter';
 import { usePrivy, useLogout } from '@privy-io/react-auth';
-import { useServerSession } from '@/components/server-session';
-import { WalletAuthButton } from '@/components/wallet-auth';
 import { BetHistory } from '@/components/bet-history';
-import { SidebetLogo } from '@/components/katika-logo';
 import { getTelegramUser, isTelegramWebApp } from '@/lib/telegram';
+import { useUserAvatar, saveCustomAvatar } from '@/lib/avatar';
+import { processImageFile } from '@/lib/avatar-upload';
+import { useToast } from '@/hooks/use-toast';
 import {
   CreditCard,
   WalletCards,
@@ -14,42 +14,125 @@ import {
   Volume2,
   VolumeX,
   Vibrate,
-  ChevronRight,
-  UserRound,
   LogOut,
   History,
-  ShieldCheck,
+  Camera,
+  RotateCcw,
+  Check,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 export function ProfilePage() {
   const { user, authenticated, login } = usePrivy();
   const { logout } = useLogout();
-  const { serverUser, loading } = useServerSession();
+  const { toast } = useToast();
   const tgUser = getTelegramUser();
+  const { avatarUrl, hasCustomAvatar } = useUserAvatar();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('sidebet_sound') !== 'false');
   const [hapticEnabled, setHapticEnabled] = useState(() => localStorage.getItem('sidebet_haptic') !== 'false');
   const [showHistory, setShowHistory] = useState(false);
+  const [showAvatarEditor, setShowAvatarEditor] = useState(false);
+  const [avatarUrlInput, setAvatarUrlInput] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => { localStorage.setItem('sidebet_sound', soundEnabled ? 'true' : 'false'); }, [soundEnabled]);
   useEffect(() => { localStorage.setItem('sidebet_haptic', hapticEnabled ? 'true' : 'false'); }, [hapticEnabled]);
 
-  const displayName = tgUser?.first_name || user?.email?.address || user?.google?.email || (user?.wallet?.address ? `${user.wallet.address.slice(0, 6)}...${user.wallet.address.slice(-4)}` : 'Pro Trader');
+  const displayName =
+    tgUser?.first_name ||
+    user?.google?.name ||
+    user?.twitter?.name ||
+    user?.farcaster?.displayName ||
+    user?.email?.address ||
+    user?.google?.email ||
+    'Pro Trader';
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const dataUrl = await processImageFile(file, 400, 400);
+      saveCustomAvatar(dataUrl);
+      toast({
+        title: 'Profile Picture Updated',
+        description: 'Your new avatar is now active across SIDEBET.',
+      });
+      setShowAvatarEditor(false);
+    } catch (err: any) {
+      toast({
+        title: 'Upload Failed',
+        description: err?.message || 'Could not process image file.',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleSaveCustomUrl = () => {
+    const trimmed = avatarUrlInput.trim();
+    if (!trimmed) return;
+    if (!/^https?:\/\/|^data:image\/|^\/assets\//i.test(trimmed)) {
+      toast({
+        title: 'Invalid Image URL',
+        description: 'Please enter a valid https:// image link or upload a photo.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    saveCustomAvatar(trimmed);
+    setAvatarUrlInput('');
+    setShowAvatarEditor(false);
+    toast({
+      title: 'Profile Picture Updated',
+      description: 'Custom profile picture saved.',
+    });
+  };
+
+  const handleResetToConnected = () => {
+    saveCustomAvatar(null);
+    setShowAvatarEditor(false);
+    toast({
+      title: 'Synced to Connected Account',
+      description: 'Your profile picture now follows your connected sign-in account.',
+    });
+  };
 
   return (
     <div className="mx-auto max-w-xl px-4 pt-6 pb-24 space-y-5">
+      {/* Hidden File Input for Avatar Upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
       {/* Profile Card with Avatar */}
-      <div className="rounded-3xl border border-white/[0.08] bg-[#0E1318] p-5 shadow-xl">
-        <div className="flex items-center justify-between">
+      <div className="rounded-3xl border border-white/[0.08] bg-[#0E1318] p-5 shadow-xl space-y-4">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3.5">
-            <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-[#22c55e]/50 ring-2 ring-black/40">
+            <button
+              type="button"
+              onClick={() => setShowAvatarEditor(!showAvatarEditor)}
+              title="Change profile picture"
+              className="group relative h-14 w-14 overflow-hidden rounded-full border-2 border-[#22c55e]/50 ring-2 ring-black/40 shrink-0"
+            >
               <img
-                src="/assets/images/avatar_crypto_trader_1794496493828.jpg"
+                src={avatarUrl}
                 alt="Trader Profile"
                 className="h-full w-full object-cover"
               />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Camera size={16} className="text-white" />
+              </div>
               <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-[#22c55e] ring-2 ring-[#0E1318]" />
-            </div>
+            </button>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-bold font-display text-white">{displayName}</h1>
@@ -58,19 +141,77 @@ export function ProfilePage() {
                 </span>
               </div>
               <p className="text-xs text-slate-400 font-mono">
-                {isTelegramWebApp() ? 'Telegram Mini App Account' : 'Solana & EVM Web Session'}
+                {isTelegramWebApp() ? 'Telegram Mini App Account' : 'Multi-Chain Web Session'}
               </p>
             </div>
           </div>
 
-          <div className="text-right">
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">Status</span>
-            <div className="flex items-center gap-1 text-xs font-mono font-bold text-[#4ade80]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e] animate-pulse" />
-              <span>Verified</span>
+          <button
+            type="button"
+            onClick={() => setShowAvatarEditor(!showAvatarEditor)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#121820] hover:border-[#22c55e]/50 px-3 py-1.5 text-[11px] font-semibold text-slate-200 transition-colors"
+          >
+            <Camera size={13} className="text-[#4ade80]" />
+            <span>{showAvatarEditor ? 'Close' : 'Edit Photo'}</span>
+          </button>
+        </div>
+
+        {/* Profile Picture Customization Drawer */}
+        {showAvatarEditor && (
+          <div className="rounded-2xl border border-white/[0.08] bg-[#080C0F] p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-white">
+                <ImageIcon size={14} className="text-[#4ade80]" />
+                <span>Profile Picture Settings</span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400">
+                {hasCustomAvatar ? 'Custom Avatar Active' : 'Synced with Connected Account'}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={uploadingAvatar}
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] px-3.5 py-2 text-xs font-bold text-black transition-all disabled:opacity-50"
+              >
+                <Camera size={13} />
+                <span>{uploadingAvatar ? 'Processing...' : 'Upload Photo'}</span>
+              </button>
+
+              {hasCustomAvatar && (
+                <button
+                  type="button"
+                  onClick={handleResetToConnected}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-[#121820] hover:bg-[#18222b] px-3.5 py-2 text-xs font-semibold text-slate-200 transition-all"
+                >
+                  <RotateCcw size={13} className="text-[#4ade80]" />
+                  <span>Use Connected Account</span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="url"
+                value={avatarUrlInput}
+                onChange={(e) => setAvatarUrlInput(e.target.value)}
+                placeholder="Or paste an image URL (https://...)"
+                className="flex-1 rounded-xl border border-white/10 bg-[#0E1318] px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:border-[#4ade80] focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleSaveCustomUrl}
+                disabled={!avatarUrlInput.trim()}
+                className="inline-flex items-center gap-1 rounded-xl border border-[#22c55e]/40 bg-[#121B16] px-3 py-2 text-xs font-bold text-[#4ade80] hover:bg-[#16251d] disabled:opacity-40"
+              >
+                <Check size={13} />
+                <span>Save</span>
+              </button>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Wallet Management Card */}
@@ -86,7 +227,7 @@ export function ProfilePage() {
         </div>
 
         <p className="text-xs text-slate-400 leading-relaxed">
-          On-chain deposits and withdrawals operate via Solana Mainnet-Beta and EVM (Base, Ethereum, Arbitrum, Polygon). Market creation executes directly on fast AMM order books.
+          On-chain deposits and withdrawals operate across segregated multi-chain vaults (Solana, Base, Ethereum, Arbitrum, Polygon). Market creation executes directly on fast AMM order books.
         </p>
 
         <div className="pt-2 grid grid-cols-2 gap-3">
@@ -164,8 +305,8 @@ export function ProfilePage() {
       <div className="rounded-3xl border border-white/[0.08] bg-[#0E1318] p-5 shadow-lg">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-xs font-bold text-white">Privy Multi-Chain Session</h3>
-            <p className="text-[11px] text-slate-400">Connected to Solana Mainnet & EVM Base</p>
+            <h3 className="text-xs font-bold text-white">Multi-Chain Session</h3>
+            <p className="text-[11px] text-slate-400">Encrypted account & custody session active</p>
           </div>
           {authenticated ? (
             <button
@@ -188,3 +329,4 @@ export function ProfilePage() {
     </div>
   );
 }
+

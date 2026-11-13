@@ -20,11 +20,13 @@ function accountLabel(user: {
 
 type WalletAuthButtonProps = {
   compact?: boolean;
+  hideAddress?: boolean;
   className?: string;
 };
 
 export function WalletAuthButton({
   compact = false,
+  hideAddress = false,
   className = '',
 }: WalletAuthButtonProps) {
   const { ready, authenticated, user, login } = usePrivy();
@@ -42,10 +44,12 @@ export function WalletAuthButton({
   if (authenticated) {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
-        <span className={`inline-flex items-center gap-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 font-mono text-xs font-semibold text-blue-400 ${compact ? 'hidden sm:inline-flex' : ''}`}>
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-          {accountLabel(user)}
-        </span>
+        {!hideAddress && (
+          <span className={`inline-flex items-center gap-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 font-mono text-xs font-semibold text-blue-400 ${compact ? 'hidden sm:inline-flex' : ''}`}>
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            {accountLabel(user)}
+          </span>
+        )}
         <button type="button" onClick={() => void logout()} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
           <LogOut size={13} />
           <span className={compact ? 'hidden sm:inline' : ''}>Sign out</span>

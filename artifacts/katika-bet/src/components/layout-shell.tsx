@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
   Compass,
@@ -12,14 +12,14 @@ import {
   Wallet,
   Medal,
   Search,
-  Bell,
   LayoutGrid,
   Settings,
-  ChevronRight,
   Swords,
 } from 'lucide-react';
 import { WalletAuthButton } from '@/components/wallet-auth';
 import { SidebetLogo } from '@/components/katika-logo';
+import { NotificationsMenu } from '@/components/notifications-menu';
+import { useUserAvatar } from '@/lib/avatar';
 
 const navItems = [
   { href: '/', label: 'Discover', icon: Compass },
@@ -53,8 +53,22 @@ function isActive(href: string, location: string) {
 
 export function LayoutShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
+  const { avatarUrl } = useUserAvatar();
+  const [balance, setBalance] = useState<number>(() =>
+    Number(localStorage.getItem('sidebet_wallet_balance') || '4011')
+  );
 
-  const balance = Number(localStorage.getItem('sidebet_wallet_balance') || '4011');
+  useEffect(() => {
+    const syncBalance = () => {
+      setBalance(Number(localStorage.getItem('sidebet_wallet_balance') || '4011'));
+    };
+    window.addEventListener('storage', syncBalance);
+    const interval = setInterval(syncBalance, 2000);
+    return () => {
+      window.removeEventListener('storage', syncBalance);
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#080C0F] text-[#F3F4F6] selection:bg-[#22c55e]/30 selection:text-white">
@@ -170,30 +184,23 @@ export function LayoutShell({ children }: { children: ReactNode }) {
                 <span>${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </Link>
 
-              {/* Notification Button with red dot */}
-              <div className="relative">
-                <button
-                  type="button"
-                  className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-[#121820] text-slate-300 hover:text-white hover:border-white/20 transition-colors"
-                >
-                  <Bell size={15} />
-                </button>
-                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-[#ef4444] ring-2 ring-[#080C0F]" />
-              </div>
+              {/* Real Notifications Menu */}
+              <NotificationsMenu size="sm" />
 
               {/* Grid app switcher */}
-              <button
-                type="button"
+              <Link
+                href="/pvp"
+                title="PvP Games"
                 className="hidden sm:grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-[#121820] text-slate-300 hover:text-white hover:border-white/20 transition-colors"
               >
                 <LayoutGrid size={15} />
-              </button>
+              </Link>
 
-              {/* User Avatar with green online dot */}
+              {/* User Avatar matching connected account or custom profile avatar */}
               <Link href="/profile" className="relative cursor-pointer">
                 <div className="h-9 w-9 overflow-hidden rounded-full border border-[#22c55e]/50 ring-2 ring-black/50">
                   <img
-                    src="/assets/images/avatar_crypto_trader_1794496493828.jpg"
+                    src={avatarUrl}
                     alt="Trader Profile"
                     className="h-full w-full object-cover"
                   />
@@ -202,7 +209,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
               </Link>
 
               <div className="hidden xl:block">
-                <WalletAuthButton compact />
+                <WalletAuthButton compact hideAddress />
               </div>
             </div>
           </div>
@@ -215,7 +222,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
         <footer className="hidden border-t border-white/[0.06] px-8 py-5 text-center text-xs text-slate-500 lg:flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-[#22c55e]" />
-            <span>Solana Mainnet-Beta & EVM Segregated Vaults Live</span>
+            <span>Multi-Chain Segregated Vaults Live</span>
           </div>
           <div>18+ Decentralized Wagering & Automated Prediction Settlement</div>
         </footer>

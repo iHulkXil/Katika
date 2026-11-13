@@ -9,7 +9,8 @@ import {
   EVM_TREASURY_ADDRESS,
   type EvmChain,
 } from '@/lib/mainnet-chains';
-import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Copy, ExternalLink, Loader2, RefreshCw, Shield, Wallet } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Copy, Loader2 } from 'lucide-react';
+import { pushNotification } from '@/lib/notifications';
 
 function shorten(val: string) {
   if (!val) return '—';
@@ -152,12 +153,18 @@ export function MainnetDepositWithdrawModal({
 
         const sig = Buffer.from(result.signature).toString('base64');
         setTxHash(sig);
-        // Record deposit locally & update balance
-        const currentBal = Number(localStorage.getItem('sidebet_wallet_balance') || '12450');
-        const addedNgn = Math.round(numAmt * 285000); // Live SOL/NGN conversion rate
-        const updated = currentBal + addedNgn;
+        // Record deposit locally & update USD balance
+        const currentBal = Number(localStorage.getItem('sidebet_wallet_balance') || '4011');
+        const addedUsd = Number((numAmt * 148.5).toFixed(2));
+        const updated = Number((currentBal + addedUsd).toFixed(2));
         localStorage.setItem('sidebet_wallet_balance', updated.toString());
         onBalanceUpdated?.(updated);
+        pushNotification({
+          title: 'SOL Deposit Confirmed',
+          message: `Deposited ${numAmt} SOL (+$${addedUsd.toFixed(2)}) into your wallet.`,
+          type: 'wallet',
+          href: '/wallet',
+        });
         void fetchBalances();
       } else {
         // EVM Mainnet Deposit
@@ -186,11 +193,17 @@ export function MainnetDepositWithdrawModal({
         });
 
         setTxHash(String(hash));
-        const currentBal = Number(localStorage.getItem('sidebet_wallet_balance') || '12450');
-        const addedNgn = Math.round(numAmt * 4200000); // ETH/NGN rate
-        const updated = currentBal + addedNgn;
+        const currentBal = Number(localStorage.getItem('sidebet_wallet_balance') || '4011');
+        const addedUsd = Number((numAmt * 3233).toFixed(2));
+        const updated = Number((currentBal + addedUsd).toFixed(2));
         localStorage.setItem('sidebet_wallet_balance', updated.toString());
         onBalanceUpdated?.(updated);
+        pushNotification({
+          title: `${selectedEvmChain.name} Deposit Confirmed`,
+          message: `Deposited ${numAmt} ${selectedEvmChain.nativeCurrency.symbol} (+$${addedUsd.toFixed(2)}) into your wallet.`,
+          type: 'wallet',
+          href: '/wallet',
+        });
         void fetchBalances();
       }
     } catch (err: any) {
@@ -233,11 +246,17 @@ export function MainnetDepositWithdrawModal({
         : '0x' + Math.random().toString(16).substring(2, 14) + '...eth';
 
       setTxHash(fakeTx);
-      const currentBal = Number(localStorage.getItem('sidebet_wallet_balance') || '12450');
-      const deductNgn = chainType === 'solana' ? Math.round(numAmt * 285000) : Math.round(numAmt * 4200000);
-      const updated = Math.max(0, currentBal - deductNgn);
+      const currentBal = Number(localStorage.getItem('sidebet_wallet_balance') || '4011');
+      const deductUsd = Number((chainType === 'solana' ? numAmt * 148.5 : numAmt * 3233).toFixed(2));
+      const updated = Number(Math.max(0, currentBal - deductUsd).toFixed(2));
       localStorage.setItem('sidebet_wallet_balance', updated.toString());
       onBalanceUpdated?.(updated);
+      pushNotification({
+        title: 'Withdrawal Dispatched',
+        message: `Withdrew ${numAmt} ${chainType === 'solana' ? 'SOL' : selectedEvmChain.nativeCurrency.symbol} (-$${deductUsd.toFixed(2)}).`,
+        type: 'wallet',
+        href: '/wallet',
+      });
     } catch (err: any) {
       setError(err?.message || 'Withdrawal dispatch failed.');
     } finally {

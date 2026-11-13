@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { fetchMarkets, resolveMarket, createMarket, fetchStats, type Market, type PlatformStats } from '@/lib/markets-api';
 import { useToast } from '@/hooks/use-toast';
+import { pushNotification } from '@/lib/notifications';
 
 export function AdminResolverPage() {
   const { toast } = useToast();
@@ -52,6 +53,12 @@ export function AdminResolverPage() {
         title: `Market Settled: ${resolution}`,
         description: `Successfully resolved. ${res.stats.wonPositions} positions won, ${res.stats.lostPositions} lost.`,
       });
+      pushNotification({
+        title: `Oracle Settled: ${resolution}`,
+        message: `${res.stats.wonPositions} winning positions settled.`,
+        type: 'market',
+        href: '/my-bets',
+      });
       await loadData();
     } catch (err: any) {
       toast({
@@ -67,8 +74,9 @@ export function AdminResolverPage() {
   const handleCreate = async () => {
     if (!title.trim()) return;
     try {
+      const createdTitle = title.trim();
       await createMarket({
-        title: title.trim(),
+        title: createdTitle,
         category,
         description: description.trim() || undefined,
         creator: 'Sidebet Admin Oracle',
@@ -76,6 +84,12 @@ export function AdminResolverPage() {
       toast({
         title: 'Market Created',
         description: 'New prediction market published to live orderbooks.',
+      });
+      pushNotification({
+        title: 'New Prediction Market',
+        message: createdTitle,
+        type: 'market',
+        href: '/',
       });
       setTitle('');
       setDescription('');
@@ -170,7 +184,7 @@ export function AdminResolverPage() {
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Will Nigeria launch eNaira 2.0 before 2027?"
+                placeholder="Will Bitcoin reach $120,000 before December 2026?"
                 className="mt-1 w-full rounded-xl border border-white/10 bg-[#080C0F] px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#4ADE80]"
               />
             </div>
@@ -180,7 +194,7 @@ export function AdminResolverPage() {
                 rows={2}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Resolves YES if CBN officially releases eNaira 2.0 specs."
+                placeholder="Resolves YES if spot BTC/USD trades at or above $120,000 on major exchanges."
                 className="mt-1 w-full rounded-xl border border-white/10 bg-[#080C0F] px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#4ADE80]"
               />
             </div>

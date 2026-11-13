@@ -4,6 +4,7 @@ import { Clock, TrendingUp, Sparkles, ArrowUpRight, CheckCircle2, Trophy, Loader
 import { usePrivy } from '@privy-io/react-auth';
 import { fetchPositions, claimWinnings, type Position } from '@/lib/markets-api';
 import { useToast } from '@/hooks/use-toast';
+import { pushNotification } from '@/lib/notifications';
 
 export function MyBets() {
   const { user } = usePrivy();
@@ -39,8 +40,15 @@ export function MyBets() {
       localStorage.setItem('sidebet_wallet_balance', String(currentBal + payoutUsd));
 
       toast({
-        title: 'Winnings Claimed! 🎉',
+        title: 'Winnings Claimed!',
         description: `Successfully claimed +${payout.toFixed(3)} SOL ($${payoutUsd.toFixed(2)}) into your available balance.`,
+      });
+
+      pushNotification({
+        title: 'Winnings Claimed',
+        message: `Added +$${payoutUsd.toFixed(2)} (+${payout.toFixed(3)} SOL) to your dollar balance.`,
+        type: 'win',
+        href: '/wallet',
       });
 
       await loadPositions();

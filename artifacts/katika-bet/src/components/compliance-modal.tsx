@@ -44,7 +44,7 @@ export function ComplianceModal() {
           </span>
           <br />
           <span>
-            3. All Nigerian politics and global events are settled via decentralized consensus oracles and verified public news.
+            3. All global prediction markets and events are settled via decentralized consensus oracles and verified public sources.
           </span>
         </p>
 

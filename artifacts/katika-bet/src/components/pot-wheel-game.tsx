@@ -20,6 +20,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useUserAvatar } from '@/lib/avatar';
 
 // Multi-crypto rates to USD
 const CRYPTO_RATES: Record<string, number> = {
@@ -57,7 +58,7 @@ const BOT_PLAYERS: Omit<PotPlayer, 'stakeUsd' | 'cryptoAmount'>[] = [
   { id: 'bot-2', name: 'Adaeze (Top Bull)', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop', color: '#FACC15', cryptoType: 'ETH' },
   { id: 'bot-3', name: 'Kofi Alpha', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop', color: '#EC4899', cryptoType: 'SOL' },
   { id: 'bot-4', name: 'Fatima Market Maker', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop', color: '#06B6D4', cryptoType: 'USDT' },
-  { id: 'bot-5', name: 'SatoshiLagos', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop', color: '#8B5CF6', cryptoType: 'BTC' },
+  { id: 'bot-5', name: 'SatoshiPrime', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop', color: '#8B5CF6', cryptoType: 'BTC' },
   { id: 'bot-6', name: 'Zainab Degen', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop', color: '#F97316', cryptoType: 'SOL' },
 ];
 
@@ -68,6 +69,7 @@ const CELEBRATE_DURATION_MS = 6000; // 6 seconds win celebration
 export function PotWheelGamePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { avatarUrl } = useUserAvatar();
 
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoType>('SOL');
@@ -485,7 +487,7 @@ export function PotWheelGamePage() {
         const newPlayer: PotPlayer = {
           id: 'user-me',
           name: 'You (Trader)',
-          avatar: '/assets/images/avatar_crypto_trader_1794496493828.jpg',
+          avatar: avatarUrl,
           color: '#22C55E',
           stakeUsd: stakeInput,
           cryptoType: selectedCrypto,

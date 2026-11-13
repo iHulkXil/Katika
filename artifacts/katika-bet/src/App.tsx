@@ -125,11 +125,11 @@ function Leaderboard() {
   }, []);
 
   const leaders = [
-    { rank: 1, name: 'Adaeze (Top Bull)', returnVal: '+$124,500', pct: '+412%', color: '#facc15' },
-    { rank: 2, name: 'Chinedu (SOL Whale)', returnVal: '+$98,200', pct: '+285%', color: '#4ade80' },
-    { rank: 3, name: 'Kofi Alpha', returnVal: '+$64,300', pct: '+194%', color: '#a855f7' },
+    { rank: 1, name: 'ApexBull (Top Alpha)', returnVal: '+$124,500', pct: '+412%', color: '#facc15' },
+    { rank: 2, name: 'SolWhale', returnVal: '+$98,200', pct: '+285%', color: '#4ade80' },
+    { rank: 3, name: 'MacroQuant', returnVal: '+$64,300', pct: '+194%', color: '#a855f7' },
     { rank: 4, name: 'You (Current Session)', returnVal: '+$4,011', pct: '+14.4%', color: '#22c55e' },
-    { rank: 5, name: 'Fatima Market Maker', returnVal: '+$28,100', pct: '+96%', color: '#ec4899' },
+    { rank: 5, name: 'DeltaMaker', returnVal: '+$28,100', pct: '+96%', color: '#ec4899' },
   ];
 
   return (

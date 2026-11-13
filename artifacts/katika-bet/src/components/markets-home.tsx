@@ -34,13 +34,14 @@ import {
 } from '@/lib/markets-api';
 import { SOLANA_TREASURY_PUBKEY } from '@/lib/mainnet-chains';
 import { SOLANA_RPC_URL, SOLANA_CLUSTER_NAME } from '@/main';
+import { pushNotification } from '@/lib/notifications';
 
 const TOP_MOVERS = [
   { name: 'Bitcoin ($91.4K)', pct: 67, change: '+5.4%', icon: 'btc', color: '#facc15' },
   { name: 'Arsenal FC', pct: 72, change: '+3.1%', icon: 'arsenal', color: '#ec4899' },
   { name: 'Solana ($148.5)', pct: 74, change: '+7.3%', icon: 'sol', color: '#4ade80' },
-  { name: 'Tinubu Coalition', pct: 54, change: '-2.1%', icon: 'tinubu', color: '#ec4899' },
-  { name: 'CBN MPR Decision', pct: 61, change: '+4.0%', icon: 'econ', color: '#22c55e' },
+  { name: 'Global AI Treaty', pct: 38, change: '+4.2%', icon: 'politics', color: '#ec4899' },
+  { name: 'Fed Rate Decision', pct: 58, change: '+3.8%', icon: 'econ', color: '#22c55e' },
 ];
 
 function MarketIcon({ type }: { type?: string }) {
@@ -215,6 +216,13 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
         ),
       });
 
+      pushNotification({
+        title: `Position Placed: ${side}`,
+        message: `Staked ${amount} SOL on "${market.title.slice(0, 48)}"`,
+        type: 'stake',
+        href: '/my-bets',
+      });
+
       // Reload markets from backend to reflect collective volume
       await loadMarkets();
     } catch (err: any) {
@@ -236,11 +244,17 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
     }
 
     try {
+      const creatorLabel =
+        user?.google?.name ||
+        user?.twitter?.name ||
+        user?.email?.address?.split('@')[0] ||
+        'Trader';
+
       const created = await createMarket({
         title: newTitle.trim(),
         category: newCategory,
         description: newDesc.trim() || undefined,
-        creator: user?.wallet?.address ? `${user.wallet.address.slice(0, 6)}...` : 'Trader',
+        creator: creatorLabel,
       });
 
       setMarkets((prev) => [created, ...prev]);
@@ -251,6 +265,13 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
       toast({
         title: 'Market Deployed',
         description: 'Your prediction market is live and available to all traders.',
+      });
+
+      pushNotification({
+        title: `New ${newCategory} Market Live`,
+        message: created.title,
+        type: 'market',
+        href: '/',
       });
     } catch (err: any) {
       toast({
@@ -270,11 +291,19 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
 
       // Refresh markets
       setMarkets((prev) => prev.map((m) => (m.id === adminMarket.id ? res.market : m)));
+      const settledTitle = adminMarket.title;
       setAdminMarket(null);
 
       toast({
         title: 'Market Resolved',
         description: `Market resolved to ${resolution}. ${res.stats.wonPositions} positions won, ${res.stats.lostPositions} lost.`,
+      });
+
+      pushNotification({
+        title: `Market Settled: ${resolution}`,
+        message: `"${settledTitle.slice(0, 48)}" settled as ${resolution}.`,
+        type: 'market',
+        href: '/my-bets',
       });
 
       await loadMarkets();
@@ -304,9 +333,9 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
           </span>
         </div>
         <div className="flex items-center gap-3 font-mono text-[11px] text-slate-500">
-          <span>Solana: {SOLANA_CLUSTER_NAME.toUpperCase()}</span>
+          <span>Multi-Chain Vaults Live</span>
           <span>·</span>
-          <span>Multi-Sig Vault Protected</span>
+          <span>Multi-Sig Protected</span>
         </div>
       </div>
 
@@ -330,7 +359,7 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
             Predict. Trade. <span className="text-[#4ade80]">Settle Onchain.</span>
           </h1>
           <p className="mt-2 text-xs lg:text-sm text-slate-300 leading-relaxed">
-            Trade decentralized contracts across Nigerian politics, global crypto, Premier League, and macro finance with real SOL staking.
+            Trade decentralized contracts across global politics, crypto, sports, and macro finance.
           </p>
 
           <div className="mt-5 flex items-center gap-3">
@@ -340,12 +369,6 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
             >
               <Plus size={14} />
               <span>Create Market</span>
-            </button>
-            <button
-              onClick={() => setCategory('Crypto')}
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#121820] hover:bg-[#18212b] px-4 py-2.5 text-xs font-semibold text-slate-200 transition-all"
-            >
-              <span>Explore Crypto</span>
             </button>
           </div>
         </div>

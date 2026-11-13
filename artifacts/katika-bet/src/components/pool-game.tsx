@@ -17,6 +17,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useUserAvatar } from '@/lib/avatar';
 
 // Crypto Exchange Rates to $ USD
 const CRYPTO_RATES = {
@@ -77,6 +78,7 @@ const BALL_COLORS: Record<number, string> = {
 export function PoolGamePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { avatarUrl } = useUserAvatar();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Wagering & Crypto Settings
@@ -794,7 +796,7 @@ export function PoolGamePage() {
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 overflow-hidden rounded-full border border-[#22C55E]/40">
                 <img
-                  src="/assets/images/avatar_crypto_trader_1794496493828.jpg"
+                  src={avatarUrl}
                   alt="You"
                   className="h-full w-full object-cover"
                 />

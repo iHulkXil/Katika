@@ -1,28 +1,25 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'wouter';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets } from '@privy-io/react-auth/solana';
 import {
   ArrowUpRight,
-  ArrowDownLeft,
   Copy,
   Check,
   Lock,
   Plus,
   SlidersHorizontal,
   MoreHorizontal,
-  Bell,
   LayoutGrid,
-  TrendingUp,
-  TrendingDown,
   ShieldCheck,
-  ChevronRight,
-  ExternalLink,
   Layers,
   BarChart2,
   PieChart,
 } from 'lucide-react';
 import { MainnetDepositWithdrawModal } from '@/components/mainnet-deposit-modal';
-import { ConnectedWalletStatus, WalletAuthButton } from '@/components/wallet-auth';
+import { ConnectedWalletStatus } from '@/components/wallet-auth';
+import { NotificationsMenu } from '@/components/notifications-menu';
+import { useUserAvatar } from '@/lib/avatar';
 
 type CryptoAsset = {
   id: string;
@@ -91,6 +88,7 @@ const ACTIVITY_MATRIX: Array<Array<'magenta' | 'green' | 'yellow' | 'empty'>> = 
 export function CryptoWalletDashboard() {
   const { authenticated, user, login } = usePrivy();
   const { wallets } = useWallets();
+  const { avatarUrl } = useUserAvatar();
 
   const [activeAsset, setActiveAsset] = useState<CryptoAsset>(POPULAR_ASSETS[0]);
   const [chartTimeframe, setChartTimeframe] = useState<'4H' | '1D' | '1W' | '1M' | '6M'>('4H');
@@ -197,36 +195,29 @@ export function CryptoWalletDashboard() {
               <span>Withdraw</span>
             </button>
 
-            {/* Notification bell button with red badge */}
-            <div className="relative">
-              <button
-                type="button"
-                className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-[#121820] text-slate-300 hover:text-white hover:border-white/20 transition-colors"
-              >
-                <Bell size={16} />
-              </button>
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[#ef4444] ring-2 ring-[#080C0F]" />
-            </div>
+            {/* Real Notifications Menu */}
+            <NotificationsMenu size="md" />
 
             {/* Grid app switcher */}
-            <button
-              type="button"
+            <Link
+              href="/pvp"
+              title="PvP Games"
               className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-[#121820] text-slate-300 hover:text-white hover:border-white/20 transition-colors"
             >
               <LayoutGrid size={16} />
-            </button>
+            </Link>
 
-            {/* User Profile Avatar matching reference portrait */}
-            <div className="relative group cursor-pointer">
+            {/* User Profile Avatar */}
+            <Link href="/profile" className="relative group cursor-pointer">
               <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-[#22c55e]/40 p-0.5 ring-2 ring-black/40">
                 <img
-                  src="/assets/images/avatar_crypto_trader_1794496493828.jpg"
+                  src={avatarUrl}
                   alt="Trader Profile"
                   className="h-full w-full rounded-full object-cover"
                 />
               </div>
               <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#22c55e] ring-2 ring-[#080C0F]" />
-            </div>
+            </Link>
           </div>
         </header>
 
