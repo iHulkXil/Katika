@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, type ReactNode } from 'react';
 import {
   Plus,
   TrendingUp,
@@ -32,8 +32,8 @@ import {
   type Market,
   type Position,
 } from '@/lib/markets-api';
-import { SOLANA_TREASURY_PUBKEY } from '@/lib/mainnet-chains';
-import { SOLANA_RPC_URL, SOLANA_CLUSTER_NAME } from '@/main';
+import { SOLANA_TREASURY_PUBKEY, encodeBase58 } from '@/lib/mainnet-chains';
+import { SOLANA_RPC_URL, SOLANA_CLUSTER_NAME, SOLANA_CAIP_CHAIN } from '@/main';
 import { pushNotification } from '@/lib/notifications';
 import { useSearch } from 'wouter';
 
@@ -64,7 +64,15 @@ function MarketIcon({ type }: { type?: string }) {
   return <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#22c55e]/15 border border-[#22c55e]/30 text-[#22c55e]"><Landmark size={20} /></div>;
 }
 
-export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: string }) {
+export function MarketsHome({
+  defaultCategory = 'All',
+  variant = 'markets',
+  sideRail,
+}: {
+  defaultCategory?: string;
+  variant?: 'markets' | 'discover';
+  sideRail?: ReactNode;
+}) {
   const { authenticated, user, login } = usePrivy();
   const { wallets } = useWallets();
   const { signAndSendTransaction } = useSignAndSendTransaction();
@@ -186,14 +194,13 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
           tx.recentBlockhash = blockhash;
           const serialized = tx.serialize({ requireAllSignatures: false });
 
-          const chainIdentifier = `solana:${SOLANA_CLUSTER_NAME}` as const;
           const result = await signAndSendTransaction({
             transaction: serialized,
             wallet: solWallet,
-            chain: chainIdentifier,
+            chain: SOLANA_CAIP_CHAIN,
           });
 
-          txSig = Buffer.from(result.signature).toString('base64');
+          txSig = encodeBase58(result.signature);
         } catch (chainErr: any) {
           console.warn('Onchain transfer bypass for demo/balance ledger:', chainErr);
         }
@@ -352,10 +359,12 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
     return category === 'All' ? markets : markets.filter((m) => m.category === category);
   }, [markets, category]);
 
+  const isDiscover = variant === 'discover';
+
   return (
-    <div className="space-y-6 p-4 lg:p-8 max-w-7xl mx-auto">
+    <div className={`space-y-6 p-4 lg:p-8 mx-auto ${isDiscover ? 'max-w-[1600px]' : 'max-w-7xl'}`}>
       {/* Compliance / Disclaimer Banner */}
-      <div className="rounded-2xl border border-white/[0.08] bg-[#0E1318] px-4 py-3 text-xs text-slate-400 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-md">
+      <div className="rounded-2xl border border-white/[0.08] bg-[#0E1318]/90 backdrop-blur-md px-4 py-3 text-xs text-slate-400 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-md">
         <div className="flex items-center gap-2">
           <Info size={15} className="text-[#4ADE80] shrink-0" />
           <span>
@@ -369,45 +378,77 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
         </div>
       </div>
 
-      {/* Hero Banner with Obsidian + Neon Green Aesthetic */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-[#0E1318] p-6 lg:p-8 shadow-2xl">
-        <div
-          className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full blur-[100px] opacity-25"
-          style={{ background: '#22c55e' }}
-        />
-        <div
-          className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full blur-[120px] opacity-20"
-          style={{ background: '#ec4899' }}
-        />
-
-        <div className="relative z-10 max-w-xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-[#121B16] px-3 py-1 text-[11px] font-mono font-bold text-[#4ade80] mb-3">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#22c55e] animate-pulse" />
-            <span>PERSISTENT ONCHAIN PREDICTION MARKETS</span>
+      {/* Hero Banner (Compact header on Discover so Markets grid dominates above the fold) */}
+      {isDiscover ? (
+        <div className="flex flex-col gap-4 rounded-3xl border border-white/[0.08] bg-[#0E1318]/92 backdrop-blur-md p-5 lg:px-7 lg:py-5 shadow-xl sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-[11px] font-mono text-[#4ADE80]">
+              Discover · Prediction Markets & Multi-Chain PvP
+            </p>
+            <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight font-display text-white">
+              Predict. Trade. <span className="text-[#4ade80]">Settle Onchain.</span>
+            </h1>
+            <p className="text-xs text-slate-400">
+              Trade live outcome contracts across Politics, Nigerian Politics, Crypto, Sports, Finance, and Lifestyle—or peek into PvP games on the side.
+            </p>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight font-display text-white lg:text-4xl">
-            Predict. Trade. <span className="text-[#4ade80]">Settle Onchain.</span>
-          </h1>
-          <p className="mt-2 text-xs lg:text-sm text-slate-300 leading-relaxed">
-            Trade decentralized contracts across global politics, crypto, sports, and macro finance.
-          </p>
 
-          <div className="mt-5 flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
+              type="button"
               onClick={() => setShowCreate(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-[#22c55e] hover:bg-[#16a34a] px-5 py-2.5 text-xs font-bold text-black shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center gap-2 rounded-full bg-[#22c55e] hover:bg-[#16a34a] px-5 py-2.5 text-xs font-bold text-black shadow-[0_0_20px_rgba(34,197,94,0.28)] transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap shrink-0"
             >
               <Plus size={14} />
               <span>Create Market</span>
             </button>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-[#0E1318]/92 backdrop-blur-md p-6 lg:p-8 shadow-2xl">
+          <div
+            className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full blur-[100px] opacity-25"
+            style={{ background: '#22c55e' }}
+          />
+          <div
+            className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full blur-[120px] opacity-20"
+            style={{ background: '#ec4899' }}
+          />
 
-      {/* Main Grid: Markets + Top Movers */}
-      <div className="grid gap-6 lg:grid-cols-4 items-start">
+          <div className="relative z-10 max-w-xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-[#121B16] px-3 py-1 text-[11px] font-mono font-bold text-[#4ade80] mb-3">
+              <span>PERSISTENT ONCHAIN PREDICTION MARKETS</span>
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight font-display text-white lg:text-4xl">
+              Predict. Trade. <span className="text-[#4ade80]">Settle Onchain.</span>
+            </h1>
+            <p className="mt-2 text-xs lg:text-sm text-slate-300 leading-relaxed">
+              Trade decentralized contracts across global politics, Nigerian politics, crypto, sports, finance, and lifestyle trends.
+            </p>
+
+            <div className="mt-5 flex items-center gap-3">
+              <button
+                onClick={() => setShowCreate(true)}
+                className="inline-flex items-center gap-2 rounded-full bg-[#22c55e] hover:bg-[#16a34a] px-5 py-2.5 text-xs font-bold text-black shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Plus size={14} />
+                <span>Create Market</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Grid: Markets + Side Rail (PvP on Discover, Top Movers on Markets) */}
+      <div
+        className={
+          isDiscover
+            ? 'grid gap-6 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_370px] items-start'
+            : 'grid gap-6 lg:grid-cols-4 items-start'
+        }
+      >
         {/* Markets Cards */}
-        <div className="lg:col-span-3 space-y-4">
+        <div className={`${isDiscover ? 'min-w-0' : 'lg:col-span-3'} space-y-4`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Flame size={18} className="text-[#f472b6]" />
@@ -436,7 +477,7 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((m) => {
               const { yes, no, yesPct } = calcOdds(m.yesShares, m.noShares);
               const isResolved = m.status === 'resolved';
@@ -445,7 +486,7 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
                 <div
                   key={m.id}
                   onClick={() => handleOpenDetail(m)}
-                  className="group relative flex flex-col justify-between rounded-3xl border border-white/[0.08] bg-[#0E1318] p-5 shadow-lg hover:border-white/20 hover:bg-[#121820] transition-all duration-200 cursor-pointer"
+                  className="group relative flex flex-col justify-between rounded-3xl border border-white/[0.08] bg-[#0E1318]/92 backdrop-blur-sm p-5 shadow-lg hover:border-white/20 hover:bg-[#121820] transition-all duration-200 cursor-pointer"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-3">
@@ -532,45 +573,87 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
               );
             })}
           </div>
+          {/* Compact Top Movers Strip below Market Grid on Discover */}
+          {isDiscover && (
+            <div className="rounded-3xl border border-white/[0.08] bg-[#0E1318]/92 backdrop-blur-sm p-5 shadow-lg">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <TrendingUp size={16} className="text-[#4ade80]" />
+                  <h3 className="text-sm font-bold text-white">Top Consensus Movers</h3>
+                </div>
+                <span className="text-[11px] font-mono text-slate-400">24h Momentum</span>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                {TOP_MOVERS.map((m) => {
+                  const isPositive = m.change.startsWith('+');
+                  return (
+                    <div
+                      key={m.name}
+                      className="flex items-center justify-between gap-2 rounded-2xl border border-white/[0.06] bg-[#080C0F]/80 p-3 hover:border-white/15 transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-white truncate">{m.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono tabular-nums">
+                          {m.pct}% YES
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[11px] font-mono font-bold tabular-nums shrink-0 ${
+                          isPositive ? 'text-[#4ade80]' : 'text-[#f472b6]'
+                        }`}
+                      >
+                        {m.change}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Top Movers Sidebar */}
-        <div className="rounded-3xl border border-white/[0.08] bg-[#0E1318] p-5 shadow-lg">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={16} className="text-[#4ade80]" />
-            <h3 className="text-sm font-bold text-white">Top Movers</h3>
-          </div>
+        {/* Right Side Rail: PvP Showcase on Discover, Top Movers on Markets */}
+        {isDiscover && sideRail ? (
+          sideRail
+        ) : (
+          <div className="rounded-3xl border border-white/[0.08] bg-[#0E1318]/92 backdrop-blur-sm p-5 shadow-lg">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp size={16} className="text-[#4ade80]" />
+              <h3 className="text-sm font-bold text-white">Top Movers</h3>
+            </div>
 
-          <div className="space-y-3">
-            {TOP_MOVERS.map((m) => {
-              const isPositive = m.change.startsWith('+');
-              return (
-                <div
-                  key={m.name}
-                  className="flex items-center justify-between rounded-2xl p-2.5 hover:bg-[#131A21] transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <MarketIcon type={m.icon} />
-                    <div>
-                      <div className="text-xs font-semibold text-white">{m.name}</div>
-                      <div className="text-[10px] text-slate-400 font-mono">Consensus {m.pct}%</div>
+            <div className="space-y-3">
+              {TOP_MOVERS.map((m) => {
+                const isPositive = m.change.startsWith('+');
+                return (
+                  <div
+                    key={m.name}
+                    className="flex items-center justify-between rounded-2xl p-2.5 hover:bg-[#131A21] transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <MarketIcon type={m.icon} />
+                      <div>
+                        <div className="text-xs font-semibold text-white">{m.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">Consensus {m.pct}%</div>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-mono font-bold ${
+                          isPositive ? 'bg-[#22c55e]/15 text-[#4ade80]' : 'bg-[#ec4899]/15 text-[#f472b6]'
+                        }`}
+                      >
+                        {m.change}
+                      </span>
                     </div>
                   </div>
-
-                  <div className="text-right">
-                    <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-mono font-bold ${
-                        isPositive ? 'bg-[#22c55e]/15 text-[#4ade80]' : 'bg-[#ec4899]/15 text-[#f472b6]'
-                      }`}
-                    >
-                      {m.change}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* FULL MARKET DETAIL VIEW MODAL */}

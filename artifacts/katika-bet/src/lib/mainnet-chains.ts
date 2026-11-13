@@ -41,8 +41,36 @@ export const polygon: EvmChain = {
 
 export const evmMainnets: EvmChain[] = [base, mainnet, arbitrum, polygon];
 
-// Solana Mainnet-Beta configuration
+// Solana cluster RPC configurations
 export const SOLANA_MAINNET_RPC = 'https://api.mainnet-beta.solana.com';
+export const SOLANA_DEVNET_RPC = 'https://api.devnet.solana.com';
+
+const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+
+export function encodeBase58(bytes: Uint8Array): string {
+  if (!bytes || bytes.length === 0) return '';
+  const digits = [0];
+  for (let i = 0; i < bytes.length; i++) {
+    let carry = bytes[i];
+    for (let j = 0; j < digits.length; j++) {
+      const val = (digits[j] << 8) + carry;
+      digits[j] = val % 58;
+      carry = Math.floor(val / 58);
+    }
+    while (carry > 0) {
+      digits.push(carry % 58);
+      carry = Math.floor(carry / 58);
+    }
+  }
+  let out = '';
+  for (let k = 0; k < bytes.length && bytes[k] === 0; k++) {
+    out += BASE58_ALPHABET[0];
+  }
+  for (let q = digits.length - 1; q >= 0; q--) {
+    out += BASE58_ALPHABET[digits[q]];
+  }
+  return out;
+}
 
 // Official SIDEBET Treasury Vault addresses for on-chain deposits
 export const SOLANA_TREASURY_PUBKEY = '6WBC6z2j35UeH1E5fWb2J9qE9Dfv9Y1sWq8rD5hG7tK'; // Sidebet multi-sig / treasury

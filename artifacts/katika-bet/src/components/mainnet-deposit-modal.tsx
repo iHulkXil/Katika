@@ -4,12 +4,13 @@ import { useWallets as useSolanaWallets, useSignAndSendTransaction } from '@priv
 import { Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import {
   evmMainnets,
-  SOLANA_MAINNET_RPC,
   SOLANA_TREASURY_PUBKEY,
   EVM_TREASURY_ADDRESS,
+  encodeBase58,
   type EvmChain,
 } from '@/lib/mainnet-chains';
-import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Copy, Loader2 } from 'lucide-react';
+import { SOLANA_RPC_URL, SOLANA_CLUSTER_NAME, SOLANA_CAIP_CHAIN } from '@/main';
+import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Copy, Droplets, ExternalLink, Loader2 } from 'lucide-react';
 import { pushNotification } from '@/lib/notifications';
 
 function shorten(val: string) {
@@ -44,6 +45,7 @@ export function MainnetDepositWithdrawModal({
   const [solBalance, setSolBalance] = useState<string | null>(null);
   const [evmBalance, setEvmBalance] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [airdropping, setAirdropping] = useState(false);
 
   // Active wallets
   const activeSolWallet = solWallets?.[0];
@@ -60,7 +62,7 @@ export function MainnetDepositWithdrawModal({
     // Solana balance
     if (activeSolWallet?.address) {
       try {
-        const connection = new Connection(SOLANA_MAINNET_RPC, 'confirmed');
+        const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
         const pubkey = new PublicKey(activeSolWallet.address);
         const balLamports = await connection.getBalance(pubkey);
         setSolBalance((balLamports / LAMPORTS_PER_SOL).toFixed(4));
@@ -122,7 +124,7 @@ export function MainnetDepositWithdrawModal({
         if (!activeSolWallet || !signSolanaTx) {
           throw new Error('Please connect your Solana wallet');
         }
-        const connection = new Connection(SOLANA_MAINNET_RPC, 'confirmed');
+        const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
         const fromPubkey = new PublicKey(activeSolWallet.address);
         // Valid destination treasury fallback
         let toPubkey: PublicKey;
@@ -148,10 +150,10 @@ export function MainnetDepositWithdrawModal({
         const result = await signSolanaTx({
           transaction: serialized,
           wallet: activeSolWallet,
-          chain: 'solana:mainnet',
+          chain: SOLANA_CAIP_CHAIN,
         });
 
-        const sig = Buffer.from(result.signature).toString('base64');
+        const sig = encodeBase58(result.signature);
         setTxHash(sig);
         // Record deposit locally & update USD balance
         const currentBal = Number(localStorage.getItem('sidebet_wallet_balance') || '4011');
@@ -160,7 +162,7 @@ export function MainnetDepositWithdrawModal({
         localStorage.setItem('sidebet_wallet_balance', updated.toString());
         onBalanceUpdated?.(updated);
         pushNotification({
-          title: 'SOL Deposit Confirmed',
+          title: `SOL ${SOLANA_CLUSTER_NAME === 'devnet' ? 'Devnet ' : ''}Deposit Confirmed`,
           message: `Deposited ${numAmt} SOL (+$${addedUsd.toFixed(2)}) into your wallet.`,
           type: 'wallet',
           href: '/wallet',
@@ -264,6 +266,37 @@ export function MainnetDepositWithdrawModal({
     }
   };
 
+  const handleDevnetAirdrop = async () => {
+    if (!activeSolWallet?.address) {
+      setError('Connect a Solana wallet first to receive Devnet SOL.');
+      return;
+    }
+    setAirdropping(true);
+    setError(null);
+    try {
+      const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
+      const pubkey = new PublicKey(activeSolWallet.address);
+      const sig = await connection.requestAirdrop(pubkey, LAMPORTS_PER_SOL);
+      await connection.confirmTransaction(sig, 'confirmed');
+      setTxHash(sig);
+      await fetchBalances();
+      pushNotification({
+        title: 'Devnet SOL Airdrop Received',
+        message: '1.0 Devnet SOL credited to your connected Solana wallet.',
+        type: 'wallet',
+        href: '/wallet',
+      });
+    } catch (err: any) {
+      setError(
+        err?.message?.includes('429') || err?.message?.toLowerCase().includes('airdrop')
+          ? 'Devnet faucet is rate-limited right now. You can also claim test SOL at faucet.solana.com.'
+          : err?.message || 'Devnet airdrop request failed. Try faucet.solana.com.'
+      );
+    } finally {
+      setAirdropping(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -325,7 +358,9 @@ export function MainnetDepositWithdrawModal({
               <div>
                 <div className="text-xs font-bold text-white flex items-center gap-1.5">
                   <span>Solana</span>
-                  <span className="rounded-full bg-[#22c55e]/20 px-2 py-0.5 text-[9px] font-mono font-bold text-[#4ade80]">MAINNET</span>
+                  <span className="rounded-full bg-[#22c55e]/20 px-2 py-0.5 text-[9px] font-mono font-bold text-[#4ade80]">
+                    {SOLANA_CLUSTER_NAME === 'devnet' ? 'DEVNET' : 'MAINNET'}
+                  </span>
                 </div>
                 <div className="text-[10px] text-slate-400 mt-1 font-mono">
                   Balance: {solBalance !== null ? `${solBalance} SOL` : 'Loading...'}
@@ -447,9 +482,21 @@ export function MainnetDepositWithdrawModal({
 
         {txHash && (
           <div className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-950/40 p-3 text-xs text-emerald-300 space-y-1">
-            <div className="flex items-center gap-1.5 font-semibold">
-              <CheckCircle2 size={15} className="text-emerald-400" />
-              <span>Transaction Broadcast Successfully!</span>
+            <div className="flex items-center justify-between gap-2 font-semibold">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 size={15} className="text-emerald-400" />
+                <span>Transaction Broadcast Successfully!</span>
+              </div>
+              {chainType === 'solana' && !txHash.includes('...') && (
+                <a
+                  href={`https://solscan.io/tx/${txHash}${SOLANA_CLUSTER_NAME === 'devnet' ? '?cluster=devnet' : ''}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] font-mono text-[#4ade80] underline shrink-0"
+                >
+                  Solscan <ExternalLink size={11} />
+                </a>
+              )}
             </div>
             <p className="font-mono text-[11px] text-slate-400 break-all">
               Tx: {txHash}
@@ -457,11 +504,36 @@ export function MainnetDepositWithdrawModal({
           </div>
         )}
 
+        {/* Devnet Faucet Quick Request when Solana Devnet is active */}
+        {chainType === 'solana' && SOLANA_CLUSTER_NAME === 'devnet' && (
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[#22c55e]/20 bg-[#0D1A14] px-3.5 py-2.5 text-xs">
+            <div className="min-w-0">
+              <span className="text-[11px] font-semibold text-white block">Solana Devnet Test Mode</span>
+              <span className="text-[10px] font-mono text-slate-400 block truncate">
+                Need test SOL? Request a 1 SOL devnet airdrop.
+              </span>
+            </div>
+            <button
+              type="button"
+              disabled={airdropping || !activeSolWallet}
+              onClick={handleDevnetAirdrop}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#22c55e]/40 bg-[#12241B] hover:bg-[#173124] px-3 py-1.5 text-[11px] font-mono font-bold text-[#4ade80] disabled:opacity-50 transition-colors whitespace-nowrap shrink-0"
+            >
+              {airdropping ? <Loader2 size={12} className="animate-spin" /> : <Droplets size={12} />}
+              <span>{airdropping ? 'Airdropping...' : '+1 Devnet SOL'}</span>
+            </button>
+          </div>
+        )}
+
         {/* Direct Treasury Deposit Address fallback */}
         {mode === 'deposit' && (
           <div className="mt-3 rounded-2xl border border-white/[0.08] bg-[#080C0F] p-3 text-[11px] text-slate-400 flex items-center justify-between">
             <div className="truncate mr-2">
-              <span className="text-[10px] text-slate-500 font-mono uppercase block">Sidebet Mainnet Treasury</span>
+              <span className="text-[10px] text-slate-500 font-mono uppercase block">
+                {chainType === 'solana' && SOLANA_CLUSTER_NAME === 'devnet'
+                  ? 'Sidebet Devnet Treasury'
+                  : 'Sidebet Treasury'}
+              </span>
               <span className="font-mono text-[10px] text-slate-200">
                 {chainType === 'solana' ? shorten(SOLANA_TREASURY_PUBKEY) : shorten(EVM_TREASURY_ADDRESS)}
               </span>

@@ -12,13 +12,16 @@ import './game-motion.css';
 // Privy App ID with standard production fallback
 const privyAppId = (import.meta.env.VITE_PRIVY_APP_ID ?? 'cmske7xuh00750djms91aexl3').trim();
 
-// Solana Cluster & RPC configuration (configurable via env)
-export const SOLANA_CLUSTER_NAME = (import.meta.env.VITE_SOLANA_CLUSTER ?? 'mainnet-beta') as 'mainnet-beta' | 'devnet';
+// Solana Cluster & RPC configuration (defaults to Devnet for testing; configurable via env)
+export const SOLANA_CLUSTER_NAME = (import.meta.env.VITE_SOLANA_CLUSTER ?? 'devnet') as 'mainnet-beta' | 'devnet';
 export const SOLANA_RPC_URL = import.meta.env.VITE_SOLANA_RPC ?? (
   SOLANA_CLUSTER_NAME === 'devnet'
     ? 'https://api.devnet.solana.com'
     : 'https://api.mainnet-beta.solana.com'
 );
+export const SOLANA_CAIP_CHAIN = (
+  SOLANA_CLUSTER_NAME === 'devnet' ? 'solana:devnet' : 'solana:mainnet'
+) as 'solana:devnet' | 'solana:mainnet';
 
 createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>

@@ -5,6 +5,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { fetchPositions, claimWinnings, type Position } from '@/lib/markets-api';
 import { useToast } from '@/hooks/use-toast';
 import { pushNotification } from '@/lib/notifications';
+import { SOLANA_CLUSTER_NAME } from '@/main';
 
 export function MyBets() {
   const { user } = usePrivy();
@@ -194,7 +195,7 @@ export function MyBets() {
                   <div className="flex items-center gap-3 text-[11px] text-slate-500">
                     {p.txSig && (
                       <a
-                        href={`https://solscan.io/tx/${p.txSig}`}
+                        href={`https://solscan.io/tx/${p.txSig}${SOLANA_CLUSTER_NAME === 'devnet' ? '?cluster=devnet' : ''}`}
                         target="_blank"
                         rel="noreferrer"
                         className="text-[#4ade80] hover:underline"
