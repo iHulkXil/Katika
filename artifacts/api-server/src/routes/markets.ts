@@ -37,8 +37,44 @@ export type Position = {
   placedAt: string;
 };
 
-// Seed Initial Global Politics, Crypto, Sports, and Finance Markets
+// Seed Initial Markets across Politics, Nigerian Politics, Crypto, Sports, Finance, and Lifestyle
 const INITIAL_MARKETS: Market[] = [
+  // Nigerian Politics
+  {
+    id: "obi-2027-coalition",
+    title: "Will Peter Obi lead a unified opposition coalition ticket ahead of Nigeria's 2027 election?",
+    description: "Resolves YES if Peter Obi is formally announced as the joint presidential flagbearer of a registered multi-party coalition before Q4 2026.",
+    category: "Nigerian Politics",
+    yesShares: 5800,
+    noShares: 4200,
+    liquidity: 65,
+    volume: 194500,
+    endsAt: "Dec 2026",
+    status: "open",
+    resolution: null,
+    creator: "Sidebet Desk",
+    icon: "politics",
+    createdAt: new Date().toISOString(),
+    resolvedAt: null,
+  },
+  {
+    id: "apc-nass-majority",
+    title: "Will APC retain a >60% seat majority in Nigeria's National Assembly through 2026?",
+    description: "Resolves YES if official National Assembly clerk seat counts show APC controlling more than 60% of combined Senate and House seats at year-end.",
+    category: "Nigerian Politics",
+    yesShares: 6400,
+    noShares: 3600,
+    liquidity: 48,
+    volume: 128000,
+    endsAt: "Dec 31",
+    status: "open",
+    resolution: null,
+    creator: "Sidebet Desk",
+    icon: "politics",
+    createdAt: new Date().toISOString(),
+    resolvedAt: null,
+  },
+  // Global Politics
   {
     id: "us-midterm-house",
     title: "Will the incumbent coalition hold a majority in the upcoming parliamentary vote?",
@@ -73,23 +109,7 @@ const INITIAL_MARKETS: Market[] = [
     createdAt: new Date().toISOString(),
     resolvedAt: null,
   },
-  {
-    id: "eu-digital-id",
-    title: "Will the European Parliament approve cross-border digital wallet rollout ahead of schedule?",
-    description: "Resolves YES if the European Parliament plenary formally passes the accelerated deployment timeline this quarter.",
-    category: "Politics",
-    yesShares: 6100,
-    noShares: 3900,
-    liquidity: 48,
-    volume: 142000,
-    endsAt: "Dec 31",
-    status: "open",
-    resolution: null,
-    creator: "Sidebet Foundation",
-    icon: "politics",
-    createdAt: new Date().toISOString(),
-    resolvedAt: null,
-  },
+  // Crypto
   {
     id: "btc15",
     title: "BTC price above $92,000 at end of the 4-hour settlement candle?",
@@ -141,6 +161,7 @@ const INITIAL_MARKETS: Market[] = [
     createdAt: new Date().toISOString(),
     resolvedAt: null,
   },
+  // Sports
   {
     id: "arsenal",
     title: "Will Arsenal win the Premier League 2026/27 title race?",
@@ -158,6 +179,7 @@ const INITIAL_MARKETS: Market[] = [
     createdAt: new Date().toISOString(),
     resolvedAt: null,
   },
+  // Finance
   {
     id: "fed-rate-cut",
     title: "Will the Federal Reserve cut interest rates by 25bps+ at the next FOMC meeting?",
@@ -175,6 +197,75 @@ const INITIAL_MARKETS: Market[] = [
     createdAt: new Date().toISOString(),
     resolvedAt: null,
   },
+  {
+    id: "cbn-mpr-cut",
+    title: "Will the Central Bank of Nigeria (CBN) cut the MPR below 25% at its next MPC?",
+    description: "Resolves YES if the official CBN Monetary Policy Committee communiqué sets the Monetary Policy Rate below 25.00%.",
+    category: "Finance",
+    yesShares: 4400,
+    noShares: 5600,
+    liquidity: 40,
+    volume: 112000,
+    endsAt: "MPC",
+    status: "open",
+    resolution: null,
+    creator: "EconLab",
+    icon: "econ",
+    createdAt: new Date().toISOString(),
+    resolvedAt: null,
+  },
+  // Lifestyle (Celebrity Gossip & Trends)
+  {
+    id: "davido-burna-tour",
+    title: "Will Davido & Burna Boy announce a joint global stadium performance this year?",
+    description: "Resolves YES if both artists or their official management announce a co-headlined stadium show or tour date.",
+    category: "Lifestyle",
+    yesShares: 3900,
+    noShares: 6100,
+    liquidity: 34,
+    volume: 164000,
+    endsAt: "Dec 31",
+    status: "open",
+    resolution: null,
+    creator: "CultureDesk",
+    icon: "lifestyle",
+    createdAt: new Date().toISOString(),
+    resolvedAt: null,
+  },
+  {
+    id: "regina-trends-viral",
+    title: "Will the top celebrity power couple split rumor be officially confirmed this month?",
+    description: "Resolves YES if either party publishes an official statement or verified social confirmation ending the relationship.",
+    category: "Lifestyle",
+    yesShares: 6300,
+    noShares: 3700,
+    liquidity: 28,
+    volume: 98500,
+    endsAt: "30d",
+    status: "open",
+    resolution: null,
+    creator: "CultureDesk",
+    icon: "lifestyle",
+    createdAt: new Date().toISOString(),
+    resolvedAt: null,
+  },
+  {
+    id: "grammy-afrobeats-trend",
+    title: "Will an Afrobeats headline album cross 1B Spotify streams within 60 days of release?",
+    description: "Resolves YES if official Spotify chart trackers confirm 1,000,000,000+ cumulative streams within 60 calendar days.",
+    category: "Lifestyle",
+    yesShares: 5500,
+    noShares: 4500,
+    liquidity: 31,
+    volume: 137200,
+    endsAt: "60d",
+    status: "open",
+    resolution: null,
+    creator: "CultureDesk",
+    icon: "lifestyle",
+    createdAt: new Date().toISOString(),
+    resolvedAt: null,
+  },
 ];
 
 // Persistent File Storage Path
@@ -186,7 +277,7 @@ const POSITIONS_FILE = path.join(DATA_DIR, "sidebet_positions.json");
 let marketsMap = new Map<string, Market>();
 let positionsList: Position[] = [];
 
-// Load state from file or seed
+// Load state from file or seed (and ensure new seed categories are backfilled)
 function initStore() {
   try {
     if (!fs.existsSync(DATA_DIR)) {
@@ -200,9 +291,15 @@ function initStore() {
       }
     }
 
-    // Seed if empty
-    if (marketsMap.size === 0) {
-      INITIAL_MARKETS.forEach((m) => marketsMap.set(m.id, m));
+    let modified = false;
+    INITIAL_MARKETS.forEach((m) => {
+      if (!marketsMap.has(m.id)) {
+        marketsMap.set(m.id, m);
+        modified = true;
+      }
+    });
+
+    if (modified) {
       persistMarkets();
     }
 
@@ -294,12 +391,24 @@ router.post("/markets", (req: Request, res: Response) => {
     return res.status(400).json({ error: "Market title is required" });
   }
 
+  const cat = category || "Politics";
+  const icon =
+    cat === "Crypto"
+      ? "btc"
+      : cat === "Sports"
+      ? "arsenal"
+      : cat === "Lifestyle"
+      ? "lifestyle"
+      : cat === "Finance"
+      ? "econ"
+      : "politics";
+
   const id = `mkt-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   const newMarket: Market = {
     id,
     title: title.trim(),
     description: description || "Decentralized prediction event contract settled via Sidebet onchain oracle.",
-    category: category || "Politics",
+    category: cat,
     yesShares: 5000,
     noShares: 5000,
     liquidity: Number(initialLiquidity) || 10,
@@ -308,7 +417,7 @@ router.post("/markets", (req: Request, res: Response) => {
     status: "open",
     resolution: null,
     creator: creator || "Community User",
-    icon: category === "Crypto" ? "btc" : category === "Sports" ? "arsenal" : "obi",
+    icon,
     createdAt: new Date().toISOString(),
     resolvedAt: null,
   };

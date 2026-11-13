@@ -206,9 +206,11 @@ export function AdminResolverPage() {
                 className="mt-1 w-full rounded-xl border border-white/10 bg-[#080C0F] px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#4ADE80]"
               >
                 <option>Politics</option>
+                <option>Nigerian Politics</option>
                 <option>Crypto</option>
                 <option>Sports</option>
                 <option>Finance</option>
+                <option>Lifestyle</option>
               </select>
             </div>
           </div>

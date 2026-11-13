@@ -35,19 +35,32 @@ import {
 import { SOLANA_TREASURY_PUBKEY } from '@/lib/mainnet-chains';
 import { SOLANA_RPC_URL, SOLANA_CLUSTER_NAME } from '@/main';
 import { pushNotification } from '@/lib/notifications';
+import { useSearch } from 'wouter';
+
+export const MARKET_CATEGORIES = [
+  'All',
+  'Politics',
+  'Nigerian Politics',
+  'Crypto',
+  'Sports',
+  'Finance',
+  'Lifestyle',
+] as const;
 
 const TOP_MOVERS = [
   { name: 'Bitcoin ($91.4K)', pct: 67, change: '+5.4%', icon: 'btc', color: '#facc15' },
   { name: 'Arsenal FC', pct: 72, change: '+3.1%', icon: 'arsenal', color: '#ec4899' },
+  { name: 'Peter Obi Coalition', pct: 58, change: '+6.2%', icon: 'politics', color: '#22c55e' },
+  { name: 'Davido & Burna Tour', pct: 39, change: '+8.4%', icon: 'lifestyle', color: '#ec4899' },
   { name: 'Solana ($148.5)', pct: 74, change: '+7.3%', icon: 'sol', color: '#4ade80' },
-  { name: 'Global AI Treaty', pct: 38, change: '+4.2%', icon: 'politics', color: '#ec4899' },
-  { name: 'Fed Rate Decision', pct: 58, change: '+3.8%', icon: 'econ', color: '#22c55e' },
 ];
 
 function MarketIcon({ type }: { type?: string }) {
   if (type === 'btc') return <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#facc15]/15 border border-[#facc15]/30 text-[#facc15]"><Bitcoin size={20} /></div>;
   if (type === 'arsenal') return <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#ec4899]/15 border border-[#ec4899]/30 text-[#f472b6]"><Trophy size={20} /></div>;
   if (type === 'sol') return <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#4ade80]/15 border border-[#4ade80]/30 text-[#4ade80]"><Sparkles size={20} /></div>;
+  if (type === 'lifestyle') return <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#ec4899]/15 border border-[#ec4899]/30 text-[#f472b6]"><Flame size={20} /></div>;
+  if (type === 'econ') return <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#facc15]/15 border border-[#facc15]/30 text-[#facc15]"><Coins size={20} /></div>;
   return <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#22c55e]/15 border border-[#22c55e]/30 text-[#22c55e]"><Landmark size={20} /></div>;
 }
 
@@ -56,10 +69,27 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
   const { wallets } = useWallets();
   const { signAndSendTransaction } = useSignAndSendTransaction();
   const { toast } = useToast();
+  const searchStr = useSearch();
 
-  const [category, setCategory] = useState(defaultCategory);
+  const initialCat = (() => {
+    const params = new URLSearchParams(searchStr);
+    const fromUrl = params.get('category');
+    return fromUrl || defaultCategory;
+  })();
+
+  const [category, setCategory] = useState(initialCat);
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchStr);
+    const fromUrl = params.get('category');
+    if (fromUrl) {
+      setCategory(fromUrl);
+    } else if (defaultCategory) {
+      setCategory(defaultCategory);
+    }
+  }, [searchStr, defaultCategory]);
 
   // Modals & Active Views
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
@@ -385,15 +415,15 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
               {loading && <Loader2 size={14} className="animate-spin text-[#4ADE80]" />}
             </div>
 
-            {/* Category Segmented Pills */}
-            <div className="flex items-center gap-1.5 rounded-2xl bg-[#0E1318] p-1 border border-white/[0.08]">
-              {['All', 'Politics', 'Crypto', 'Sports', 'Finance'].map((c) => {
-                const isActive = category === c;
+            {/* Category Segmented Tabs inside Markets */}
+            <div className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-[#0E1318] p-1 border border-white/[0.08]">
+              {MARKET_CATEGORIES.map((c) => {
+                const isActive = category.toLowerCase() === c.toLowerCase();
                 return (
                   <button
                     key={c}
                     onClick={() => setCategory(c)}
-                    className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
+                    className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
                       isActive
                         ? 'bg-[#4ade80] text-black shadow-sm'
                         : 'text-slate-400 hover:text-slate-200'
@@ -801,9 +831,11 @@ export function MarketsHome({ defaultCategory = 'All' }: { defaultCategory?: str
                 className="mt-1.5 w-full rounded-xl border border-white/10 bg-[#080C0F] px-3.5 py-2.5 text-xs text-white focus:border-[#4ade80] focus:outline-none"
               >
                 <option>Politics</option>
+                <option>Nigerian Politics</option>
                 <option>Crypto</option>
                 <option>Sports</option>
                 <option>Finance</option>
+                <option>Lifestyle</option>
               </select>
             </div>
 

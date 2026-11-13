@@ -1,3 +1,4 @@
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import react from '@vitejs/plugin-react';
@@ -6,6 +7,30 @@ import { defineConfig, type PluginOption } from 'vite';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = typeof import.meta.dirname !== 'undefined' ? import.meta.dirname : path.dirname(__filename);
+
+const SAFE_WINDOW_TOP =
+  '(function(){try{var t=window.top;if(!t)return undefined;void t.ethereum;return t;}catch(e){return undefined;}})()';
+
+const WALLET_SDK_PATH_RE = /(@base-org[\\/+]account|@coinbase[\\/+]wallet-sdk)/;
+
+function patchWalletSdkWindowTop(code: string): string {
+  return code.replace(/\bwindow\.top\b/g, SAFE_WINDOW_TOP);
+}
+
+function safeIframeWalletSdkPlugin(): PluginOption {
+  return {
+    name: 'safe-iframe-wallet-sdk',
+    transform(code, id) {
+      if (WALLET_SDK_PATH_RE.test(id) && code.includes('window.top')) {
+        return {
+          code: patchWalletSdkWindowTop(code),
+          map: null,
+        };
+      }
+      return null;
+    },
+  };
+}
 
 const rawPort = process.env.PORT ?? '5173';
 const port = Number(rawPort);
@@ -28,7 +53,26 @@ export default defineConfig({
   define: {
     'import.meta.env.VITE_PRIVY_APP_ID': JSON.stringify(privyAppId),
   },
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), safeIframeWalletSdkPlugin()],
+  optimizeDeps: {
+    esbuildOptions: {
+      plugins: [
+        {
+          name: 'safe-iframe-wallet-sdk-esbuild',
+          setup(build) {
+            build.onLoad({ filter: /(@base-org[\\/+]account|@coinbase[\\/+]wallet-sdk).*\.[cm]?js$/ }, async (args) => {
+              const code = await fs.promises.readFile(args.path, 'utf8');
+              if (!code.includes('window.top')) return undefined;
+              return {
+                contents: patchWalletSdkWindowTop(code),
+                loader: 'js',
+              };
+            });
+          },
+        },
+      ],
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),

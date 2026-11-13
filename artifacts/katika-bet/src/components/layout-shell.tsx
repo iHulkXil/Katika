@@ -3,12 +3,8 @@ import { Link, useLocation } from 'wouter';
 import {
   Compass,
   Flame,
-  Trophy,
-  Bitcoin,
   Landmark,
-  LineChart,
   Receipt,
-  PieChart,
   Wallet,
   Medal,
   Search,
@@ -25,29 +21,32 @@ const navItems = [
   { href: '/', label: 'Discover', icon: Compass },
   { href: '/markets', label: 'Markets', icon: Flame },
   { href: '/pvp', label: 'PvP Arena', icon: Swords },
-  { href: '/trending', label: 'Trending', icon: Flame },
-  { href: '/sports', label: 'Sports', icon: Trophy },
-  { href: '/crypto', label: 'Crypto', icon: Bitcoin },
-  { href: '/politics', label: 'Politics', icon: Landmark },
-  { href: '/finance', label: 'Finance', icon: LineChart },
   { href: '/my-bets', label: 'My Bets', icon: Receipt },
-  { href: '/portfolio', label: 'Portfolio', icon: PieChart },
-  { href: '/wallet', label: 'Wallet', icon: Wallet },
+  { href: '/wallet', label: 'Wallet & Portfolio', icon: Wallet },
   { href: '/leaderboard', label: 'Leaderboard', icon: Medal },
   { href: '/admin', label: 'Admin Oracle', icon: Landmark },
 ];
 
 const mobileBottomNav = [
-  { href: '/', label: 'Home', icon: Compass },
+  { href: '/', label: 'Discover', icon: Compass },
   { href: '/markets', label: 'Markets', icon: Flame },
   { href: '/pvp', label: 'PvP', icon: Swords },
   { href: '/wallet', label: 'Wallet', icon: Wallet },
-  { href: '/portfolio', label: 'Portfolio', icon: PieChart },
   { href: '/profile', label: 'Profile', icon: Settings },
 ];
 
 function isActive(href: string, location: string) {
-  if (href === '/') return location === '/' || location === '/dashboard' || location === '/markets';
+  if (href === '/') return location === '/' || location === '/dashboard';
+  if (href === '/markets') {
+    return (
+      location === '/markets' ||
+      location.startsWith('/markets/') ||
+      ['/sports', '/crypto', '/politics', '/finance', '/lifestyle', '/nigerian-politics', '/trending'].includes(location)
+    );
+  }
+  if (href === '/wallet') {
+    return location === '/wallet' || location === '/portfolio' || location === '/cashier';
+  }
   return location === href || location.startsWith(href + '/');
 }
 
