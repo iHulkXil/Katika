@@ -13,6 +13,7 @@ import { CryptoWalletDashboard } from '@/components/crypto-wallet-dashboard';
 import { PvPLobby } from '@/components/pvp-lobby';
 import { PoolGamePage } from '@/components/pool-game';
 import { PotWheelGamePage } from '@/components/pot-wheel-game';
+import { PenaltyShootoutPage } from '@/components/penalty-shootout';
 import { ComplianceModal } from '@/components/compliance-modal';
 import { KycOnboardingModal } from '@/components/kyc-onboarding-modal';
 import { KycProvider, useKyc } from '@/lib/kyc';
@@ -141,6 +142,9 @@ function Router() {
         <Route path="/games/wheel" component={PotWheelGamePage} />
         <Route path="/pvp/wheel" component={PotWheelGamePage} />
         <Route path="/pvp/wheel/:id" component={PotWheelGamePage} />
+        <Route path="/games/penalty" component={PenaltyShootoutPage} />
+        <Route path="/pvp/penalty" component={PenaltyShootoutPage} />
+        <Route path="/pvp/penalty/:id" component={PenaltyShootoutPage} />
         <Route path="/trending">{() => <MarketsHome defaultCategory="All" />}</Route>
         <Route path="/sports">{() => <MarketsHome defaultCategory="Sports" />}</Route>
         <Route path="/crypto">{() => <MarketsHome defaultCategory="Crypto" />}</Route>

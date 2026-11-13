@@ -1187,7 +1187,7 @@ type AutoPvpSettlement = {
   id: string;
   matchKey: string;
   privyUserId: string;
-  game: "pool" | "wheel";
+  game: "pool" | "wheel" | "penalty";
   stakeUsd: number;
   cryptoType: string;
   cryptoAmount: number;
@@ -1235,8 +1235,8 @@ router.post("/pvp/auto-settle", async (req, res) => {
     if (typeof matchKey !== "string" || !matchKey.trim()) {
       return res.status(400).json({ error: "matchKey is required" });
     }
-    if (game !== "pool" && game !== "wheel") {
-      return res.status(400).json({ error: "game must be 'pool' or 'wheel'" });
+    if (game !== "pool" && game !== "wheel" && game !== "penalty") {
+      return res.status(400).json({ error: "game must be 'pool', 'wheel', or 'penalty'" });
     }
 
     const existing = pvpSettlements.find(

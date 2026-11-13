@@ -19,7 +19,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useToast } from '@/hooks/use-toast';
 import { pushNotification } from '@/lib/notifications';
 
-export type PvpGameId = 'pool' | 'wheel';
+export type PvpGameId = 'pool' | 'wheel' | 'penalty';
 
 interface PvpGameShowcase {
   id: PvpGameId;
@@ -61,6 +61,19 @@ const PVP_GAMES: PvpGameShowcase[] = [
     toonImage: '/assets/images/toon_pot_wheel_1794558431894.jpg',
     peekCaption: 'Live weighted slice spin settling the 3-minute community pot',
     controlsHint: 'Stake share = Slice size · Auto-spin every 3m',
+  },
+  {
+    id: 'penalty',
+    title: 'Penalty Shootout',
+    modeLabel: 'Cartoon 3D · 5+SD',
+    payoutLabel: '96% Pot Payout',
+    description: 'Bend top-corner penalties past the keeper or dive to save in 3D.',
+    chains: 'SOL · ETH · BTC · USDT',
+    href: '/games/penalty',
+    accent: '#38BDF8',
+    toonImage: '/assets/images/toon_ludo_sprint_1794558431519.jpg',
+    peekCaption: 'Top-bins curling strike vs diving cartoon goalkeeper',
+    controlsHint: 'Aim & hold Shoot · Touch Dive controls',
   },
 ];
 
@@ -274,8 +287,52 @@ function WheelToonPeek({ compact = false }: { compact?: boolean }) {
   );
 }
 
+function PenaltyToonPeek({ compact = false }: { compact?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 320 180"
+      className="h-full w-full select-none"
+      role="img"
+      aria-label="Animated stylized toon preview of Cartoon 3D Penalty Shootout"
+    >
+      <rect width="320" height="180" fill="#0B1622" />
+      {/* Stadium sky + turf */}
+      <rect x="0" y="0" width="320" height="84" fill="#1D4ED8" opacity="0.35" />
+      <rect x="0" y="84" width="320" height="96" fill="#16A34A" />
+      <rect x="0" y="108" width="320" height="24" fill="#15803D" />
+      <rect x="0" y="156" width="320" height="24" fill="#15803D" />
+      {/* Goal frame & net */}
+      <rect x="64" y="28" width="192" height="72" fill="#FFFFFF" opacity="0.12" stroke="#FFFFFF" strokeWidth="4" />
+      <line x1="64" y1="52" x2="256" y2="52" stroke="#E2E8F0" strokeWidth="1" opacity="0.35" />
+      <line x1="64" y1="76" x2="256" y2="76" stroke="#E2E8F0" strokeWidth="1" opacity="0.35" />
+      <line x1="128" y1="28" x2="128" y2="100" stroke="#E2E8F0" strokeWidth="1" opacity="0.35" />
+      <line x1="192" y1="28" x2="192" y2="100" stroke="#E2E8F0" strokeWidth="1" opacity="0.35" />
+      {/* Diving cartoon keeper */}
+      <g transform="translate(132, 62) rotate(-25)">
+        <rect x="-12" y="-16" width="24" height="30" rx="6" fill="#FACC15" stroke="#070B0E" strokeWidth="2.5" />
+        <circle cx="0" cy="-24" r="9" fill="#FDBA8C" stroke="#070B0E" strokeWidth="2" />
+        <rect x="-24" y="-12" width="12" height="10" rx="3" fill="#22C55E" stroke="#070B0E" strokeWidth="2" />
+        <rect x="12" y="-12" width="12" height="10" rx="3" fill="#22C55E" stroke="#070B0E" strokeWidth="2" />
+      </g>
+      {/* Aim curve + football */}
+      <path d="M160,152 Q196,98 228,48" fill="none" stroke="#FACC15" strokeWidth="2.5" strokeDasharray="5 4" />
+      <circle cx="228" cy="48" r="10" fill="#FFFFFF" stroke="#070B0E" strokeWidth="2.5" />
+      <circle cx="228" cy="48" r="4" fill="#070B0E" />
+      {!compact && (
+        <g>
+          <rect x="18" y="146" width="118" height="22" rx="6" fill="#070B0E" opacity="0.88" stroke="#38BDF8" strokeWidth="1.5" />
+          <text x="77" y="160" textAnchor="middle" fontSize="9" fontWeight="700" fill="#38BDF8" fontFamily="monospace">
+            3D SHOOTOUT PEEK
+          </text>
+        </g>
+      )}
+    </svg>
+  );
+}
+
 function LiveToonScene({ gameId, compact = false }: { gameId: PvpGameId; compact?: boolean }) {
   if (gameId === 'pool') return <PoolToonPeek compact={compact} />;
+  if (gameId === 'penalty') return <PenaltyToonPeek compact={compact} />;
   return <WheelToonPeek compact={compact} />;
 }
 

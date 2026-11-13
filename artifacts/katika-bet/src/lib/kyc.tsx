@@ -59,10 +59,14 @@ export interface SubmitLevel2KycInput {
   idNumber: string;
 }
 
+export type OtpChannel = 'whatsapp' | 'sms';
+
 export interface SendOtpResponse {
   ok: boolean;
   maskedPhone: string;
   carrier: CarrierType;
+  channel?: OtpChannel;
+  provider?: string;
   isAirtel: boolean;
   expiresInSec: number;
   previewOtp?: string;
@@ -79,7 +83,7 @@ interface KycContextValue {
   refreshKyc: () => Promise<void>;
   submitKyc: (input: SubmitKycInput) => Promise<KycRecord>;
   submitLevel2Kyc: (input: SubmitLevel2KycInput) => Promise<KycRecord>;
-  sendPhoneOtp: (phoneNumber: string, carrier?: CarrierType) => Promise<SendOtpResponse>;
+  sendPhoneOtp: (phoneNumber: string, carrier?: CarrierType, channel?: OtpChannel) => Promise<SendOtpResponse>;
   verifyPhoneOtp: (code: string) => Promise<KycRecord>;
   recordGamePlay: (gameName: string) => Promise<void>;
   claimAirtelBonus: () => Promise<KycRecord>;
@@ -233,10 +237,10 @@ export function KycProvider({ children }: { children: ReactNode }) {
   );
 
   const sendPhoneOtp = useCallback(
-    async (phoneNumber: string, carrier?: CarrierType) => {
+    async (phoneNumber: string, carrier?: CarrierType, channel: OtpChannel = 'whatsapp') => {
       return authFetch<SendOtpResponse>('/kyc/send-otp', {
         method: 'POST',
-        body: JSON.stringify({ phoneNumber, carrier }),
+        body: JSON.stringify({ phoneNumber, carrier, channel }),
       });
     },
     [authFetch],

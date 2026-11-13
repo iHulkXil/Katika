@@ -70,12 +70,29 @@ export function ProfilePage() {
   // Inline phone verification for Airtel 200MB bonus
   const [phoneInput, setPhoneInput] = useState('');
   const [carrierInput, setCarrierInput] = useState<CarrierType>('airtel');
+  const [otpChannel, setOtpChannel] = useState<'whatsapp' | 'sms'>('whatsapp');
   const [otpSentTo, setOtpSentTo] = useState<string | null>(null);
+  const [otpSentChannel, setOtpSentChannel] = useState<'whatsapp' | 'sms'>('whatsapp');
   const [previewOtp, setPreviewOtp] = useState<string | null>(null);
   const [otpInput, setOtpInput] = useState('');
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [claimingBonus, setClaimingBonus] = useState(false);
+  const [otpCapability, setOtpCapability] = useState<{
+    whatsappLive: boolean;
+    smsLive: boolean;
+    whatsappMode: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const baseApi = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '');
+    void fetch(`${baseApi}/kyc/otp-status`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && typeof data.whatsappLive === 'boolean') setOtpCapability(data);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (phoneInput.replace(/\D/g, '').length >= 4 && detectAirtelNumber(phoneInput)) {
@@ -160,12 +177,13 @@ export function ProfilePage() {
     }
     setSendingOtp(true);
     try {
-      const res = await sendPhoneOtp(phoneInput, carrierInput);
+      const res = await sendPhoneOtp(phoneInput, carrierInput, otpChannel);
       setOtpSentTo(res.maskedPhone);
+      setOtpSentChannel(res.channel ?? otpChannel);
       setPreviewOtp(res.previewOtp ?? null);
       toast({
-        title: 'OTP Sent',
-        description: `6-digit verification code sent to ${res.maskedPhone}.`,
+        title: res.channel === 'sms' ? 'SMS OTP Sent' : 'WhatsApp OTP Sent',
+        description: `6-digit verification code sent via ${res.channel === 'sms' ? 'SMS' : 'WhatsApp'} to ${res.maskedPhone}.`,
       });
     } catch (err: any) {
       toast({
@@ -605,7 +623,7 @@ export function ProfilePage() {
             <span className={(kycRecord?.gamesPlayedCount ?? 0) > 0 ? 'text-white font-semibold' : 'text-slate-400'}>
               {(kycRecord?.gamesPlayedCount ?? 0) > 0
                 ? `Played ${kycRecord?.lastGamePlayed || 'a game'} (${kycRecord?.gamesPlayedCount} play${kycRecord?.gamesPlayedCount === 1 ? '' : 's'})`
-                : '2. Play any game (Pool, Wheel of Fortune, or Markets)'}
+                : '2. Play any game (Penalty Shootout, Pool, Wheel, or Markets)'}
             </span>
           </div>
         </div>
@@ -613,10 +631,43 @@ export function ProfilePage() {
         {/* Inline Phone OTP form if not yet verified as Airtel */}
         {(!kycRecord?.phoneVerified || kycRecord?.carrier !== 'airtel') && kycRecord?.airtelBonusStatus !== 'claimed' && (
           <div className="space-y-2 pt-2 border-t border-white/10">
-            <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-200">
-              <Phone size={12} className="text-rose-400" />
-              <span>{kycRecord?.phoneVerified ? 'Switch to an Airtel number' : 'Verify Phone Number for 200MB Offer'}</span>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-200">
+                <Phone size={12} className="text-rose-400" />
+                <span>{kycRecord?.phoneVerified ? 'Switch to an Airtel number' : 'Verify Phone Number via WhatsApp for 200MB Offer'}</span>
+              </div>
+              <div className="inline-flex rounded-lg border border-white/10 bg-[#080C0F] p-0.5 text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setOtpChannel('whatsapp')}
+                  className={`rounded-md px-2 py-0.5 font-bold transition-colors ${
+                    otpChannel === 'whatsapp' ? 'bg-[#22c55e] text-black' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOtpChannel('sms')}
+                  className={`rounded-md px-2 py-0.5 font-bold transition-colors ${
+                    otpChannel === 'sms' ? 'bg-[#22c55e] text-black' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  SMS
+                </button>
+              </div>
             </div>
+            {otpCapability && (
+              <p className="text-[10px] text-slate-400">
+                {otpChannel === 'whatsapp'
+                  ? otpCapability.whatsappLive
+                    ? `Live WhatsApp OTP active (${otpCapability.whatsappMode === 'twilio_verify' ? 'Twilio Verify' : 'Twilio WhatsApp'}).`
+                    : 'Sandbox preview active — add Twilio keys in environment for live WhatsApp delivery.'
+                  : otpCapability.smsLive
+                  ? 'Live Twilio SMS OTP active.'
+                  : 'Sandbox preview active — add Twilio keys in environment for live SMS delivery.'}
+              </p>
+            )}
             <div className="flex gap-2">
               <select
                 value={carrierInput}
@@ -637,21 +688,24 @@ export function ProfilePage() {
                 type="button"
                 disabled={sendingOtp}
                 onClick={handleSendPhoneOtp}
-                className="rounded-xl bg-[#22c55e] hover:bg-[#16a34a] px-3 py-2 text-[11px] font-black text-black disabled:opacity-50"
+                className="rounded-xl bg-[#22c55e] hover:bg-[#16a34a] px-3 py-2 text-[11px] font-black text-black disabled:opacity-50 whitespace-nowrap"
               >
-                {sendingOtp ? '...' : otpSentTo ? 'Resend' : 'Send OTP'}
+                {sendingOtp ? '...' : otpSentTo ? 'Resend' : otpChannel === 'whatsapp' ? 'Send WhatsApp OTP' : 'Send OTP'}
               </button>
             </div>
 
             {otpSentTo && (
               <div className="space-y-2 rounded-xl border border-[#22c55e]/30 bg-[#080C0F] p-2.5">
+                <div className="text-[10px] font-mono text-emerald-300">
+                  Sent via {otpSentChannel === 'sms' ? 'SMS' : 'WhatsApp'} to {otpSentTo}
+                </div>
                 {previewOtp && (
                   <button
                     type="button"
                     onClick={() => setOtpInput(previewOtp)}
                     className="text-[11px] font-mono text-[#FACC15] hover:underline block"
                   >
-                    Verification Code: <strong>{previewOtp}</strong> (tap to fill)
+                    Sandbox Code: <strong>{previewOtp}</strong> (tap to fill)
                   </button>
                 )}
                 <div className="flex gap-2">
@@ -681,11 +735,17 @@ export function ProfilePage() {
         {kycRecord?.airtelBonusStatus === 'pending_game' && (
           <div className="flex flex-wrap gap-2 pt-1">
             <Link
-              href="/games/pool"
+              href="/games/penalty"
               className="inline-flex items-center gap-1 rounded-xl bg-[#22c55e] px-3.5 py-2 text-xs font-black text-black hover:bg-[#16a34a]"
             >
               <Wifi size={13} />
-              <span>Play 8-Ball Pool (Free Practice Available)</span>
+              <span>Play Penalty Shootout (Free)</span>
+            </Link>
+            <Link
+              href="/games/pool"
+              className="inline-flex items-center gap-1 rounded-xl border border-white/15 bg-[#121820] px-3.5 py-2 text-xs font-bold text-white hover:border-[#22c55e]"
+            >
+              <span>8-Ball Pool</span>
             </Link>
             <Link
               href="/games/wheel"

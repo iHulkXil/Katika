@@ -42,11 +42,16 @@ export interface KycRecord {
   updatedAt: string;
 }
 
+export type OtpChannel = "whatsapp" | "sms";
+
 interface PendingOtp {
   code: string;
   phoneNumber: string;
   maskedPhone: string;
   carrier: CarrierType;
+  channel: OtpChannel;
+  provider: "twilio_verify" | "twilio_whatsapp" | "twilio_sms" | "sandbox";
+  attempts: number;
   expiresAt: number;
 }
 
@@ -237,6 +242,28 @@ router.get("/kyc", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/kyc/otp-status - Safe capability check for WhatsApp/SMS Twilio configuration (no secrets)
+router.get("/kyc/otp-status", (_req: Request, res: Response) => {
+  const hasTwilioAuth = Boolean(
+    process.env.TWILIO_ACCOUNT_SID?.trim() && process.env.TWILIO_AUTH_TOKEN?.trim(),
+  );
+  const hasVerify = hasTwilioAuth && Boolean(process.env.TWILIO_VERIFY_SERVICE_SID?.trim());
+  const hasWhatsappSender = hasTwilioAuth && Boolean(process.env.TWILIO_WHATSAPP_FROM?.trim());
+  const hasSmsSender = hasTwilioAuth && Boolean(process.env.TWILIO_PHONE_NUMBER?.trim());
+
+  const whatsappMode = hasVerify
+    ? "twilio_verify"
+    : hasWhatsappSender
+    ? "twilio_whatsapp"
+    : "sandbox";
+
+  return res.json({
+    whatsappLive: hasVerify || hasWhatsappSender,
+    smsLive: hasVerify || hasSmsSender,
+    whatsappMode,
+  });
+});
+
 // POST /api/kyc/submit - Submit Level 1 KYC details on initial signup (ID document NOT required here)
 router.post("/kyc/submit", async (req: Request, res: Response) => {
   try {
@@ -341,11 +368,147 @@ router.post("/kyc/level2", async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/kyc/send-otp - Send 6-digit OTP to verify phone number (and check Airtel eligibility)
+async function dispatchTwilioOtp(params: {
+  phoneNumber: string;
+  code: string;
+  channel: OtpChannel;
+}): Promise<{ provider: PendingOtp["provider"]; delivered: boolean }> {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+  const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+  const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID?.trim();
+  const whatsappFrom = process.env.TWILIO_WHATSAPP_FROM?.trim();
+  const smsFrom = process.env.TWILIO_PHONE_NUMBER?.trim();
+
+  if (!accountSid || !authToken) {
+    return { provider: "sandbox", delivered: false };
+  }
+
+  const authHeader = `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`;
+
+  // 1. Prefer Twilio Verify API (supports Channel=whatsapp or sms natively with managed templates)
+  if (verifyServiceSid) {
+    const body = new URLSearchParams({
+      To: params.phoneNumber,
+      Channel: params.channel === "whatsapp" ? "whatsapp" : "sms",
+    });
+    const resp = await fetch(
+      `https://verify.twilio.com/v2/Services/${encodeURIComponent(verifyServiceSid)}/Verifications`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: body.toString(),
+      },
+    );
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`Twilio Verify failed (${resp.status}): ${errText}`);
+    }
+    return { provider: "twilio_verify", delivered: true };
+  }
+
+  // 2. Twilio Programmable WhatsApp Messages API
+  if (params.channel === "whatsapp" && whatsappFrom) {
+    const fromAddr = whatsappFrom.startsWith("whatsapp:")
+      ? whatsappFrom
+      : `whatsapp:${whatsappFrom}`;
+    const toAddr = `whatsapp:${params.phoneNumber}`;
+    const contentSid = process.env.TWILIO_WHATSAPP_CONTENT_SID?.trim();
+    const body = contentSid
+      ? new URLSearchParams({
+          From: fromAddr,
+          To: toAddr,
+          ContentSid: contentSid,
+          ContentVariables: JSON.stringify({ "1": params.code }),
+        })
+      : new URLSearchParams({
+          From: fromAddr,
+          To: toAddr,
+          Body: `Your SIDEBET verification code is: ${params.code}. It expires in 10 minutes.`,
+        });
+    const resp = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(accountSid)}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: body.toString(),
+      },
+    );
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`Twilio WhatsApp failed (${resp.status}): ${errText}`);
+    }
+    return { provider: "twilio_whatsapp", delivered: true };
+  }
+
+  // 3. Twilio Programmable SMS fallback
+  if (smsFrom) {
+    const body = new URLSearchParams({
+      From: smsFrom,
+      To: params.phoneNumber,
+      Body: `Your SIDEBET verification code is: ${params.code}. It expires in 10 minutes.`,
+    });
+    const resp = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(accountSid)}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: body.toString(),
+      },
+    );
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`Twilio SMS failed (${resp.status}): ${errText}`);
+    }
+    return { provider: "twilio_sms", delivered: true };
+  }
+
+  return { provider: "sandbox", delivered: false };
+}
+
+async function checkTwilioVerifyOtp(phoneNumber: string, code: string): Promise<boolean> {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+  const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+  const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID?.trim();
+  if (!accountSid || !authToken || !verifyServiceSid) return false;
+
+  const authHeader = `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`;
+  const body = new URLSearchParams({
+    To: phoneNumber,
+    Code: code,
+  });
+
+  const resp = await fetch(
+    `https://verify.twilio.com/v2/Services/${encodeURIComponent(verifyServiceSid)}/VerificationCheck`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: authHeader,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+    },
+  );
+  if (!resp.ok) {
+    return false;
+  }
+  const data = (await resp.json()) as { status?: string; valid?: boolean };
+  return data.status === "approved" || data.valid === true;
+}
+
+// POST /api/kyc/send-otp - Send 6-digit OTP via WhatsApp (Twilio Verify / WhatsApp) or SMS
 router.post("/kyc/send-otp", async (req: Request, res: Response) => {
   try {
     const identity = await authenticateRequest(req);
-    const { phoneNumber, carrier } = req.body ?? {};
+    const { phoneNumber, carrier, channel } = req.body ?? {};
 
     if (typeof phoneNumber !== "string" || phoneNumber.replace(/\D/g, "").length < 7) {
       return res.status(400).json({ error: "Enter a valid mobile phone number." });
@@ -359,35 +522,47 @@ router.post("/kyc/send-otp", async (req: Request, res: Response) => {
         : autoAirtel
         ? "airtel"
         : "other";
+    const resolvedChannel: OtpChannel = channel === "sms" ? "sms" : "whatsapp";
 
     const code = String(crypto.randomInt(100000, 999999));
     const masked = maskPhone(normalized);
+
+    const dispatch = await dispatchTwilioOtp({
+      phoneNumber: normalized,
+      code,
+      channel: resolvedChannel,
+    });
 
     pendingOtps.set(identity.privyUserId, {
       code,
       phoneNumber: normalized,
       maskedPhone: masked,
       carrier: resolvedCarrier,
+      channel: resolvedChannel,
+      provider: dispatch.provider,
+      attempts: 0,
       expiresAt: Date.now() + 10 * 60 * 1000,
     });
-
-    // In sandbox/preview environments without SMS gateway credentials, surface previewOtp so verification can be completed end-to-end
-    const hasSmsGateway = Boolean(process.env.SMS_API_KEY || process.env.TWILIO_ACCOUNT_SID);
 
     return res.json({
       ok: true,
       maskedPhone: masked,
       carrier: resolvedCarrier,
+      channel: resolvedChannel,
+      provider: dispatch.provider,
       isAirtel: resolvedCarrier === "airtel",
       expiresInSec: 600,
-      ...(hasSmsGateway ? {} : { previewOtp: code }),
+      ...(dispatch.delivered ? {} : { previewOtp: code }),
     });
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Twilio ")) {
+      return res.status(502).json({ error: error.message });
+    }
     return handleAuthError(res, error);
   }
 });
 
-// POST /api/kyc/verify-otp - Verify 6-digit phone OTP
+// POST /api/kyc/verify-otp - Verify 6-digit WhatsApp/SMS phone OTP
 router.post("/kyc/verify-otp", async (req: Request, res: Response) => {
   try {
     const identity = await authenticateRequest(req);
@@ -401,8 +576,29 @@ router.post("/kyc/verify-otp", async (req: Request, res: Response) => {
       pendingOtps.delete(identity.privyUserId);
       return res.status(400).json({ error: "Verification code expired. Please request a new OTP." });
     }
-    if (typeof code !== "string" || code.trim() !== pending.code) {
-      return res.status(400).json({ error: "Invalid 6-digit verification code." });
+
+    if (typeof code !== "string" || !/^\d{4,8}$/.test(code.trim())) {
+      return res.status(400).json({ error: "Enter a valid numeric verification code." });
+    }
+
+    const trimmedCode = code.trim();
+    let isValid = false;
+
+    if (pending.provider === "twilio_verify") {
+      isValid = await checkTwilioVerifyOtp(pending.phoneNumber, trimmedCode);
+    } else {
+      isValid = trimmedCode === pending.code;
+    }
+
+    if (!isValid) {
+      pending.attempts += 1;
+      if (pending.attempts >= 5) {
+        pendingOtps.delete(identity.privyUserId);
+        return res.status(429).json({
+          error: "Too many invalid attempts. Please request a new WhatsApp OTP.",
+        });
+      }
+      return res.status(400).json({ error: "Invalid verification code." });
     }
 
     pendingOtps.delete(identity.privyUserId);

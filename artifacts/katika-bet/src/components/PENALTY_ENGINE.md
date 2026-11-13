@@ -1,22 +1,16 @@
-# Penalty shootout engine
+# Cartoon 3D Penalty Shootout Engine (`soccer.io` Import)
 
-Rules are frozen. Do not change resolveShot while restyling.
+Imported and customized from [`jainalokk/soccer.io`](https://github.com/jainalokk/soccer.io) under the MIT License (`src/games/penalty/THIRD_PARTY_LICENSE.md`).
 
-- 3v3. User is team A. Stake in, pot stake*2 on win.
-- Directions: left / centre / right.
-- Score if shot direction !== keeper dive.
-- Green composure ring (<20) still scores 42% of the time even if the keeper guesses.
-- Red ring is >34. Yellow in between.
-- Power is cosmetic (82-118 km/h) plus pitch low/mid/high/panenka. It does not change the score.
-- Keeper control-all stays.
+## Preserved Core Mechanics
+- **Ball Physics (`src/games/penalty/utils/Physics.ts`)**: Gravity, drag, turf bounce restitution, spin/curl, swept goal-line crossing, and goalpost/crossbar deflections.
+- **Shooting & Goalkeeping (`src/games/penalty/utils/Controls.ts`, `Player.ts`, `Goalkeeper.ts`)**: Directional aiming with goal reticle, hold-to-charge oscillating power bar, striker sprint run-up synced to kick impact, difficulty-scaled AI dives (`1–100`), and manual keeper diving.
+- **Game Modes**: Shootout vs AI, Local 2-Player (Pass-and-Play & Simultaneous `WASD` vs `Arrows`), Arcade Striker (`1–100`), and Arcade Keeper (`1–100`).
+- **Shootout Rules**: 5 penalties per team with early-clinch checks and Sudden Death tiebreakers.
 
-## Models (2026-10-06)
-
-Keep only the official local `Footballer Animated` model (`/models/footballer-animated.glb`).
-All other legacy/generic glb models have been purged.
-
-Presets:
-- Striker: `/models/footballer-animated.glb`
-- Keeper: `/models/footballer-animated.glb`
-
-Complete soccer kit humanoid rigged with 22 animations covering Striker actions (Idle, Run, Sprint, Kick, Pass, Bicycle) and Goalkeeper actions (GK_Dive, GK_Catch, GK_Miss). Capsule bodies are hidden when the 3D model loads.
+## Modular Asset Pipeline (`AssetManifest.ts` & `AssetManager.ts`)
+Characters, teams, stadiums, balls, and sound effects are decoupled from gameplay logic:
+- **3D Rigged Characters (`gltf`)**: Uses `/models/footballer-animated.glb` (`22` Mixamo animations including `Idle`, `Run`, `Sprint`, `Kick`, `GK_Dive`, `GK_Catch`, `Spin`, `Bicycle`, `Stumble`) with cel-shaded `MeshToonMaterial`, per-team kit tinting, hand-bone keeper gloves, and hair alpha fixes.
+- **Animated 2D Sprite Sheets (`spritesheet`)**: Supports configurable `cols`, `rows`, `fps`, and per-state frame ranges (`SpriteMaterial`).
+- **Procedural Cartoon Rig (`procedural-toon`)**: Instant fallback mascot rig.
+- **Audio (`audioUrls`)**: Custom audio URLs (`whistle`, `kick`, `save`, `goal`, `post`, `miss`, `tick`, `win`) with Web Audio API procedural synthesis fallback.

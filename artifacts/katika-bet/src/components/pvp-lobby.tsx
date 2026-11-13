@@ -34,6 +34,19 @@ const PVP_GAMES = [
     features: ['SOL · ETH · BTC · USDT', 'Custom Stake Inside', 'Instant 3-Min Auto Settle'],
     ctaLabel: 'Enter Wheel of Fortune',
   },
+  {
+    id: 'penalty',
+    href: '/games/penalty',
+    emoji: '⚽',
+    badge: '3D SHOOTOUT',
+    subtitle: '5 Kicks + Sudden Death',
+    title: 'Penalty Shootout',
+    description:
+      'Cartoon 3D penalty arena with rigged footballers. Play 5-kick Sudden Death vs AI, Local 2-Player, or Arcade Levels inside.',
+    accent: '#38BDF8',
+    features: ['5 Kicks + Sudden Death', 'Local 2-Player Mode', 'Mobile Touch & Auto Settle'],
+    ctaLabel: 'Enter Penalty Arena',
+  },
 ] as const;
 
 export function PvPLobby() {

@@ -74,7 +74,7 @@ export function AirtelOfferBanner() {
               {status === 'unlocked'
                 ? `Airtel line ${record.maskedPhone || ''} verified & game played. Claim your instant 200MB bundle now.`
                 : status === 'pending_game'
-                ? 'Play any Prediction Market, 8-Ball Pool (including Free Practice at $0), or Wheel of Fortune to unlock.'
+                ? 'Play Penalty Shootout, 8-Ball Pool (Free Practice at $0), Wheel of Fortune, or Markets to unlock.'
                 : 'Verify your Airtel phone number under Profile KYC and play any game to unlock 200MB FREE mobile data.'}
             </p>
           </div>
