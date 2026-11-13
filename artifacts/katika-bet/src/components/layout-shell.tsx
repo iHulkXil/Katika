@@ -70,9 +70,15 @@ export function LayoutShell({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#080C0F] text-[#F3F4F6] selection:bg-[#22c55e]/30 selection:text-white">
+    <div className="relative min-h-screen bg-[#070B0E] text-[#F3F4F6] selection:bg-[#22c55e]/30 selection:text-white">
+      {/* Global Custom Doodle Wallpaper Background */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-[#070B0E]">
+        <div className="app-doodle-pattern absolute inset-0" />
+        <div className="app-doodle-vignette absolute inset-0" />
+      </div>
+
       {/* Sleek Floating / Dock Sidebar matching the reference design */}
-      <aside className="fixed inset-y-4 left-4 z-40 hidden w-64 flex-col justify-between rounded-3xl border border-white/[0.08] bg-[#0D1217]/95 p-4 shadow-2xl backdrop-blur-xl lg:flex">
+      <aside className="fixed inset-y-4 left-4 z-40 hidden w-64 flex-col justify-between rounded-3xl border border-white/[0.08] bg-[#0D1217]/88 p-4 shadow-2xl backdrop-blur-xl lg:flex">
         {/* Top Brand Logo with neon glow */}
         <div>
           <Link href="/" className="flex items-center gap-3 px-2 py-2 group">
@@ -148,9 +154,9 @@ export function LayoutShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <div className="lg:pl-72">
+      <div className="relative z-10 lg:pl-72">
         {/* Top Header Bar */}
-        <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#080C0F]/85 backdrop-blur-xl">
+        <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#070B0E]/75 backdrop-blur-xl">
           <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-8">
             {/* Mobile Brand */}
             <Link href="/" className="flex items-center gap-2 lg:hidden">
@@ -228,7 +234,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
       </div>
 
       {/* Mobile Bottom Dock Bar */}
-      <nav className="fixed bottom-3 left-4 right-4 z-40 rounded-2xl border border-white/[0.08] bg-[#0D1217]/95 p-2 shadow-2xl backdrop-blur-xl lg:hidden">
+      <nav className="fixed bottom-3 left-4 right-4 z-40 rounded-2xl border border-white/[0.08] bg-[#0D1217]/90 p-2 shadow-2xl backdrop-blur-xl lg:hidden">
         <div className="flex items-center justify-around">
           {mobileBottomNav.map((item) => {
             const active = isActive(item.href, location);

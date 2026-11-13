@@ -174,10 +174,10 @@ export function CryptoWalletDashboard() {
   }, [activeAsset, chartTimeframe]);
 
   return (
-    <div className="relative min-h-screen bg-[#080C0F] text-[#F3F4F6] p-4 lg:p-6 overflow-hidden">
-      {/* Ambient background rays / glow matching screenshot */}
+    <div className="relative min-h-screen text-[#F3F4F6] p-4 lg:p-6 overflow-hidden">
+      {/* Ambient background rays / glow */}
       <div
-        className="pointer-events-none absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full blur-[140px] opacity-25"
+        className="pointer-events-none absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full blur-[140px] opacity-20"
         style={{
           background: 'radial-gradient(circle, rgba(34,197,94,0.4) 0%, rgba(16,185,129,0.1) 60%, transparent 100%)',
         }}
@@ -186,13 +186,6 @@ export function CryptoWalletDashboard() {
         className="pointer-events-none absolute top-1/4 right-0 h-[500px] w-[500px] rounded-full blur-[160px] opacity-15"
         style={{
           background: 'radial-gradient(circle, rgba(236,72,153,0.3) 0%, rgba(168,85,247,0.1) 60%, transparent 100%)',
-        }}
-      />
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(45deg, #22c55e 0, #22c55e 1px, transparent 0, transparent 50px)',
         }}
       />
 

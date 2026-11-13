@@ -643,7 +643,7 @@ export function PoolGamePage() {
   const stripesLeft = ballsRef.current.filter((b) => b.type === 'stripe' && !b.inPocket).length;
 
   return (
-    <div className="min-h-screen bg-[#080C0F] text-[#F3F4F6] p-4 lg:p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="min-h-screen text-[#F3F4F6] p-4 lg:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/[0.08] pb-4">
         <div className="flex items-center gap-3">
