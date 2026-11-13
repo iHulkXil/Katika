@@ -177,7 +177,7 @@ router.get("/clash/history", async (req, res) => {
       ),
     ).orderBy(desc(clashesTable.createdAt)).limit(20);
 
-    const clashes = rows.map((r) => ({
+    const clashes = rows.map((r: any) => ({
       id: r.id,
       challengerCardName: (r.creatorStats as any)?.name ?? "Player",
       opponentCardName: (r.opponentStats as any)?.name ?? "Bot Opponent",
@@ -204,7 +204,7 @@ router.get("/clash/recent", async (_req, res) => {
       .orderBy(desc(clashesTable.createdAt))
       .limit(10);
 
-    const clashes = rows.map((r) => ({
+    const clashes = rows.map((r: any) => ({
       id: r.id,
       challengerCardName: (r.creatorStats as any)?.name ?? "Player",
       opponentCardName: (r.opponentStats as any)?.name ?? "Bot Opponent",

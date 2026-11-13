@@ -26,10 +26,13 @@ export interface KycRecord {
   dob: string;
   country: string;
   address: string;
-  idType: IdDocumentType;
-  idNumberMasked: string;
+  idType?: IdDocumentType;
+  idNumberMasked?: string;
   kycCompleted: boolean;
   kycSubmittedAt?: string;
+  kycLevel2Completed: boolean;
+  kycLevel2SubmittedAt?: string;
+  kycLevel: 0 | 1 | 2;
   phoneNumber?: string;
   maskedPhone?: string;
   carrier: CarrierType | null;
@@ -49,6 +52,9 @@ export interface SubmitKycInput {
   dob: string;
   country: string;
   address: string;
+}
+
+export interface SubmitLevel2KycInput {
   idType: IdDocumentType;
   idNumber: string;
 }
@@ -66,11 +72,13 @@ interface KycContextValue {
   record: KycRecord | null;
   loading: boolean;
   isKycComplete: boolean;
+  isLevel2Complete: boolean;
   needsKyc: boolean;
   onboardingOpen: boolean;
   setOnboardingOpen: (open: boolean) => void;
   refreshKyc: () => Promise<void>;
   submitKyc: (input: SubmitKycInput) => Promise<KycRecord>;
+  submitLevel2Kyc: (input: SubmitLevel2KycInput) => Promise<KycRecord>;
   sendPhoneOtp: (phoneNumber: string, carrier?: CarrierType) => Promise<SendOtpResponse>;
   verifyPhoneOtp: (code: string) => Promise<KycRecord>;
   recordGamePlay: (gameName: string) => Promise<void>;
@@ -193,8 +201,28 @@ export function KycProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('sidebet_terms_accepted', 'true');
       pushNotification({
         id: `kyc-verified-${updated.privyUserId}`,
-        title: 'KYC Identity Verified',
-        message: 'Your account verification is complete. Verify an Airtel number & play any game to unlock 200MB free data.',
+        title: 'Level 1 KYC Verified',
+        message: 'Welcome to SIDEBET! Verify your Airtel number & play any game to claim 200MB free data, or add ID verification in Profile.',
+        type: 'system',
+        href: '/profile',
+        userId: user?.id,
+      });
+      return updated;
+    },
+    [authFetch, user?.id],
+  );
+
+  const submitLevel2Kyc = useCallback(
+    async (input: SubmitLevel2KycInput) => {
+      const updated = await authFetch<KycRecord>('/kyc/level2', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      });
+      setRecord(updated);
+      pushNotification({
+        id: `kyc-level2-${updated.privyUserId}`,
+        title: 'Level 2 KYC Verified',
+        message: 'Your government ID document has been verified under Profile KYC.',
         type: 'system',
         href: '/profile',
         userId: user?.id,
@@ -298,6 +326,7 @@ export function KycProvider({ children }: { children: ReactNode }) {
   }, [authFetch, user?.id]);
 
   const isKycComplete = Boolean(record?.kycCompleted);
+  const isLevel2Complete = Boolean(record?.kycLevel2Completed || record?.idNumberMasked);
   const needsKyc = Boolean(ready && authenticated && !loading && !isKycComplete);
 
   const value = useMemo<KycContextValue>(
@@ -305,11 +334,13 @@ export function KycProvider({ children }: { children: ReactNode }) {
       record,
       loading,
       isKycComplete,
+      isLevel2Complete,
       needsKyc,
       onboardingOpen,
       setOnboardingOpen,
       refreshKyc,
       submitKyc,
+      submitLevel2Kyc,
       sendPhoneOtp,
       verifyPhoneOtp,
       recordGamePlay,
@@ -319,10 +350,12 @@ export function KycProvider({ children }: { children: ReactNode }) {
       record,
       loading,
       isKycComplete,
+      isLevel2Complete,
       needsKyc,
       onboardingOpen,
       refreshKyc,
       submitKyc,
+      submitLevel2Kyc,
       sendPhoneOtp,
       verifyPhoneOtp,
       recordGamePlay,

@@ -21,10 +21,13 @@ export interface KycRecord {
   dob: string; // YYYY-MM-DD
   country: string;
   address: string;
-  idType: IdDocumentType;
-  idNumberMasked: string;
+  idType?: IdDocumentType;
+  idNumberMasked?: string;
   kycCompleted: boolean;
   kycSubmittedAt?: string;
+  kycLevel2Completed: boolean;
+  kycLevel2SubmittedAt?: string;
+  kycLevel: 0 | 1 | 2;
   phoneNumber?: string;
   maskedPhone?: string;
   carrier: CarrierType | null;
@@ -86,15 +89,26 @@ function defaultRecord(privyUserId: string): KycRecord {
     dob: "",
     country: "",
     address: "",
-    idType: "national_id",
-    idNumberMasked: "",
     kycCompleted: false,
+    kycLevel2Completed: false,
+    kycLevel: 0,
     carrier: null,
     phoneVerified: false,
     gamesPlayedCount: 0,
     airtelBonusMb: 200,
     airtelBonusStatus: "locked",
     updatedAt: new Date().toISOString(),
+  };
+}
+
+function normalizeRecord(record: KycRecord): KycRecord {
+  const hasLevel2 = Boolean(record.kycLevel2Completed || record.idNumberMasked);
+  const kycLevel: 0 | 1 | 2 = !record.kycCompleted ? 0 : hasLevel2 ? 2 : 1;
+  return {
+    ...record,
+    kycLevel2Completed: hasLevel2,
+    kycLevel,
+    airtelBonusStatus: computeBonusStatus(record),
   };
 }
 
@@ -210,19 +224,20 @@ function handleAuthError(res: Response, error: unknown) {
   return res.status(500).json({ error: "KYC service error" });
 }
 
-// GET /api/kyc - Fetch current authenticated user's KYC & Airtel 200MB bonus state
+// GET /api/kyc - Fetch current authenticated user's KYC (Level 1 + Level 2) & Airtel 200MB bonus state
 router.get("/kyc", async (req: Request, res: Response) => {
   try {
     const identity = await authenticateRequest(req);
-    const record = kycStore[identity.privyUserId] ?? defaultRecord(identity.privyUserId);
-    record.airtelBonusStatus = computeBonusStatus(record);
+    const record = normalizeRecord(
+      kycStore[identity.privyUserId] ?? defaultRecord(identity.privyUserId),
+    );
     return res.json(record);
   } catch (error) {
     return handleAuthError(res, error);
   }
 });
 
-// POST /api/kyc/submit - Submit mandatory KYC details on signup
+// POST /api/kyc/submit - Submit Level 1 KYC details on initial signup (ID document NOT required here)
 router.post("/kyc/submit", async (req: Request, res: Response) => {
   try {
     const identity = await authenticateRequest(req);
@@ -246,6 +261,58 @@ router.post("/kyc/submit", async (req: Request, res: Response) => {
     if (typeof address !== "string" || address.trim().length < 3) {
       return res.status(400).json({ error: "Residential address or city is required." });
     }
+
+    const validIdTypes: IdDocumentType[] = ["national_id", "passport", "drivers_license"];
+    const hasOptionalId =
+      validIdTypes.includes(idType) &&
+      typeof idNumber === "string" &&
+      idNumber.trim().length >= 4;
+
+    const existing = kycStore[identity.privyUserId] ?? defaultRecord(identity.privyUserId);
+    const nowIso = new Date().toISOString();
+
+    const updated = normalizeRecord({
+      ...existing,
+      privyUserId: identity.privyUserId,
+      fullName: fullName.trim(),
+      dob: dob.trim(),
+      country: country.trim(),
+      address: address.trim(),
+      ...(hasOptionalId
+        ? {
+            idType,
+            idNumberMasked: maskIdNumber(idNumber),
+            kycLevel2Completed: true,
+            kycLevel2SubmittedAt: existing.kycLevel2SubmittedAt ?? nowIso,
+          }
+        : {}),
+      kycCompleted: true,
+      kycSubmittedAt: existing.kycSubmittedAt ?? nowIso,
+      updatedAt: nowIso,
+    });
+
+    kycStore[identity.privyUserId] = updated;
+    saveKycStore(kycStore);
+
+    return res.json(updated);
+  } catch (error) {
+    return handleAuthError(res, error);
+  }
+});
+
+// POST /api/kyc/level2 - Submit Level 2 KYC (Government ID document) under Profile
+router.post("/kyc/level2", async (req: Request, res: Response) => {
+  try {
+    const identity = await authenticateRequest(req);
+    const { idType, idNumber } = req.body ?? {};
+
+    const existing = kycStore[identity.privyUserId] ?? defaultRecord(identity.privyUserId);
+    if (!existing.kycCompleted) {
+      return res.status(400).json({
+        error: "Please complete Level 1 profile verification first.",
+      });
+    }
+
     const validIdTypes: IdDocumentType[] = ["national_id", "passport", "drivers_license"];
     if (!validIdTypes.includes(idType)) {
       return res.status(400).json({ error: "Please choose a valid ID document type." });
@@ -254,23 +321,16 @@ router.post("/kyc/submit", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "ID document number must be at least 4 characters." });
     }
 
-    const existing = kycStore[identity.privyUserId] ?? defaultRecord(identity.privyUserId);
     const nowIso = new Date().toISOString();
-
-    const updated: KycRecord = {
+    const updated = normalizeRecord({
       ...existing,
       privyUserId: identity.privyUserId,
-      fullName: fullName.trim(),
-      dob: dob.trim(),
-      country: country.trim(),
-      address: address.trim(),
       idType,
       idNumberMasked: maskIdNumber(idNumber),
-      kycCompleted: true,
-      kycSubmittedAt: existing.kycSubmittedAt ?? nowIso,
+      kycLevel2Completed: true,
+      kycLevel2SubmittedAt: existing.kycLevel2SubmittedAt ?? nowIso,
       updatedAt: nowIso,
-    };
-    updated.airtelBonusStatus = computeBonusStatus(updated);
+    });
 
     kycStore[identity.privyUserId] = updated;
     saveKycStore(kycStore);
@@ -350,7 +410,7 @@ router.post("/kyc/verify-otp", async (req: Request, res: Response) => {
     const existing = kycStore[identity.privyUserId] ?? defaultRecord(identity.privyUserId);
     const nowIso = new Date().toISOString();
 
-    const updated: KycRecord = {
+    const updated = normalizeRecord({
       ...existing,
       privyUserId: identity.privyUserId,
       phoneNumber: pending.phoneNumber,
@@ -359,8 +419,7 @@ router.post("/kyc/verify-otp", async (req: Request, res: Response) => {
       phoneVerified: true,
       phoneVerifiedAt: nowIso,
       updatedAt: nowIso,
-    };
-    updated.airtelBonusStatus = computeBonusStatus(updated);
+    });
 
     kycStore[identity.privyUserId] = updated;
     saveKycStore(kycStore);
@@ -384,14 +443,13 @@ router.post("/kyc/record-game", async (req: Request, res: Response) => {
     const prevStatus = computeBonusStatus(existing);
     const nowIso = new Date().toISOString();
 
-    const updated: KycRecord = {
+    const updated = normalizeRecord({
       ...existing,
       privyUserId: identity.privyUserId,
       gamesPlayedCount: (existing.gamesPlayedCount || 0) + 1,
       lastGamePlayed: gameName,
       updatedAt: nowIso,
-    };
-    updated.airtelBonusStatus = computeBonusStatus(updated);
+    });
 
     kycStore[identity.privyUserId] = updated;
     saveKycStore(kycStore);
@@ -415,7 +473,7 @@ router.post("/kyc/claim-bonus", async (req: Request, res: Response) => {
     const status = computeBonusStatus(existing);
 
     if (status === "claimed") {
-      return res.json(existing);
+      return res.json(normalizeRecord(existing));
     }
     if (status !== "unlocked") {
       return res.status(400).json({
@@ -424,13 +482,13 @@ router.post("/kyc/claim-bonus", async (req: Request, res: Response) => {
     }
 
     const voucher = `AIRTEL-200MB-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
-    const updated: KycRecord = {
+    const updated = normalizeRecord({
       ...existing,
       airtelBonusStatus: "claimed",
       airtelBonusClaimedAt: new Date().toISOString(),
       airtelVoucherCode: voucher,
       updatedAt: new Date().toISOString(),
-    };
+    });
 
     kycStore[identity.privyUserId] = updated;
     saveKycStore(kycStore);

@@ -75,7 +75,7 @@ export function MarketsHome({
   sideRail?: ReactNode;
 }) {
   const { authenticated, user, login } = usePrivy();
-  const { recordGamePlay, record: kycRecord } = useKyc();
+  const { recordGamePlay } = useKyc();
   const { wallets } = useWallets();
   const { signAndSendTransaction } = useSignAndSendTransaction();
   const { toast } = useToast();
@@ -357,13 +357,6 @@ export function MarketsHome({
             <p className="text-xs text-slate-400">
               Trade live outcome contracts across Politics, Nigerian Politics, Crypto, Sports, Finance, and Lifestyle—or peek into PvP games on the side.
             </p>
-            {(!authenticated || (kycRecord && kycRecord.airtelBonusStatus !== 'claimed')) && (
-              <div className="pt-1.5 flex flex-wrap items-center gap-2 text-[11px]">
-                <span className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/35 bg-rose-500/10 px-2.5 py-1 font-semibold text-rose-300">
-                  🎁 Airtel Bonus: Sign up with KYC, verify your Airtel number &amp; play any game to get 200MB FREE data
-                </span>
-              </div>
-            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">

@@ -19,6 +19,7 @@ import { NotificationsMenu } from '@/components/notifications-menu';
 import { useUserAvatar } from '@/lib/avatar';
 import { useUserWalletBalance } from '@/lib/balance';
 import { useKyc } from '@/lib/kyc';
+import { AirtelOfferBanner } from '@/components/airtel-offer-banner';
 
 const navItems = [
   { href: '/', label: 'Discover', icon: Compass },
@@ -156,17 +157,17 @@ export function LayoutShell({ children }: { children: ReactNode }) {
           <div className="rounded-2xl border border-amber-500/30 bg-[#18130B] p-3.5 space-y-2.5">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
               <Lock size={13} className="text-amber-400" />
-              <span>KYC Verification Required</span>
+              <span>Level 1 Verification Required</span>
             </div>
             <p className="text-[11px] text-slate-300 leading-relaxed">
-              Submit your KYC details &amp; verify an Airtel number for a 200MB bonus to unlock full trading.
+              Enter your name, DOB &amp; address (no ID document needed yet) to unlock full trading and PvP.
             </p>
             <button
               type="button"
               onClick={() => setOnboardingOpen(true)}
               className="w-full rounded-xl bg-[#22c55e] hover:bg-[#16a34a] py-2 text-xs font-extrabold text-black transition-all"
             >
-              Complete KYC
+              Complete Level 1 KYC
             </button>
           </div>
         ) : authenticated ? (
@@ -191,7 +192,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
               >
                 {record?.airtelBonusStatus === 'unlocked'
                   ? '🎁 Claim 200MB Airtel Bonus →'
-                  : '📶 Airtel 200MB Bonus: Verify & Play →'}
+                  : '📶 Airtel 200MB Offer →'}
               </Link>
             )}
           </div>
@@ -202,7 +203,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
               <span>Discover Mode</span>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              Sign up + KYC with Email or Google. Airtel users who verify phone &amp; play any game get <strong className="text-rose-300">200MB free</strong>.
+              Sign in with Email or Google and complete quick Level 1 profile setup to trade markets &amp; join PvP.
             </p>
             <WalletAuthButton className="w-full" />
           </div>
@@ -281,7 +282,10 @@ export function LayoutShell({ children }: { children: ReactNode }) {
         </header>
 
         {/* Main Body */}
-        <main className="min-h-[calc(100vh-4rem)] pb-24 lg:pb-8">{children}</main>
+        <main className="min-h-[calc(100vh-4rem)] pb-24 lg:pb-8">
+          <AirtelOfferBanner />
+          {children}
+        </main>
 
         {/* Footer */}
         <footer className="hidden border-t border-white/[0.06] px-8 py-5 text-center text-xs text-slate-500 lg:flex items-center justify-between">

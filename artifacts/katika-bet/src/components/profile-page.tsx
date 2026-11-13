@@ -5,7 +5,7 @@ import { BetHistory } from '@/components/bet-history';
 import { getTelegramUser, isTelegramWebApp } from '@/lib/telegram';
 import { useUserAvatar, saveCustomAvatar } from '@/lib/avatar';
 import { processImageFile } from '@/lib/avatar-upload';
-import { detectAirtelNumber, useKyc, type CarrierType } from '@/lib/kyc';
+import { detectAirtelNumber, useKyc, type CarrierType, type IdDocumentType } from '@/lib/kyc';
 import { useToast } from '@/hooks/use-toast';
 import {
   CreditCard,
@@ -27,7 +27,15 @@ import {
   CheckCircle2,
   Loader2,
   Wifi,
+  IdCard,
+  Lock,
 } from 'lucide-react';
+
+const ID_TYPE_LABELS: Record<IdDocumentType, string> = {
+  national_id: 'National ID / NIN',
+  passport: 'International Passport',
+  drivers_license: "Driver's License",
+};
 
 export function ProfilePage() {
   const { user, authenticated, login } = usePrivy();
@@ -37,7 +45,9 @@ export function ProfilePage() {
   const { avatarUrl, hasCustomAvatar } = useUserAvatar();
   const {
     record: kycRecord,
+    isLevel2Complete,
     setOnboardingOpen,
+    submitLevel2Kyc,
     sendPhoneOtp,
     verifyPhoneOtp,
     claimAirtelBonus,
@@ -50,6 +60,12 @@ export function ProfilePage() {
   const [showAvatarEditor, setShowAvatarEditor] = useState(false);
   const [avatarUrlInput, setAvatarUrlInput] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  // Level 2 KYC (ID document)
+  const [idType, setIdType] = useState<IdDocumentType>('national_id');
+  const [idNumber, setIdNumber] = useState('');
+  const [submittingLevel2, setSubmittingLevel2] = useState(false);
+  const [editingLevel2, setEditingLevel2] = useState(false);
 
   // Inline phone verification for Airtel 200MB bonus
   const [phoneInput, setPhoneInput] = useState('');
@@ -209,6 +225,36 @@ export function ProfilePage() {
     }
   };
 
+  const handleSubmitLevel2 = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (idNumber.trim().length < 4) {
+      toast({
+        title: 'Invalid ID Number',
+        description: 'Enter at least 4 characters from your government-issued ID.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setSubmittingLevel2(true);
+    try {
+      await submitLevel2Kyc({ idType, idNumber: idNumber.trim() });
+      setIdNumber('');
+      setEditingLevel2(false);
+      toast({
+        title: 'Level 2 KYC Verified!',
+        description: 'Your government ID document has been verified on your profile.',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Level 2 Verification Failed',
+        description: err?.message || 'Could not verify ID document.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmittingLevel2(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-xl px-4 pt-6 pb-24 space-y-5">
       {/* Hidden File Input for Avatar Upload */}
@@ -327,210 +373,351 @@ export function ProfilePage() {
         )}
       </div>
 
-      {/* KYC Verification & Airtel 200MB Data Bonus Card */}
-      <div className="rounded-3xl border border-white/[0.08] bg-[#0E1318] p-5 space-y-4 shadow-lg">
+      {/* Dedicated KYC Verification Section (Level 1 + Level 2) */}
+      <section id="kyc-section" className="rounded-3xl border border-white/[0.08] bg-[#0E1318] p-5 space-y-4 shadow-lg">
         <div className="flex items-center justify-between border-b border-white/5 pb-3">
           <div className="flex items-center gap-2">
             <ShieldCheck size={17} className="text-[#4ade80]" />
-            <h2 className="text-xs font-bold uppercase tracking-wider text-white">KYC &amp; Airtel 200MB Bonus</h2>
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-white">KYC Verification</h2>
+              <p className="text-[10px] text-slate-400">Tiered identity status for your SIDEBET account</p>
+            </div>
           </div>
+
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-mono font-bold ${
+              isLevel2Complete
+                ? 'bg-[#22c55e]/15 border border-[#22c55e]/35 text-[#4ade80]'
+                : kycRecord?.kycCompleted
+                ? 'bg-sky-500/15 border border-sky-500/35 text-sky-300'
+                : 'bg-amber-500/15 border border-amber-500/35 text-amber-300'
+            }`}
+          >
+            {isLevel2Complete ? (
+              <>
+                <CheckCircle2 size={11} /> LEVEL 2 VERIFIED
+              </>
+            ) : kycRecord?.kycCompleted ? (
+              <>
+                <CheckCircle2 size={11} /> LEVEL 1 VERIFIED
+              </>
+            ) : (
+              <>
+                <Lock size={11} /> UNVERIFIED
+              </>
+            )}
+          </span>
+        </div>
+
+        {/* Level 1 KYC Card */}
+        <div className="rounded-2xl border border-white/[0.07] bg-[#080C0F] p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="font-mono text-[9px] uppercase tracking-wider text-[#4ade80] font-bold">
+                Level 1 · Basic Profile (Completed at Signup)
+              </span>
+              <h3 className="text-xs font-bold text-white mt-0.5">Personal Identity &amp; Age Check (18+)</h3>
+            </div>
+            {kycRecord?.kycCompleted ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e]/15 border border-[#22c55e]/30 px-2 py-0.5 text-[10px] font-mono font-bold text-[#4ade80]">
+                <CheckCircle2 size={10} /> PASSED
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setOnboardingOpen(true)}
+                className="rounded-full bg-[#22c55e] px-3 py-1 text-[10px] font-black text-black"
+              >
+                Complete Level 1
+              </button>
+            )}
+          </div>
+
           {kycRecord?.kycCompleted ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e]/15 border border-[#22c55e]/30 px-2.5 py-0.5 text-[10px] font-mono font-bold text-[#4ade80]">
-              <CheckCircle2 size={11} /> KYC VERIFIED
-            </span>
+            <div className="grid grid-cols-2 gap-2.5 pt-1 text-[11px] border-t border-white/5">
+              <div>
+                <span className="text-slate-500 block font-mono text-[9px] uppercase">Full Name</span>
+                <span className="font-semibold text-white">{kycRecord.fullName}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block font-mono text-[9px] uppercase">Date of Birth</span>
+                <span className="font-mono text-white">{kycRecord.dob} (18+)</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block font-mono text-[9px] uppercase">Country</span>
+                <span className="text-slate-200">{kycRecord.country}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block font-mono text-[9px] uppercase">Address</span>
+                <span className="text-slate-200 truncate block">{kycRecord.address}</span>
+              </div>
+            </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => setOnboardingOpen(true)}
-              className="rounded-full bg-[#22c55e] px-2.5 py-0.5 text-[10px] font-bold text-black"
-            >
-              Complete KYC
-            </button>
+            <p className="text-[11px] text-slate-400">
+              Complete Level 1 basic identity (name, DOB, country, address) to unlock trading and Level 2 verification.
+            </p>
           )}
         </div>
 
-        {kycRecord?.kycCompleted && (
-          <div className="grid grid-cols-2 gap-2.5 rounded-2xl border border-white/5 bg-[#080C0F] p-3 text-[11px]">
-            <div>
-              <span className="text-slate-500 block font-mono text-[9px] uppercase">Verified Name</span>
-              <span className="font-semibold text-white">{kycRecord.fullName}</span>
+        {/* Level 2 KYC Card (ID Document) */}
+        <div className="rounded-2xl border border-white/[0.07] bg-[#080C0F] p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-300">
+                <IdCard size={16} />
+              </div>
+              <div>
+                <span className="font-mono text-[9px] uppercase tracking-wider text-sky-300 font-bold block">
+                  Level 2 · Government ID Document
+                </span>
+                <h3 className="text-xs font-bold text-white">Enhanced Verification</h3>
+              </div>
+            </div>
+
+            {isLevel2Complete ? (
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e]/15 border border-[#22c55e]/30 px-2 py-0.5 text-[10px] font-mono font-bold text-[#4ade80]">
+                  <CheckCircle2 size={10} /> VERIFIED
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setEditingLevel2(!editingLevel2)}
+                  className="text-[10px] font-semibold text-slate-400 hover:text-white underline"
+                >
+                  {editingLevel2 ? 'Cancel' : 'Update ID'}
+                </button>
+              </div>
+            ) : (
+              <span className="rounded-full bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-mono font-bold text-amber-300">
+                OPTIONAL UPGRADE
+              </span>
+            )}
+          </div>
+
+          {isLevel2Complete && !editingLevel2 ? (
+            <div className="grid grid-cols-2 gap-2.5 pt-2 text-[11px] border-t border-white/5">
+              <div>
+                <span className="text-slate-500 block font-mono text-[9px] uppercase">Document Type</span>
+                <span className="font-semibold text-white">
+                  {kycRecord?.idType ? ID_TYPE_LABELS[kycRecord.idType] : 'Government ID'}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-500 block font-mono text-[9px] uppercase">ID Number</span>
+                <span className="font-mono text-[#4ade80]">{kycRecord?.idNumberMasked}</span>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmitLevel2} className="space-y-3 pt-1 border-t border-white/5">
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Submit a valid government ID document to upgrade your account to <strong className="text-white">Level 2 KYC</strong> for higher withdrawal &amp; market limits.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-300 mb-1">
+                    ID Document Type
+                  </label>
+                  <select
+                    value={idType}
+                    onChange={(e) => setIdType(e.target.value as IdDocumentType)}
+                    className="w-full rounded-xl border border-white/10 bg-[#0E1318] px-3 py-2 text-xs text-white focus:border-[#22c55e] focus:outline-none"
+                  >
+                    <option value="national_id">National ID / NIN</option>
+                    <option value="passport">International Passport</option>
+                    <option value="drivers_license">Driver&apos;s License</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-300 mb-1">
+                    ID Document Number
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    minLength={4}
+                    value={idNumber}
+                    onChange={(e) => setIdNumber(e.target.value)}
+                    placeholder="Enter ID number (4+ chars)"
+                    className="w-full rounded-xl border border-white/10 bg-[#0E1318] px-3 py-2 text-xs font-mono text-white placeholder:text-slate-500 focus:border-[#22c55e] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={submittingLevel2 || !kycRecord?.kycCompleted}
+                className="w-full rounded-xl bg-[#22c55e] hover:bg-[#16a34a] py-2.5 text-xs font-black text-black shadow-md shadow-[#22c55e]/20 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {submittingLevel2 ? <Loader2 size={14} className="animate-spin" /> : <IdCard size={14} />}
+                <span>{submittingLevel2 ? 'Verifying Document...' : 'Verify Level 2 ID Document'}</span>
+              </button>
+            </form>
+          )}
+        </div>
+      </section>
+
+      {/* Post-Signup Airtel 200MB Data Offer Card */}
+      <section id="airtel-offer" className="rounded-3xl border border-rose-500/30 bg-gradient-to-br from-[#200C12] via-[#13131A] to-[#0B1610] p-5 space-y-3 shadow-lg">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-400">
+              <Gift size={17} />
             </div>
             <div>
-              <span className="text-slate-500 block font-mono text-[9px] uppercase">Date of Birth</span>
-              <span className="font-mono text-white">{kycRecord.dob} (18+)</span>
+              <h2 className="text-xs font-extrabold uppercase tracking-wider text-white">Airtel 200MB Data Offer</h2>
+              <p className="text-[11px] text-slate-300">Verify an Airtel phone number &amp; play any game</p>
             </div>
-            <div>
-              <span className="text-slate-500 block font-mono text-[9px] uppercase">Country</span>
-              <span className="text-slate-200">{kycRecord.country}</span>
+          </div>
+          <span className="rounded-full bg-white/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-[#FACC15]">
+            {kycRecord?.airtelBonusStatus === 'claimed'
+              ? 'CLAIMED'
+              : kycRecord?.airtelBonusStatus === 'unlocked'
+              ? 'READY TO CLAIM'
+              : kycRecord?.airtelBonusStatus === 'pending_game'
+              ? 'PLAY 1 GAME'
+              : 'STEP 1: PHONE'}
+          </span>
+        </div>
+
+        <div className="space-y-1.5 text-[11px]">
+          <div className="flex items-center gap-2">
+            <CheckCircle2
+              size={13}
+              className={
+                kycRecord?.phoneVerified && kycRecord?.carrier === 'airtel'
+                  ? 'text-[#4ade80]'
+                  : 'text-slate-600'
+              }
+            />
+            <span className={kycRecord?.phoneVerified && kycRecord?.carrier === 'airtel' ? 'text-white font-semibold' : 'text-slate-400'}>
+              {kycRecord?.phoneVerified
+                ? `Phone Verified: ${kycRecord.maskedPhone} (${kycRecord.carrier === 'airtel' ? 'Airtel' : 'Other Network'})`
+                : '1. Verify your Airtel phone number'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle2
+              size={13}
+              className={(kycRecord?.gamesPlayedCount ?? 0) > 0 ? 'text-[#4ade80]' : 'text-slate-600'}
+            />
+            <span className={(kycRecord?.gamesPlayedCount ?? 0) > 0 ? 'text-white font-semibold' : 'text-slate-400'}>
+              {(kycRecord?.gamesPlayedCount ?? 0) > 0
+                ? `Played ${kycRecord?.lastGamePlayed || 'a game'} (${kycRecord?.gamesPlayedCount} play${kycRecord?.gamesPlayedCount === 1 ? '' : 's'})`
+                : '2. Play any game (Pool, Wheel of Fortune, or Markets)'}
+            </span>
+          </div>
+        </div>
+
+        {/* Inline Phone OTP form if not yet verified as Airtel */}
+        {(!kycRecord?.phoneVerified || kycRecord?.carrier !== 'airtel') && kycRecord?.airtelBonusStatus !== 'claimed' && (
+          <div className="space-y-2 pt-2 border-t border-white/10">
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-200">
+              <Phone size={12} className="text-rose-400" />
+              <span>{kycRecord?.phoneVerified ? 'Switch to an Airtel number' : 'Verify Phone Number for 200MB Offer'}</span>
             </div>
-            <div>
-              <span className="text-slate-500 block font-mono text-[9px] uppercase">Document ID</span>
-              <span className="font-mono text-slate-200">{kycRecord.idNumberMasked}</span>
+            <div className="flex gap-2">
+              <select
+                value={carrierInput}
+                onChange={(e) => setCarrierInput(e.target.value as CarrierType)}
+                className="rounded-xl border border-white/10 bg-[#080C0F] px-2.5 py-2 text-[11px] text-white"
+              >
+                <option value="airtel">Airtel</option>
+                <option value="other">Other</option>
+              </select>
+              <input
+                type="tel"
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value)}
+                placeholder="0802 123 4567"
+                className="flex-1 rounded-xl border border-white/10 bg-[#080C0F] px-3 py-2 text-xs font-mono text-white placeholder:text-slate-500 focus:border-[#22c55e] focus:outline-none"
+              />
+              <button
+                type="button"
+                disabled={sendingOtp}
+                onClick={handleSendPhoneOtp}
+                className="rounded-xl bg-[#22c55e] hover:bg-[#16a34a] px-3 py-2 text-[11px] font-black text-black disabled:opacity-50"
+              >
+                {sendingOtp ? '...' : otpSentTo ? 'Resend' : 'Send OTP'}
+              </button>
             </div>
+
+            {otpSentTo && (
+              <div className="space-y-2 rounded-xl border border-[#22c55e]/30 bg-[#080C0F] p-2.5">
+                {previewOtp && (
+                  <button
+                    type="button"
+                    onClick={() => setOtpInput(previewOtp)}
+                    className="text-[11px] font-mono text-[#FACC15] hover:underline block"
+                  >
+                    Verification Code: <strong>{previewOtp}</strong> (tap to fill)
+                  </button>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={otpInput}
+                    onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="6-digit OTP"
+                    className="flex-1 rounded-xl border border-white/10 bg-[#0E1318] px-3 py-1.5 text-xs font-mono text-white"
+                  />
+                  <button
+                    type="button"
+                    disabled={verifyingOtp || otpInput.length !== 6}
+                    onClick={handleVerifyPhoneOtp}
+                    className="rounded-xl bg-[#22c55e] px-3.5 py-1.5 text-xs font-black text-black disabled:opacity-50"
+                  >
+                    {verifyingOtp ? 'Checking...' : 'Verify'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Airtel 200MB Bonus Tracker */}
-        <div className="rounded-2xl border border-rose-500/30 bg-gradient-to-br from-[#200C12] via-[#13131A] to-[#0B1610] p-4 space-y-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="grid h-8 w-8 place-items-center rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-400">
-                <Gift size={16} />
-              </div>
-              <div>
-                <h3 className="text-xs font-extrabold text-white">200MB Airtel Data Bonus</h3>
-                <p className="text-[10px] text-slate-300">Verify an Airtel phone number &amp; play any game</p>
-              </div>
-            </div>
-            <span className="rounded-full bg-white/10 px-2 py-0.5 font-mono text-[10px] font-bold text-[#FACC15]">
-              {kycRecord?.airtelBonusStatus === 'claimed'
-                ? 'CLAIMED'
-                : kycRecord?.airtelBonusStatus === 'unlocked'
-                ? 'READY TO CLAIM'
-                : kycRecord?.airtelBonusStatus === 'pending_game'
-                ? 'PLAY 1 GAME'
-                : 'STEP 1: PHONE'}
-            </span>
-          </div>
-
-          <div className="space-y-1.5 text-[11px]">
-            <div className="flex items-center gap-2">
-              <CheckCircle2
-                size={13}
-                className={
-                  kycRecord?.phoneVerified && kycRecord?.carrier === 'airtel'
-                    ? 'text-[#4ade80]'
-                    : 'text-slate-600'
-                }
-              />
-              <span className={kycRecord?.phoneVerified && kycRecord?.carrier === 'airtel' ? 'text-white font-semibold' : 'text-slate-400'}>
-                {kycRecord?.phoneVerified
-                  ? `Phone Verified: ${kycRecord.maskedPhone} (${kycRecord.carrier === 'airtel' ? 'Airtel' : 'Other Network'})`
-                  : '1. Verify your Airtel phone number'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2
-                size={13}
-                className={(kycRecord?.gamesPlayedCount ?? 0) > 0 ? 'text-[#4ade80]' : 'text-slate-600'}
-              />
-              <span className={(kycRecord?.gamesPlayedCount ?? 0) > 0 ? 'text-white font-semibold' : 'text-slate-400'}>
-                {(kycRecord?.gamesPlayedCount ?? 0) > 0
-                  ? `Played ${kycRecord?.lastGamePlayed || 'a game'} (${kycRecord?.gamesPlayedCount} play${kycRecord?.gamesPlayedCount === 1 ? '' : 's'})`
-                  : '2. Play any game (Pool, Wheel of Fortune, or Markets)'}
-              </span>
-            </div>
-          </div>
-
-          {/* Inline Phone OTP form if not yet verified as Airtel */}
-          {(!kycRecord?.phoneVerified || kycRecord?.carrier !== 'airtel') && kycRecord?.airtelBonusStatus !== 'claimed' && (
-            <div className="space-y-2 pt-1 border-t border-white/10">
-              <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-200">
-                <Phone size={12} className="text-rose-400" />
-                <span>{kycRecord?.phoneVerified ? 'Switch to an Airtel number' : 'Verify Phone Number for 200MB Bonus'}</span>
-              </div>
-              <div className="flex gap-2">
-                <select
-                  value={carrierInput}
-                  onChange={(e) => setCarrierInput(e.target.value as CarrierType)}
-                  className="rounded-xl border border-white/10 bg-[#080C0F] px-2.5 py-2 text-[11px] text-white"
-                >
-                  <option value="airtel">Airtel</option>
-                  <option value="other">Other</option>
-                </select>
-                <input
-                  type="tel"
-                  value={phoneInput}
-                  onChange={(e) => setPhoneInput(e.target.value)}
-                  placeholder="0802 123 4567"
-                  className="flex-1 rounded-xl border border-white/10 bg-[#080C0F] px-3 py-2 text-xs font-mono text-white placeholder:text-slate-500 focus:border-[#22c55e] focus:outline-none"
-                />
-                <button
-                  type="button"
-                  disabled={sendingOtp}
-                  onClick={handleSendPhoneOtp}
-                  className="rounded-xl bg-[#22c55e] hover:bg-[#16a34a] px-3 py-2 text-[11px] font-black text-black disabled:opacity-50"
-                >
-                  {sendingOtp ? '...' : otpSentTo ? 'Resend' : 'Send OTP'}
-                </button>
-              </div>
-
-              {otpSentTo && (
-                <div className="space-y-2 rounded-xl border border-[#22c55e]/30 bg-[#080C0F] p-2.5">
-                  {previewOtp && (
-                    <button
-                      type="button"
-                      onClick={() => setOtpInput(previewOtp)}
-                      className="text-[11px] font-mono text-[#FACC15] hover:underline block"
-                    >
-                      Verification Code: <strong>{previewOtp}</strong> (tap to fill)
-                    </button>
-                  )}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={6}
-                      value={otpInput}
-                      onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="6-digit OTP"
-                      className="flex-1 rounded-xl border border-white/10 bg-[#0E1318] px-3 py-1.5 text-xs font-mono text-white"
-                    />
-                    <button
-                      type="button"
-                      disabled={verifyingOtp || otpInput.length !== 6}
-                      onClick={handleVerifyPhoneOtp}
-                      className="rounded-xl bg-[#22c55e] px-3.5 py-1.5 text-xs font-black text-black disabled:opacity-50"
-                    >
-                      {verifyingOtp ? 'Checking...' : 'Verify'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {kycRecord?.airtelBonusStatus === 'pending_game' && (
-            <div className="flex flex-wrap gap-2 pt-1">
-              <Link
-                href="/games/pool"
-                className="inline-flex items-center gap-1 rounded-xl bg-[#22c55e] px-3.5 py-2 text-xs font-black text-black hover:bg-[#16a34a]"
-              >
-                <Wifi size={13} />
-                <span>Play 8-Ball Pool (Free Practice Available)</span>
-              </Link>
-              <Link
-                href="/games/wheel"
-                className="inline-flex items-center gap-1 rounded-xl border border-white/15 bg-[#121820] px-3.5 py-2 text-xs font-bold text-white hover:border-[#22c55e]"
-              >
-                <span>Wheel of Fortune</span>
-              </Link>
-            </div>
-          )}
-
-          {kycRecord?.airtelBonusStatus === 'unlocked' && (
-            <button
-              type="button"
-              disabled={claimingBonus}
-              onClick={handleClaimBonus}
-              className="w-full rounded-xl bg-[#22c55e] hover:bg-[#16a34a] py-2.5 text-xs font-black text-black shadow-lg shadow-[#22c55e]/20 flex items-center justify-center gap-2 disabled:opacity-50"
+        {kycRecord?.airtelBonusStatus === 'pending_game' && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Link
+              href="/games/pool"
+              className="inline-flex items-center gap-1 rounded-xl bg-[#22c55e] px-3.5 py-2 text-xs font-black text-black hover:bg-[#16a34a]"
             >
-              {claimingBonus ? <Loader2 size={14} className="animate-spin" /> : <Gift size={14} />}
-              <span>{claimingBonus ? 'Issuing Data Bundle...' : 'Claim 200MB Airtel Data Bonus'}</span>
-            </button>
-          )}
+              <Wifi size={13} />
+              <span>Play 8-Ball Pool (Free Practice Available)</span>
+            </Link>
+            <Link
+              href="/games/wheel"
+              className="inline-flex items-center gap-1 rounded-xl border border-white/15 bg-[#121820] px-3.5 py-2 text-xs font-bold text-white hover:border-[#22c55e]"
+            >
+              <span>Wheel of Fortune</span>
+            </Link>
+          </div>
+        )}
 
-          {kycRecord?.airtelBonusStatus === 'claimed' && (
-            <div className="rounded-xl border border-[#22c55e]/40 bg-[#0B1711] p-3 flex items-center justify-between text-xs">
-              <div>
-                <span className="text-[#4ade80] font-bold block">200MB Airtel Data Issued!</span>
-                <span className="text-[10px] text-slate-400">Sent to {kycRecord.maskedPhone}</span>
-              </div>
-              <span className="font-mono font-black text-[#FACC15]">{kycRecord.airtelVoucherCode}</span>
+        {kycRecord?.airtelBonusStatus === 'unlocked' && (
+          <button
+            type="button"
+            disabled={claimingBonus}
+            onClick={handleClaimBonus}
+            className="w-full rounded-xl bg-[#22c55e] hover:bg-[#16a34a] py-2.5 text-xs font-black text-black shadow-lg shadow-[#22c55e]/20 flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {claimingBonus ? <Loader2 size={14} className="animate-spin" /> : <Gift size={14} />}
+            <span>{claimingBonus ? 'Issuing Data Bundle...' : 'Claim 200MB Airtel Data Bonus'}</span>
+          </button>
+        )}
+
+        {kycRecord?.airtelBonusStatus === 'claimed' && (
+          <div className="rounded-xl border border-[#22c55e]/40 bg-[#0B1711] p-3 flex items-center justify-between text-xs">
+            <div>
+              <span className="text-[#4ade80] font-bold block">200MB Airtel Data Issued!</span>
+              <span className="text-[10px] text-slate-400">Sent to {kycRecord.maskedPhone}</span>
             </div>
-          )}
-        </div>
-      </div>
+            <span className="font-mono font-black text-[#FACC15]">{kycRecord.airtelVoucherCode}</span>
+          </div>
+        )}
+      </section>
 
       {/* Wallet Management Card */}
       <div className="rounded-3xl border border-white/[0.08] bg-[#0E1318] p-5 space-y-3 shadow-lg">

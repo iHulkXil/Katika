@@ -120,6 +120,22 @@ export function PoolGamePage() {
   const [aimAngle, setAimAngle] = useState<number>(0);
   const [foulMessage, setFoulMessage] = useState<string | null>(null);
 
+  const turnRef = useRef(turn);
+  const player1GroupRef = useRef(player1Group);
+  const isAimingRef = useRef(isAiming);
+  const powerRef = useRef(power);
+  const aimAngleRef = useRef(aimAngle);
+  const matchWinnerRef = useRef(matchWinner);
+  const userIdRef = useRef(user?.id);
+
+  useEffect(() => { turnRef.current = turn; }, [turn]);
+  useEffect(() => { player1GroupRef.current = player1Group; }, [player1Group]);
+  useEffect(() => { isAimingRef.current = isAiming; }, [isAiming]);
+  useEffect(() => { powerRef.current = power; }, [power]);
+  useEffect(() => { aimAngleRef.current = aimAngle; }, [aimAngle]);
+  useEffect(() => { matchWinnerRef.current = matchWinner; }, [matchWinner]);
+  useEffect(() => { userIdRef.current = user?.id; }, [user?.id]);
+
   // Opponent Details
   const opponent = useMemo(() => ({
     name: 'Kofi Alpha (SOL)',
@@ -249,6 +265,10 @@ export function PoolGamePage() {
   const handleReset = () => {
     ballsRef.current = initBalls();
     matchSettledRef.current = false;
+    isAimingRef.current = true;
+    turnRef.current = 'player1';
+    player1GroupRef.current = null;
+    matchWinnerRef.current = null;
     setIsAiming(true);
     setTurn('player1');
     setPlayer1Group(null);
@@ -305,20 +325,23 @@ export function PoolGamePage() {
   };
 
   // Turn Action & Strike Impulse
-  const handleShoot = () => {
-    if (!isAiming || matchWinner) return;
+  const handleShoot = useCallback((overrideAngle?: number, overridePower?: number) => {
+    if (!isAimingRef.current || matchWinnerRef.current) return;
 
     const cueBall = ballsRef.current.find((b) => b.id === 0);
     if (!cueBall || cueBall.inPocket) return;
 
-    // Impulse magnitude based on power slider
-    const force = (power / 100) * 16;
-    cueBall.vx = Math.cos(aimAngle) * force;
-    cueBall.vy = Math.sin(aimAngle) * force;
+    // Impulse magnitude based on power slider (or bot override)
+    const activePower = overridePower ?? powerRef.current;
+    const activeAngle = overrideAngle ?? aimAngleRef.current;
+    const force = (activePower / 100) * 16;
+    cueBall.vx = Math.cos(activeAngle) * force;
+    cueBall.vy = Math.sin(activeAngle) * force;
 
+    isAimingRef.current = false;
     setIsAiming(false);
     playSound('hit');
-  };
+  }, [playSound]);
 
   // Physics Animation Loop
   useEffect(() => {
@@ -398,7 +421,8 @@ export function PoolGamePage() {
             } else if (b.type === 'eight' && !matchSettledRef.current) {
               // 8-ball win/loss automatic settlement
               matchSettledRef.current = true;
-              const winner = turn === 'player1' ? 'You' : opponent.name;
+              const winner = turnRef.current === 'player1' ? 'You' : opponent.name;
+              matchWinnerRef.current = winner;
               setMatchWinner(winner);
 
               if (matchStartedRef.current && gameModeRef.current === 'pvp') {
@@ -407,17 +431,18 @@ export function PoolGamePage() {
                 const settledStake = stakeUsdRef.current;
                 const settledCrypto = selectedCryptoRef.current;
                 const settledCryptoAmt = Number(cryptoAmountRef.current) || 0;
+                const activeUserId = userIdRef.current;
 
                 if (won) {
-                  const currentBal = getWalletBalance(user?.id);
-                  setWalletBalance(user?.id, currentBal + settledPrize);
+                  const currentBal = getWalletBalance(activeUserId);
+                  setWalletBalance(activeUserId, currentBal + settledPrize);
                   pushNotification({
                     id: `pvp-pool-win-${matchKeyRef.current}`,
                     title: 'PvP 8-Ball Pool Settled: Won!',
                     message: `+$${settledPrize.toFixed(2)} automatically credited to your dollar balance.`,
                     type: 'win',
                     href: '/my-bets',
-                    userId: user?.id,
+                    userId: activeUserId,
                   });
                   toast({
                     title: 'VICTORY! Auto-Settled 🎱',
@@ -464,13 +489,16 @@ export function PoolGamePage() {
               }
             } else {
               // Assign groups if not assigned
-              if (!player1Group) {
-                if (turn === 'player1') {
-                  setPlayer1Group(b.type as 'solid' | 'stripe');
+              if (!player1GroupRef.current && (b.type === 'solid' || b.type === 'stripe')) {
+                if (turnRef.current === 'player1') {
+                  player1GroupRef.current = b.type;
+                  setPlayer1Group(b.type);
                   setPlayer2Group(b.type === 'solid' ? 'stripe' : 'solid');
                 } else {
-                  setPlayer2Group(b.type as 'solid' | 'stripe');
-                  setPlayer1Group(b.type === 'solid' ? 'stripe' : 'solid');
+                  const p1Group = b.type === 'solid' ? 'stripe' : 'solid';
+                  player1GroupRef.current = p1Group;
+                  setPlayer2Group(b.type);
+                  setPlayer1Group(p1Group);
                 }
               }
             }
@@ -516,11 +544,14 @@ export function PoolGamePage() {
       }
 
       // Check if all balls stopped moving -> re-enable aiming
-      if (!anyMoving && !isAiming && !matchWinner) {
+      if (!anyMoving && !isAimingRef.current && !matchWinnerRef.current) {
+        isAimingRef.current = true;
         setIsAiming(true);
         // Switch turn if in PvP mode
-        if (gameMode === 'pvp') {
-          setTurn((prev) => (prev === 'player1' ? 'player2' : 'player1'));
+        if (gameModeRef.current === 'pvp') {
+          const nextTurn = turnRef.current === 'player1' ? 'player2' : 'player1';
+          turnRef.current = nextTurn;
+          setTurn(nextTurn);
         }
       }
 
@@ -644,7 +675,9 @@ export function PoolGamePage() {
 
       // Aim Line and Cue Stick (when aiming)
       const cueBall = balls.find((b) => b.id === 0);
-      if (cueBall && !cueBall.inPocket && isAiming && !matchWinner) {
+      if (cueBall && !cueBall.inPocket && isAimingRef.current && !matchWinnerRef.current) {
+        const curAngle = aimAngleRef.current;
+        const curPower = powerRef.current;
         ctx.save();
 
         // Trajectory Guideline
@@ -654,18 +687,18 @@ export function PoolGamePage() {
         ctx.beginPath();
         ctx.moveTo(cueBall.x, cueBall.y);
         ctx.lineTo(
-          cueBall.x + Math.cos(aimAngle) * 320,
-          cueBall.y + Math.sin(aimAngle) * 320
+          cueBall.x + Math.cos(curAngle) * 320,
+          cueBall.y + Math.sin(curAngle) * 320
         );
         ctx.stroke();
 
         // Cue Stick Behind Ball
-        const stickDist = 20 + (power / 100) * 30;
+        const stickDist = 20 + (curPower / 100) * 30;
         const stickLength = 160;
-        const startX = cueBall.x - Math.cos(aimAngle) * stickDist;
-        const startY = cueBall.y - Math.sin(aimAngle) * stickDist;
-        const endX = cueBall.x - Math.cos(aimAngle) * (stickDist + stickLength);
-        const endY = cueBall.y - Math.sin(aimAngle) * (stickDist + stickLength);
+        const startX = cueBall.x - Math.cos(curAngle) * stickDist;
+        const startY = cueBall.y - Math.sin(curAngle) * stickDist;
+        const endX = cueBall.x - Math.cos(curAngle) * (stickDist + stickLength);
+        const endY = cueBall.y - Math.sin(curAngle) * (stickDist + stickLength);
 
         ctx.setLineDash([]);
         ctx.strokeStyle = '#F59E0B';
@@ -680,8 +713,8 @@ export function PoolGamePage() {
         ctx.beginPath();
         ctx.moveTo(startX, startY);
         ctx.lineTo(
-          startX - Math.cos(aimAngle) * 12,
-          startY - Math.sin(aimAngle) * 12
+          startX - Math.cos(curAngle) * 12,
+          startY - Math.sin(curAngle) * 12
         );
         ctx.stroke();
 
@@ -693,11 +726,11 @@ export function PoolGamePage() {
 
     animId = requestAnimationFrame(updatePhysics);
     return () => cancelAnimationFrame(animId);
-  }, [isAiming, aimAngle, power, matchWinner, turn, player1Group, prizeUsd, prizeCrypto, selectedCrypto, opponent.name, gameMode, playSound, toast]);
+  }, [opponent.name, playSound, toast, getAccessToken]);
 
   // Pointer drag to aim
   const handleCanvasPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isAiming || matchWinner) return;
+    if (!isAimingRef.current || matchWinnerRef.current) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
@@ -710,35 +743,45 @@ export function PoolGamePage() {
     if (!cueBall || cueBall.inPocket) return;
 
     const angle = Math.atan2(clickY - cueBall.y, clickX - cueBall.x);
+    aimAngleRef.current = angle;
     setAimAngle(angle);
   };
 
   // Bot Opponent Simulation Turn
   useEffect(() => {
-    if (turn === 'player2' && matchStarted && !matchWinner && isAiming && gameMode === 'pvp') {
-      const timer = setTimeout(() => {
-        // Find best target ball
-        const cueBall = ballsRef.current.find((b) => b.id === 0);
-        const targetGroup = player2Group || 'solid';
-        const eligible = ballsRef.current.filter(
-          (b) => !b.inPocket && b.id !== 0 && (b.type === targetGroup || b.type === 'eight')
-        );
-
-        if (cueBall && eligible.length > 0) {
-          const target = eligible[Math.floor(Math.random() * eligible.length)];
-          const angle = Math.atan2(target.y - cueBall.y, target.x - cueBall.x);
-          setAimAngle(angle + (Math.random() - 0.5) * 0.15); // slight human error
-          setPower(40 + Math.random() * 35);
-
-          setTimeout(() => {
-            handleShoot();
-          }, 800);
-        }
-      }, 1500);
-
-      return () => clearTimeout(timer);
+    if (turn !== 'player2' || !matchStarted || matchWinner || !isAiming || gameMode !== 'pvp') {
+      return;
     }
-  }, [turn, matchStarted, matchWinner, isAiming, gameMode, player2Group]);
+
+    let innerTimer: ReturnType<typeof setTimeout> | undefined;
+    const timer = setTimeout(() => {
+      // Find best target ball
+      const cueBall = ballsRef.current.find((b) => b.id === 0);
+      const targetGroup = player2Group || 'solid';
+      const eligible = ballsRef.current.filter(
+        (b) => !b.inPocket && b.id !== 0 && (b.type === targetGroup || b.type === 'eight')
+      );
+
+      if (cueBall && eligible.length > 0) {
+        const target = eligible[Math.floor(Math.random() * eligible.length)];
+        const shotAngle = Math.atan2(target.y - cueBall.y, target.x - cueBall.x) + (Math.random() - 0.5) * 0.15;
+        const shotPower = 40 + Math.random() * 35;
+        aimAngleRef.current = shotAngle;
+        powerRef.current = shotPower;
+        setAimAngle(shotAngle);
+        setPower(shotPower);
+
+        innerTimer = setTimeout(() => {
+          handleShoot(shotAngle, shotPower);
+        }, 800);
+      }
+    }, 1500);
+
+    return () => {
+      clearTimeout(timer);
+      if (innerTimer) clearTimeout(innerTimer);
+    };
+  }, [turn, matchStarted, matchWinner, isAiming, gameMode, player2Group, handleShoot]);
 
   // Target balls left for Player 1 & 2
   const solidsLeft = ballsRef.current.filter((b) => b.type === 'solid' && !b.inPocket).length;
@@ -1115,7 +1158,11 @@ export function PoolGamePage() {
               min="10"
               max="100"
               value={power}
-              onChange={(e) => setPower(Number(e.target.value))}
+              onChange={(e) => {
+                const nextPower = Number(e.target.value);
+                powerRef.current = nextPower;
+                setPower(nextPower);
+              }}
               className="w-full h-2 rounded-lg bg-[#080C0F] accent-[#22C55E] cursor-pointer"
             />
           </div>
@@ -1124,7 +1171,7 @@ export function PoolGamePage() {
             <button
               type="button"
               disabled={!isAiming || Boolean(matchWinner) || (matchStarted && turn !== 'player1')}
-              onClick={handleShoot}
+              onClick={() => handleShoot()}
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#22C55E] hover:bg-[#16A34A] px-7 py-3 text-xs font-extrabold text-black shadow-[0_0_20px_rgba(34,197,94,0.3)] disabled:opacity-40 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <Play size={14} className="fill-current" />

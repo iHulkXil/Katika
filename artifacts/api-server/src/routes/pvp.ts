@@ -318,7 +318,7 @@ async function applyTimeoutIfExpired(match: any): Promise<any> {
               winnerId,
               rake: payout.rake,
               prize: payout.prize,
-              board: moveRes.board,
+              board: moveRes.nextBoard,
               resolvedAt: new Date(),
             })
             .where(eq(clubMatchesTable.id, match.id))
@@ -331,7 +331,7 @@ async function applyTimeoutIfExpired(match: any): Promise<any> {
           .update(clubMatchesTable)
           .set({
             turnUserId: nextTurn,
-            board: moveRes.board,
+            board: moveRes.nextBoard,
             resolvedAt: new Date(),
           })
           .where(eq(clubMatchesTable.id, match.id))
@@ -801,13 +801,13 @@ async function handleMatchAction(req: any, res: any) {
         }
 
         const rollRes = applyLudoRoll(board, myColor);
-        const nextTurn = rollRes.hasLegalMoves ? match.turnUserId : nextTurnUserId;
+        const nextTurn = !rollRes.turnPassed ? match.turnUserId : nextTurnUserId;
 
         const updated = await db
           .update(clubMatchesTable)
           .set({
             turnUserId: nextTurn,
-            board: rollRes.board,
+            board: rollRes.nextBoard,
             resolvedAt: new Date(),
           })
           .where(eq(clubMatchesTable.id, match.id))
@@ -873,7 +873,7 @@ async function handleMatchAction(req: any, res: any) {
               winnerId,
               rake: payout.rake,
               prize: payout.prize,
-              board: moveRes.board,
+              board: moveRes.nextBoard,
               resolvedAt: new Date(),
             })
             .where(eq(clubMatchesTable.id, match.id))
@@ -887,7 +887,7 @@ async function handleMatchAction(req: any, res: any) {
           .update(clubMatchesTable)
           .set({
             turnUserId: nextTurn,
-            board: moveRes.board,
+            board: moveRes.nextBoard,
             resolvedAt: new Date(),
           })
           .where(eq(clubMatchesTable.id, match.id))
@@ -1162,7 +1162,7 @@ async function handlePenaltySettle(req: any, res: any) {
         wager,
         payout,
         won,
-        detail: `${detail} (Score: ${score})`,
+        detail: { summary: `${detail} (Score: ${score})`, score },
       });
 
       return res.json({

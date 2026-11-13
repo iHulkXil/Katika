@@ -218,7 +218,7 @@ router.get("/cashier/orders", async (req, res) => {
       eq(cashierOrdersTable.userId, identity.privyUserId),
     ).orderBy(desc(cashierOrdersTable.createdAt)).limit(20);
 
-    const orders = rows.map((r) => ({
+    const orders = rows.map((r: any) => ({
       id: r.id,
       packageId: r.packId,
       amountKtk: r.ktk,

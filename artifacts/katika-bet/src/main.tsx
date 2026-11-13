@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client';
-import { PrivyProvider } from '@privy-io/react-auth';
+import { PrivyProvider, type PrivyClientConfig } from '@privy-io/react-auth';
+import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit';
 
 import App from './App';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -19,9 +20,26 @@ export const SOLANA_RPC_URL = import.meta.env.VITE_SOLANA_RPC ?? (
     ? 'https://api.devnet.solana.com'
     : 'https://api.mainnet-beta.solana.com'
 );
+export const SOLANA_WS_URL = SOLANA_RPC_URL.replace(/^http/, 'ws');
 export const SOLANA_CAIP_CHAIN = (
   SOLANA_CLUSTER_NAME === 'devnet' ? 'solana:devnet' : 'solana:mainnet'
 ) as 'solana:devnet' | 'solana:mainnet';
+
+const solanaRpcs = (
+  SOLANA_CAIP_CHAIN === 'solana:devnet'
+    ? {
+        'solana:devnet': {
+          rpc: createSolanaRpc(SOLANA_RPC_URL),
+          rpcSubscriptions: createSolanaRpcSubscriptions(SOLANA_WS_URL),
+        },
+      }
+    : {
+        'solana:mainnet': {
+          rpc: createSolanaRpc(SOLANA_RPC_URL),
+          rpcSubscriptions: createSolanaRpcSubscriptions(SOLANA_WS_URL),
+        },
+      }
+) as NonNullable<PrivyClientConfig['solana']>['rpcs'];
 
 createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>
@@ -41,12 +59,9 @@ createRoot(document.getElementById('root')!).render(
           ethereum: { createOnLogin: 'all-users' },
           solana: { createOnLogin: 'all-users' },
         },
-        solanaClusters: [
-          {
-            name: SOLANA_CLUSTER_NAME,
-            rpcUrl: SOLANA_RPC_URL,
-          },
-        ],
+        solana: {
+          rpcs: solanaRpcs,
+        },
       }}
     >
       <ServerSessionSync>

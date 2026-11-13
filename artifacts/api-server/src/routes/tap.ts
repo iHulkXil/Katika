@@ -77,7 +77,6 @@ router.post("/tap/swap", async (req, res) => {
       pointsSwapped: points,
       ktkCredited: ktkEarned,
       newBought: creditResult.newBought,
-      playable: creditResult.playable,
       message: `Successfully swapped ${points.toLocaleString()} Points for ${ktkEarned.toLocaleString()} $KTK!`,
       ...economy,
     });

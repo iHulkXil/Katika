@@ -235,7 +235,7 @@ router.get("/leaderboard", async (_req, res) => {
       volumeMap.set(v.privyUserId, { volume: Number(v.volume), betsCount: Number(v.betsCount) });
     }
 
-    const leaderboardItems = legends.map((l) => {
+    const leaderboardItems = legends.map((l: any) => {
       const vol = volumeMap.get(l.privyUserId)?.volume ?? 0;
       const count = volumeMap.get(l.privyUserId)?.betsCount ?? 0;
       const ovr = Math.round((l.pace + l.shooting + l.passing + l.dribbling + l.defending + l.physical) / 6);

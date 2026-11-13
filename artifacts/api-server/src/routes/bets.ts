@@ -19,7 +19,7 @@ router.get("/bets", async (req, res) => {
       .orderBy(desc(gameBetsTable.createdAt))
       .limit(40);
     return res.json({
-      bets: rows.map((row) => ({
+      bets: rows.map((row: any) => ({
         id: row.id,
         game: row.game,
         wager: row.wager,

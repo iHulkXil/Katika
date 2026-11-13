@@ -366,7 +366,7 @@ router.get("/markets", (req: Request, res: Response) => {
 
 // 2. GET /api/markets/:id
 router.get("/markets/:id", (req: Request, res: Response) => {
-  const market = marketsMap.get(req.params.id);
+  const market = marketsMap.get(String(req.params.id));
   if (!market) {
     return res.status(404).json({ error: "Market not found" });
   }
@@ -434,7 +434,7 @@ router.post("/markets", (req: Request, res: Response) => {
 // 4. POST /api/markets/:id/resolve (Admin or Authorized Resolver)
 router.post("/markets/:id/resolve", (req: Request, res: Response) => {
   const { resolution } = req.body; // "YES" | "NO"
-  const market = marketsMap.get(req.params.id);
+  const market = marketsMap.get(String(req.params.id));
 
   if (!market) {
     return res.status(404).json({ error: "Market not found" });

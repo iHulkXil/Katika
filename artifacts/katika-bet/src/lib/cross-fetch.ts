@@ -1,10 +1,12 @@
 // Safe shim for cross-fetch to prevent "Cannot set property fetch of #<Window> which has only a getter"
-const nativeFetch =
+const fallbackFetch: typeof globalThis.fetch = (...args) => globalThis.fetch(...args);
+
+const nativeFetch: typeof globalThis.fetch =
   typeof globalThis !== 'undefined' && typeof globalThis.fetch === 'function'
     ? globalThis.fetch.bind(globalThis)
     : typeof window !== 'undefined' && typeof window.fetch === 'function'
     ? window.fetch.bind(window)
-    : (...args: Parameters<typeof fetch>) => fetch(...args);
+    : fallbackFetch;
 
 const HeadersShim =
   typeof globalThis !== 'undefined' && globalThis.Headers
@@ -28,5 +30,5 @@ const ResponseShim =
     : Response;
 
 export default nativeFetch;
-export const fetch = nativeFetch;
+export const fetch: typeof globalThis.fetch = nativeFetch;
 export { HeadersShim as Headers, RequestShim as Request, ResponseShim as Response };
