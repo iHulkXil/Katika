@@ -26,7 +26,6 @@ import {
   fetchMarkets,
   createMarket,
   placeStake,
-  resolveMarket,
   fetchMarketById,
   calcOdds,
   type Market,
@@ -35,6 +34,8 @@ import {
 import { SOLANA_TREASURY_PUBKEY, encodeBase58 } from '@/lib/mainnet-chains';
 import { SOLANA_RPC_URL, SOLANA_CLUSTER_NAME, SOLANA_CAIP_CHAIN } from '@/main';
 import { pushNotification } from '@/lib/notifications';
+import { getWalletBalance, setWalletBalance } from '@/lib/balance';
+import { useKyc } from '@/lib/kyc';
 import { useSearch } from 'wouter';
 
 export const MARKET_CATEGORIES = [
@@ -74,6 +75,7 @@ export function MarketsHome({
   sideRail?: ReactNode;
 }) {
   const { authenticated, user, login } = usePrivy();
+  const { recordGamePlay, record: kycRecord } = useKyc();
   const { wallets } = useWallets();
   const { signAndSendTransaction } = useSignAndSendTransaction();
   const { toast } = useToast();
@@ -106,10 +108,6 @@ export function MarketsHome({
   const [pendingBet, setPendingBet] = useState<{ market: Market; side: 'YES' | 'NO' } | null>(null);
   const [betAmount, setBetAmount] = useState(0.1);
   const [placing, setPlacing] = useState(false);
-
-  // Admin Resolution State
-  const [adminMarket, setAdminMarket] = useState<Market | null>(null);
-  const [resolving, setResolving] = useState(false);
 
   // Form creation
   const [newTitle, setNewTitle] = useState('');
@@ -221,10 +219,10 @@ export function MarketsHome({
         txSig,
       });
 
-      // 4. Deduct stake from local cash balance
-      const currentBal = Number(localStorage.getItem('sidebet_wallet_balance') || '4011');
+      // 4. Deduct stake from user cash balance
+      const currentBal = getWalletBalance(user?.id);
       const stakeUsd = amount * 148.5; // ~148.50 per SOL
-      localStorage.setItem('sidebet_wallet_balance', String(Math.max(0, currentBal - stakeUsd)));
+      setWalletBalance(user?.id, Math.max(0, currentBal - stakeUsd));
 
       // 5. Update UI
       setMarkets((prev) => prev.map((m) => (m.id === market.id ? res.market : m)));
@@ -258,7 +256,10 @@ export function MarketsHome({
         message: `Staked ${amount} SOL on "${market.title.slice(0, 48)}"`,
         type: 'stake',
         href: '/my-bets',
+        userId: user?.id,
       });
+
+      void recordGamePlay('Prediction Market');
 
       // Reload markets from backend to reflect collective volume
       await loadMarkets();
@@ -309,6 +310,7 @@ export function MarketsHome({
         message: created.title,
         type: 'market',
         href: '/',
+        userId: user?.id,
       });
     } catch (err: any) {
       toast({
@@ -316,42 +318,6 @@ export function MarketsHome({
         description: err.message || 'Failed to create market',
         variant: 'destructive',
       });
-    }
-  };
-
-  // Admin Resolve Market (YES or NO)
-  const handleResolve = async (resolution: 'YES' | 'NO') => {
-    if (!adminMarket) return;
-    setResolving(true);
-    try {
-      const res = await resolveMarket(adminMarket.id, resolution);
-
-      // Refresh markets
-      setMarkets((prev) => prev.map((m) => (m.id === adminMarket.id ? res.market : m)));
-      const settledTitle = adminMarket.title;
-      setAdminMarket(null);
-
-      toast({
-        title: 'Market Resolved',
-        description: `Market resolved to ${resolution}. ${res.stats.wonPositions} positions won, ${res.stats.lostPositions} lost.`,
-      });
-
-      pushNotification({
-        title: `Market Settled: ${resolution}`,
-        message: `"${settledTitle.slice(0, 48)}" settled as ${resolution}.`,
-        type: 'market',
-        href: '/my-bets',
-      });
-
-      await loadMarkets();
-    } catch (err: any) {
-      toast({
-        title: 'Resolution Failed',
-        description: err.message || 'Could not resolve market',
-        variant: 'destructive',
-      });
-    } finally {
-      setResolving(false);
     }
   };
 
@@ -391,12 +357,25 @@ export function MarketsHome({
             <p className="text-xs text-slate-400">
               Trade live outcome contracts across Politics, Nigerian Politics, Crypto, Sports, Finance, and Lifestyle—or peek into PvP games on the side.
             </p>
+            {(!authenticated || (kycRecord && kycRecord.airtelBonusStatus !== 'claimed')) && (
+              <div className="pt-1.5 flex flex-wrap items-center gap-2 text-[11px]">
+                <span className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/35 bg-rose-500/10 px-2.5 py-1 font-semibold text-rose-300">
+                  🎁 Airtel Bonus: Sign up with KYC, verify your Airtel number &amp; play any game to get 200MB FREE data
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               type="button"
-              onClick={() => setShowCreate(true)}
+              onClick={() => {
+                if (!authenticated) {
+                  void login();
+                  return;
+                }
+                setShowCreate(true);
+              }}
               className="inline-flex items-center gap-2 rounded-full bg-[#22c55e] hover:bg-[#16a34a] px-5 py-2.5 text-xs font-bold text-black shadow-[0_0_20px_rgba(34,197,94,0.28)] transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap shrink-0"
             >
               <Plus size={14} />
@@ -428,7 +407,13 @@ export function MarketsHome({
 
             <div className="mt-5 flex items-center gap-3">
               <button
-                onClick={() => setShowCreate(true)}
+                onClick={() => {
+                  if (!authenticated) {
+                    void login();
+                    return;
+                  }
+                  setShowCreate(true);
+                }}
                 className="inline-flex items-center gap-2 rounded-full bg-[#22c55e] hover:bg-[#16a34a] px-5 py-2.5 text-xs font-bold text-black shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Plus size={14} />
@@ -552,22 +537,6 @@ export function MarketsHome({
                         <span className="text-[10px] opacity-75">{no}x</span>
                       </button>
                     </div>
-
-                    {/* Resolve button for quick demo testing */}
-                    {!isResolved && (
-                      <div className="mt-2 text-right">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setAdminMarket(m);
-                          }}
-                          className="text-[10px] font-mono text-slate-500 hover:text-[#facc15] transition-colors"
-                        >
-                          ⚙ Resolve
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               );
@@ -686,10 +655,13 @@ export function MarketsHome({
             <div className="rounded-2xl border border-white/5 bg-[#080C0F] p-4 text-xs text-slate-300 space-y-2">
               <h4 className="font-bold text-white flex items-center gap-1.5">
                 <Scale size={14} className="text-[#4ade80]" />
-                <span>Resolution Criteria</span>
+                <span>Admin Resolution Criteria</span>
               </h4>
               <p className="leading-relaxed">
-                {selectedMarket.description || 'Decentralized prediction event contract settled via Sidebet onchain oracle.'}
+                {selectedMarket.description || 'Prediction market event contract reviewed and settled by Sidebet Admin based on verified public sources.'}
+              </p>
+              <p className="text-[11px] font-mono text-slate-400">
+                Settlement Authority: Sidebet Admin
               </p>
             </div>
 
@@ -934,51 +906,6 @@ export function MarketsHome({
                 className="flex-1 rounded-xl bg-[#22c55e] hover:bg-[#16a34a] py-2.5 text-xs font-bold text-black shadow-md shadow-[#22c55e]/25"
               >
                 Deploy Market
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ADMIN RESOLUTION MODAL */}
-      {adminMarket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in">
-          <div className="w-full max-w-md rounded-3xl border border-[#facc15]/30 bg-[#0D1217] p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold font-display text-[#FACC15] flex items-center gap-2">
-                <Scale size={18} />
-                <span>Resolve Prediction Event</span>
-              </h3>
-              <button
-                onClick={() => setAdminMarket(null)}
-                className="grid h-7 w-7 place-items-center rounded-full border border-white/10 text-slate-400"
-              >
-                <X size={14} />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-300 leading-snug">
-              {adminMarket.title}
-            </p>
-
-            <div className="rounded-2xl bg-[#080C0F] p-3 text-xs text-slate-400 font-mono">
-              Resolving will immediately settle all user positions as Won or Lost and unlock payouts.
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <button
-                disabled={resolving}
-                onClick={() => handleResolve('YES')}
-                className="rounded-2xl bg-[#22C55E] hover:bg-[#16A34A] py-3 text-xs font-bold text-black shadow-md shadow-[#22C55E]/30"
-              >
-                {resolving ? 'Settling...' : 'Resolve YES'}
-              </button>
-              <button
-                disabled={resolving}
-                onClick={() => handleResolve('NO')}
-                className="rounded-2xl bg-[#EC4899] hover:bg-[#DB2777] py-3 text-xs font-bold text-white shadow-md shadow-[#EC4899]/30"
-              >
-                {resolving ? 'Settling...' : 'Resolve NO'}
               </button>
             </div>
           </div>

@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
-import { ShieldCheck, AlertCircle, Check } from 'lucide-react';
+import { ShieldCheck, Check } from 'lucide-react';
+import { usePrivy } from '@privy-io/react-auth';
+import { useKyc } from '@/lib/kyc';
 
 export function ComplianceModal() {
   const [isOpen, setIsOpen] = useState(false);
+  const { authenticated } = usePrivy();
+  const { needsKyc, onboardingOpen } = useKyc();
 
   useEffect(() => {
     const accepted = localStorage.getItem('sidebet_terms_accepted');
@@ -16,7 +20,7 @@ export function ComplianceModal() {
     setIsOpen(false);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || (authenticated && (needsKyc || onboardingOpen))) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in">
@@ -44,7 +48,7 @@ export function ComplianceModal() {
           </span>
           <br />
           <span>
-            3. All global prediction markets and events are settled via decentralized consensus oracles and verified public sources.
+            3. Prediction market bets are settled by Sidebet Admin from verified public outcomes, while PvP game wagers settle automatically on match completion.
           </span>
         </p>
 

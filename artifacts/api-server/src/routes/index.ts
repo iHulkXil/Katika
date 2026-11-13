@@ -14,10 +14,12 @@ import legendsRouter from "./legends";
 import tapRouter from "./tap";
 import ballRouter from "./ball";
 import marketsRouter from "./markets";
+import kycRouter from "./kyc";
 
 const router: IRouter = Router();
 router.use(healthRouter);
 router.use(meRouter);
+router.use(kycRouter);
 router.use(marketsRouter);
 router.use(kchipRouter);
 router.use(walletRouter);

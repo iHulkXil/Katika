@@ -15,10 +15,11 @@ import {
   Swords,
   X,
 } from 'lucide-react';
+import { usePrivy } from '@privy-io/react-auth';
 import { useToast } from '@/hooks/use-toast';
 import { pushNotification } from '@/lib/notifications';
 
-export type PvpGameId = 'pool' | 'wheel' | 'ludo';
+export type PvpGameId = 'pool' | 'wheel';
 
 interface PvpGameShowcase {
   id: PvpGameId;
@@ -50,7 +51,7 @@ const PVP_GAMES: PvpGameShowcase[] = [
   },
   {
     id: 'wheel',
-    title: 'Wheel of the Pot',
+    title: 'Wheel of Fortune',
     modeLabel: '3-Min Pot Cycle',
     payoutLabel: 'Winner Takes Pot',
     description: 'Your dollar stake locks proportional wheel slices every 3 minutes.',
@@ -60,19 +61,6 @@ const PVP_GAMES: PvpGameShowcase[] = [
     toonImage: '/assets/images/toon_pot_wheel_1794558431894.jpg',
     peekCaption: 'Live weighted slice spin settling the 3-minute community pot',
     controlsHint: 'Stake share = Slice size · Auto-spin every 3m',
-  },
-  {
-    id: 'ludo',
-    title: 'Ludo Quick',
-    modeLabel: '2-Token Sprint',
-    payoutLabel: 'Instant Settlement',
-    description: 'Roll 6 to unlock, protect tokens on star tiles, and sprint home first.',
-    chains: 'SOL · ETH · BTC · USDT',
-    href: '/games/ludo',
-    accent: '#C084FC',
-    toonImage: '/assets/images/toon_ludo_sprint_1794558431519.jpg',
-    peekCaption: 'Double-6 roll launching stylized toon tokens around safe tiles',
-    controlsHint: 'Roll dice · Tap highlighted pawn to hop',
   },
 ];
 
@@ -204,7 +192,7 @@ function WheelToonPeek({ compact = false }: { compact?: boolean }) {
       viewBox="0 0 320 180"
       className="h-full w-full select-none"
       role="img"
-      aria-label="Animated stylized toon preview of Wheel of the Pot"
+      aria-label="Animated stylized toon preview of Wheel of Fortune"
     >
       <rect width="320" height="180" fill="#0A1016" />
 
@@ -286,80 +274,13 @@ function WheelToonPeek({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function LudoToonPeek({ compact = false }: { compact?: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 320 180"
-      className="h-full w-full select-none"
-      role="img"
-      aria-label="Animated stylized toon preview of Ludo Quick"
-    >
-      <rect width="320" height="180" fill="#120E1B" />
-
-      {/* Board Surface */}
-      <rect x="44" y="16" width="232" height="148" rx="16" fill="#1E293B" stroke="#070B0E" strokeWidth="4" />
-
-      {/* 4 Toon Corner Yards */}
-      <rect x="52" y="24" width="66" height="50" rx="8" fill="#EF4444" stroke="#070B0E" strokeWidth="2.5" />
-      <rect x="202" y="24" width="66" height="50" rx="8" fill="#22C55E" stroke="#070B0E" strokeWidth="2.5" />
-      <rect x="52" y="106" width="66" height="50" rx="8" fill="#3B82F6" stroke="#070B0E" strokeWidth="2.5" />
-      <rect x="202" y="106" width="66" height="50" rx="8" fill="#FACC15" stroke="#070B0E" strokeWidth="2.5" />
-
-      {/* Cross Track */}
-      <rect x="122" y="24" width="76" height="132" rx="6" fill="#F8FAFC" stroke="#070B0E" strokeWidth="2.5" />
-      <rect x="52" y="76" width="216" height="28" rx="6" fill="#F8FAFC" stroke="#070B0E" strokeWidth="2.5" />
-
-      {/* Safe Star Home Hub */}
-      <polygon points="160,74 176,90 160,106 144,90" fill="#FACC15" stroke="#070B0E" strokeWidth="2.5" />
-
-      {/* Track Grid Lines */}
-      <line x1="147" y1="24" x2="147" y2="156" stroke="#CBD5E1" strokeWidth="1.5" />
-      <line x1="173" y1="24" x2="173" y2="156" stroke="#CBD5E1" strokeWidth="1.5" />
-      <line x1="90" y1="76" x2="90" y2="104" stroke="#CBD5E1" strokeWidth="1.5" />
-      <line x1="230" y1="76" x2="230" y2="104" stroke="#CBD5E1" strokeWidth="1.5" />
-
-      {/* Hopping Red Toon Pawn */}
-      <g className="animate-toon-pawn">
-        <path d="M90,94 L98,74 L106,94 Z" fill="#EF4444" stroke="#070B0E" strokeWidth="2.5" />
-        <circle cx="98" cy="70" r="7" fill="#FCA5A5" stroke="#070B0E" strokeWidth="2.5" />
-      </g>
-
-      {/* Rival Yellow Toon Pawn */}
-      <g className="animate-toon-rival">
-        <path d="M214,94 L222,74 L230,94 Z" fill="#FACC15" stroke="#070B0E" strokeWidth="2.5" />
-        <circle cx="222" cy="70" r="7" fill="#FEF08A" stroke="#070B0E" strokeWidth="2.5" />
-      </g>
-
-      {/* Tumbling Oversized Toon Die */}
-      <g className="animate-toon-dice">
-        <rect x="142" y="34" width="36" height="36" rx="8" fill="#FFFFFF" stroke="#070B0E" strokeWidth="3" />
-        <circle cx="151" cy="43" r="3" fill="#070B0E" />
-        <circle cx="169" cy="43" r="3" fill="#070B0E" />
-        <circle cx="151" cy="52" r="3" fill="#070B0E" />
-        <circle cx="169" cy="52" r="3" fill="#070B0E" />
-        <circle cx="151" cy="61" r="3" fill="#070B0E" />
-        <circle cx="169" cy="61" r="3" fill="#070B0E" />
-      </g>
-
-      {!compact && (
-        <g>
-          <rect x="20" y="146" width="110" height="22" rx="6" fill="#070B0E" opacity="0.88" stroke="#C084FC" strokeWidth="1.5" />
-          <text x="75" y="160" textAnchor="middle" fontSize="9" fontWeight="700" fill="#C084FC" fontFamily="monospace">
-            ROLL 6 SPRINT
-          </text>
-        </g>
-      )}
-    </svg>
-  );
-}
-
 function LiveToonScene({ gameId, compact = false }: { gameId: PvpGameId; compact?: boolean }) {
   if (gameId === 'pool') return <PoolToonPeek compact={compact} />;
-  if (gameId === 'wheel') return <WheelToonPeek compact={compact} />;
-  return <LudoToonPeek compact={compact} />;
+  return <WheelToonPeek compact={compact} />;
 }
 
 export function PvpSideRail() {
+  const { authenticated, user, login } = usePrivy();
   const { toast } = useToast();
   const [peekingGameId, setPeekingGameId] = useState<PvpGameId | null>('pool');
   const [modalGame, setModalGame] = useState<PvpGameShowcase | null>(null);
@@ -373,7 +294,20 @@ export function PvpSideRail() {
     }
   });
 
+  const requireAuthClick = (e: React.MouseEvent, onSuccess?: () => void) => {
+    if (!authenticated) {
+      e.preventDefault();
+      void login();
+      return;
+    }
+    onSuccess?.();
+  };
+
   const handleToggleNotify = (id: string, title: string) => {
+    if (!authenticated) {
+      void login();
+      return;
+    }
     const next = { ...waitlisted, [id]: !waitlisted[id] };
     setWaitlisted(next);
     localStorage.setItem('sidebet_pvp_waitlist', JSON.stringify(next));
@@ -389,6 +323,7 @@ export function PvpSideRail() {
         message: `You will be notified when ${title} goes live.`,
         type: 'system',
         href: '/pvp',
+        userId: user?.id,
       });
     } else {
       toast({
@@ -414,7 +349,8 @@ export function PvpSideRail() {
           </div>
 
           <Link
-            href="/pvp"
+            href={authenticated ? '/pvp' : '/'}
+            onClick={(e) => requireAuthClick(e)}
             className="inline-flex items-center gap-1 text-xs font-bold text-[#4ADE80] hover:underline whitespace-nowrap shrink-0"
           >
             <span>Open Lobby</span>
@@ -510,7 +446,8 @@ export function PvpSideRail() {
                         Peek
                       </button>
                       <Link
-                        href={game.href}
+                        href={authenticated ? game.href : '/'}
+                        onClick={(e) => requireAuthClick(e)}
                         className="inline-flex items-center gap-1 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] px-3 py-1.5 text-[11px] font-bold text-black transition-colors whitespace-nowrap shrink-0"
                       >
                         <Play size={11} />
@@ -574,7 +511,8 @@ export function PvpSideRail() {
           </div>
 
           <Link
-            href="/pvp"
+            href={authenticated ? '/pvp' : '/'}
+            onClick={(e) => requireAuthClick(e)}
             className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-[#121820] hover:border-[#EC4899]/50 py-2.5 text-xs font-bold text-[#F472B6] transition-colors"
           >
             <Gamepad2 size={14} />
@@ -664,8 +602,8 @@ export function PvpSideRail() {
                   Close
                 </button>
                 <Link
-                  href={modalGame.href}
-                  onClick={() => setModalGame(null)}
+                  href={authenticated ? modalGame.href : '/'}
+                  onClick={(e) => requireAuthClick(e, () => setModalGame(null))}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] px-5 py-2 text-xs font-bold text-black shadow-lg shadow-[#22C55E]/25 whitespace-nowrap shrink-0"
                 >
                   <Play size={13} />

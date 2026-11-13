@@ -12,8 +12,8 @@ import './game-motion.css';
 // Privy App ID with standard production fallback
 const privyAppId = (import.meta.env.VITE_PRIVY_APP_ID ?? 'cmske7xuh00750djms91aexl3').trim();
 
-// Solana Cluster & RPC configuration (defaults to Devnet for testing; configurable via env)
-export const SOLANA_CLUSTER_NAME = (import.meta.env.VITE_SOLANA_CLUSTER ?? 'devnet') as 'mainnet-beta' | 'devnet';
+// Solana Cluster & RPC configuration (defaults to mainnet-beta; configurable via env)
+export const SOLANA_CLUSTER_NAME = (import.meta.env.VITE_SOLANA_CLUSTER ?? 'mainnet-beta') as 'mainnet-beta' | 'devnet';
 export const SOLANA_RPC_URL = import.meta.env.VITE_SOLANA_RPC ?? (
   SOLANA_CLUSTER_NAME === 'devnet'
     ? 'https://api.devnet.solana.com'
@@ -28,18 +28,18 @@ createRoot(document.getElementById('root')!).render(
     <PrivyProvider
       appId={privyAppId}
       config={{
-        loginMethods: ['email', 'google', 'wallet'],
+        loginMethods: ['email', 'google'],
         appearance: {
           theme: 'dark',
           accentColor: '#22C55E',
-          showWalletLoginFirst: true,
+          showWalletLoginFirst: false,
           walletChainType: 'ethereum-and-solana',
         },
         defaultChain: base,
         supportedChains: [base, mainnet, arbitrum, polygon],
         embeddedWallets: {
-          ethereum: { createOnLogin: 'users-without-wallets' },
-          solana: { createOnLogin: 'users-without-wallets' },
+          ethereum: { createOnLogin: 'all-users' },
+          solana: { createOnLogin: 'all-users' },
         },
         solanaClusters: [
           {

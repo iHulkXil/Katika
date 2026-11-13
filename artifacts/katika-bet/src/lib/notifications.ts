@@ -12,13 +12,21 @@ export type AppNotification = {
   read?: boolean;
 };
 
-const ACTIVITY_KEY = 'sidebet_activity_notifications';
-const READ_IDS_KEY = 'sidebet_notifications_read_ids';
+const ACTIVITY_KEY_PREFIX = 'sidebet_activity_notifications';
+const READ_IDS_KEY_PREFIX = 'sidebet_notifications_read_ids';
 export const NOTIFICATIONS_EVENT = 'sidebet:notifications-updated';
 
-export function getActivityNotifications(): AppNotification[] {
+function activityKey(userId?: string) {
+  return userId ? `${ACTIVITY_KEY_PREFIX}:${userId}` : ACTIVITY_KEY_PREFIX;
+}
+
+function readIdsKey(userId?: string) {
+  return userId ? `${READ_IDS_KEY_PREFIX}:${userId}` : READ_IDS_KEY_PREFIX;
+}
+
+export function getActivityNotifications(userId?: string): AppNotification[] {
   try {
-    const raw = localStorage.getItem(ACTIVITY_KEY);
+    const raw = localStorage.getItem(activityKey(userId));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -27,9 +35,9 @@ export function getActivityNotifications(): AppNotification[] {
   }
 }
 
-export function getReadNotificationIds(): Set<string> {
+export function getReadNotificationIds(userId?: string): Set<string> {
   try {
-    const raw = localStorage.getItem(READ_IDS_KEY);
+    const raw = localStorage.getItem(readIdsKey(userId));
     if (!raw) return new Set();
     const parsed = JSON.parse(raw);
     return new Set(Array.isArray(parsed) ? parsed : []);
@@ -38,17 +46,17 @@ export function getReadNotificationIds(): Set<string> {
   }
 }
 
-export function markNotificationRead(id: string) {
-  const readSet = getReadNotificationIds();
+export function markNotificationRead(id: string, userId?: string) {
+  const readSet = getReadNotificationIds(userId);
   readSet.add(id);
-  localStorage.setItem(READ_IDS_KEY, JSON.stringify(Array.from(readSet)));
+  localStorage.setItem(readIdsKey(userId), JSON.stringify(Array.from(readSet)));
   window.dispatchEvent(new Event(NOTIFICATIONS_EVENT));
 }
 
-export function markAllNotificationsRead(ids: string[]) {
-  const readSet = getReadNotificationIds();
+export function markAllNotificationsRead(ids: string[], userId?: string) {
+  const readSet = getReadNotificationIds(userId);
   ids.forEach((id) => readSet.add(id));
-  localStorage.setItem(READ_IDS_KEY, JSON.stringify(Array.from(readSet)));
+  localStorage.setItem(readIdsKey(userId), JSON.stringify(Array.from(readSet)));
   window.dispatchEvent(new Event(NOTIFICATIONS_EVENT));
 }
 
@@ -58,9 +66,10 @@ export function pushNotification(input: {
   message: string;
   type: AppNotificationType;
   href?: string;
+  userId?: string;
 }) {
   try {
-    const existing = getActivityNotifications();
+    const existing = getActivityNotifications(input.userId);
     const entry: AppNotification = {
       id: input.id || `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       title: input.title,
@@ -70,20 +79,28 @@ export function pushNotification(input: {
       href: input.href,
     };
     const updated = [entry, ...existing.filter((item) => item.id !== entry.id)].slice(0, 25);
-    localStorage.setItem(ACTIVITY_KEY, JSON.stringify(updated));
+    localStorage.setItem(activityKey(input.userId), JSON.stringify(updated));
     window.dispatchEvent(new Event(NOTIFICATIONS_EVENT));
   } catch (err) {
     console.warn('Failed to push notification:', err);
   }
 }
 
-export async function loadRealNotifications(walletAddress?: string): Promise<AppNotification[]> {
-  const readIds = getReadNotificationIds();
-  const activity = getActivityNotifications();
+export async function loadRealNotifications(
+  walletAddress?: string,
+  authenticated = false,
+  userId?: string
+): Promise<AppNotification[]> {
+  if (!authenticated) {
+    return [];
+  }
+
+  const readIds = getReadNotificationIds(userId);
+  const activity = getActivityNotifications(userId);
 
   const [marketsRes, positionsRes] = await Promise.allSettled([
     fetchMarkets(),
-    fetchPositions(walletAddress),
+    walletAddress ? fetchPositions(walletAddress) : Promise.resolve([]),
   ]);
 
   const derived: AppNotification[] = [];
@@ -112,8 +129,11 @@ export async function loadRealNotifications(walletAddress?: string): Promise<App
     }
   }
 
-  if (marketsRes.status === 'fulfilled') {
-    const resolved = marketsRes.value.filter((m) => m.status === 'resolved').slice(0, 3);
+  if (marketsRes.status === 'fulfilled' && positionsRes.status === 'fulfilled' && positionsRes.value.length > 0) {
+    const userMarketIds = new Set(positionsRes.value.map((p) => p.marketId));
+    const resolved = marketsRes.value
+      .filter((m) => m.status === 'resolved' && userMarketIds.has(m.id))
+      .slice(0, 3);
     for (const m of resolved) {
       derived.push({
         id: `mkt-resolved-${m.id}-${m.resolution}`,
@@ -122,20 +142,6 @@ export async function loadRealNotifications(walletAddress?: string): Promise<App
         type: 'market',
         timestamp: m.resolvedAt || m.createdAt || new Date().toISOString(),
         href: '/my-bets',
-      });
-    }
-
-    const openHot = marketsRes.value
-      .filter((m) => m.status === 'open')
-      .slice(0, 2);
-    for (const m of openHot) {
-      derived.push({
-        id: `mkt-live-${m.id}`,
-        title: `Live ${m.category} Market`,
-        message: m.title,
-        type: 'market',
-        timestamp: m.createdAt || new Date().toISOString(),
-        href: '/',
       });
     }
   }

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'wouter';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets as useEvmWallets } from '@privy-io/react-auth';
 import { useWallets } from '@privy-io/react-auth/solana';
 import {
   ArrowUpRight,
@@ -22,6 +22,7 @@ import { NotificationsMenu } from '@/components/notifications-menu';
 import { MyBets } from '@/components/my-bets';
 import { fetchPositions, type Position } from '@/lib/markets-api';
 import { useUserAvatar } from '@/lib/avatar';
+import { useUserWalletBalance } from '@/lib/balance';
 
 type CryptoAsset = {
   id: string;
@@ -39,9 +40,9 @@ const POPULAR_ASSETS: CryptoAsset[] = [
     id: 'bnb',
     symbol: 'BNB',
     name: 'Binance',
-    price: 4011.0,
-    change24h: 14.4,
-    balance: 2.76,
+    price: 615.0,
+    change24h: 4.2,
+    balance: 0,
     image: '/assets/images/crypto_emerald_moneybag_1794496493722.jpg',
     color: '#22c55e',
   },
@@ -51,7 +52,7 @@ const POPULAR_ASSETS: CryptoAsset[] = [
     name: 'Ethereum',
     price: 3233.0,
     change24h: -7.5,
-    balance: 1.45,
+    balance: 0,
     image: '/assets/images/crypto_iridescent_pebble_1794496494604.jpg',
     color: '#ec4899',
   },
@@ -61,7 +62,7 @@ const POPULAR_ASSETS: CryptoAsset[] = [
     name: 'Solana',
     price: 148.5,
     change24h: 7.3,
-    balance: 34.8,
+    balance: 0,
     image: '/assets/images/crypto_holographic_torus_1794496494448.jpg',
     color: '#4ade80',
   },
@@ -71,7 +72,7 @@ const POPULAR_ASSETS: CryptoAsset[] = [
     name: 'Bitcoin',
     price: 91420.0,
     change24h: -1.2,
-    balance: 0.28,
+    balance: 0,
     image: '/assets/images/crypto_emerald_moneybag_1794496493722.jpg',
     color: '#facc15',
   },
@@ -88,9 +89,11 @@ const ACTIVITY_MATRIX: Array<Array<'magenta' | 'green' | 'yellow' | 'empty'>> = 
 ];
 
 export function CryptoWalletDashboard() {
-  const { authenticated, user, login } = usePrivy();
+  const { authenticated, user } = usePrivy();
   const { wallets } = useWallets();
+  const { wallets: evmWallets } = useEvmWallets();
   const { avatarUrl } = useUserAvatar();
+  const { balance, setBalance } = useUserWalletBalance();
 
   const [activeAsset, setActiveAsset] = useState<CryptoAsset>(POPULAR_ASSETS[0]);
   const [chartTimeframe, setChartTimeframe] = useState<'4H' | '1D' | '1W' | '1M' | '6M'>('4H');
@@ -101,35 +104,30 @@ export function CryptoWalletDashboard() {
   const [sectionView, setSectionView] = useState<'all' | 'wallet' | 'positions'>('all');
   const [positions, setPositions] = useState<Position[]>([]);
 
-  const [balance, setBalance] = useState(() => {
-    return Number(localStorage.getItem('sidebet_wallet_balance') || '4011');
-  });
-
-  const activeSolAddr = wallets?.[0]?.address || user?.wallet?.address;
-  const walletAddress = user?.wallet?.address || (wallets[0] ? wallets[0].address : '4Hlo)cH7v9K2m1QxP3');
+  const activeSolAddr = wallets?.[0]?.address;
+  const activeEvmAddr = evmWallets?.[0]?.address || user?.wallet?.address;
+  const walletAddress = activeSolAddr || activeEvmAddr || '';
 
   useEffect(() => {
     let mounted = true;
-    void fetchPositions(activeSolAddr).then((list) => {
+    const queryAddr = activeSolAddr || activeEvmAddr;
+    if (!authenticated || !queryAddr) {
+      setPositions([]);
+      return;
+    }
+    void fetchPositions(queryAddr).then((list) => {
       if (mounted) setPositions(list);
     });
-    const syncBalance = () => {
-      setBalance(Number(localStorage.getItem('sidebet_wallet_balance') || '4011'));
-    };
-    window.addEventListener('storage', syncBalance);
-    const interval = setInterval(syncBalance, 2000);
     return () => {
       mounted = false;
-      window.removeEventListener('storage', syncBalance);
-      clearInterval(interval);
     };
-  }, [activeSolAddr]);
+  }, [authenticated, activeSolAddr, activeEvmAddr]);
 
   const openCount = positions.filter((p) => p.status === 'open').length;
   const wonCount = positions.filter((p) => p.status === 'won' || p.status === 'claimed').length;
   const lostCount = positions.filter((p) => p.status === 'lost').length;
   const totalSettled = wonCount + lostCount;
-  const winRate = totalSettled > 0 ? ((wonCount / totalSettled) * 100).toFixed(1) : '72.4';
+  const winRate = totalSettled > 0 ? ((wonCount / totalSettled) * 100).toFixed(1) : '0.0';
   const totalStakedSOL = positions.reduce((acc, p) => acc + (p.amount || 0), 0);
   const totalStakedUSD = (totalStakedSOL * 148.5).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -139,6 +137,7 @@ export function CryptoWalletDashboard() {
   };
 
   const copyAddress = () => {
+    if (!walletAddress) return;
     navigator.clipboard.writeText(walletAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -231,16 +230,18 @@ export function CryptoWalletDashboard() {
             </Link>
 
             {/* User Profile Avatar */}
-            <Link href="/profile" className="relative group cursor-pointer">
-              <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-[#22c55e]/40 p-0.5 ring-2 ring-black/40">
-                <img
-                  src={avatarUrl}
-                  alt="Trader Profile"
-                  className="h-full w-full rounded-full object-cover"
-                />
-              </div>
-              <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#22c55e] ring-2 ring-[#080C0F]" />
-            </Link>
+            {authenticated && avatarUrl && (
+              <Link href="/profile" className="relative group cursor-pointer">
+                <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-[#22c55e]/40 p-0.5 ring-2 ring-black/40">
+                  <img
+                    src={avatarUrl}
+                    alt="Trader Profile"
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                </div>
+                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#22c55e] ring-2 ring-[#080C0F]" />
+              </Link>
+            )}
           </div>
         </header>
 
@@ -267,13 +268,6 @@ export function CryptoWalletDashboard() {
                 </button>
               ))}
             </div>
-
-            <Link
-              href="/admin"
-              className="rounded-xl border border-white/10 bg-[#121820] px-3 py-1.5 text-[11px] font-mono text-[#FACC15] hover:border-[#FACC15]/40 whitespace-nowrap shrink-0"
-            >
-              Admin Oracle
-            </Link>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
@@ -429,8 +423,12 @@ export function CryptoWalletDashboard() {
                   className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-950/40 px-2.5 py-1 text-[11px] font-mono text-emerald-300 hover:border-emerald-400 cursor-pointer transition-colors"
                 >
                   <Lock size={11} className="text-emerald-400" />
-                  <span>{walletAddress.slice(0, 5)}...{walletAddress.slice(-3)}</span>
-                  {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                  <span>
+                    {walletAddress
+                      ? `${walletAddress.slice(0, 5)}...${walletAddress.slice(-3)}`
+                      : 'Provisioning...'}
+                  </span>
+                  {walletAddress && (copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />)}
                 </div>
               </div>
 
@@ -441,7 +439,7 @@ export function CryptoWalletDashboard() {
                     ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </div>
                   <span className="text-xs font-bold font-mono text-[#4ade80] bg-[#22c55e]/15 px-2 py-0.5 rounded-full">
-                    ▲ +7.3%
+                    {balance > 0 ? 'FUNDED' : '$0.00 START'}
                   </span>
                 </div>
               </div>
@@ -680,6 +678,8 @@ export function CryptoWalletDashboard() {
                 <div className="space-y-3">
                   {POPULAR_ASSETS.map((asset) => {
                     const isPositive = asset.change24h >= 0;
+                    const displayUsd = asset.id === 'sol' ? balance : 0;
+                    const displayUnits = displayUsd > 0 ? (displayUsd / asset.price).toFixed(4) : '0.00';
                     return (
                       <div
                         key={asset.id}
@@ -708,10 +708,10 @@ export function CryptoWalletDashboard() {
 
                         <div className="text-right">
                           <div className="text-xs font-bold font-mono text-white tabular-nums">
-                            {asset.balance}
+                            {displayUnits}
                           </div>
                           <div className="text-[10px] text-slate-400 font-mono">
-                            ${(asset.balance * asset.price).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            ${displayUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </div>
                         </div>
                       </div>
@@ -720,7 +720,7 @@ export function CryptoWalletDashboard() {
                 </div>
               </div>
 
-              {/* Portfolio Statistic Donut Chart matching screenshot */}
+              {/* Portfolio Statistic Donut Chart */}
               <div className="rounded-3xl border border-white/[0.08] bg-[#0E1318] p-5 shadow-lg flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold tracking-wide text-white">Portfolio Statistic</span>
@@ -735,47 +735,20 @@ export function CryptoWalletDashboard() {
                     {/* Background Ring */}
                     <circle cx="50" cy="50" r="38" fill="none" stroke="#131A21" strokeWidth="10" />
 
-                    {/* Segment 1: Yellow/Gold (BTC) - 55% */}
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="38"
-                      fill="none"
-                      stroke="#facc15"
-                      strokeWidth="10"
-                      strokeDasharray="131 239"
-                      strokeDashoffset="0"
-                      strokeLinecap="round"
-                      style={{ filter: 'drop-shadow(0 0 8px rgba(250,204,21,0.5))' }}
-                    />
-
-                    {/* Segment 2: Lime Green (BNB) - 25% */}
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="38"
-                      fill="none"
-                      stroke="#4ade80"
-                      strokeWidth="10"
-                      strokeDasharray="60 239"
-                      strokeDashoffset="-140"
-                      strokeLinecap="round"
-                      style={{ filter: 'drop-shadow(0 0 8px rgba(74,222,128,0.5))' }}
-                    />
-
-                    {/* Segment 3: Violet/Magenta (SOL/USDT) - 15% */}
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="38"
-                      fill="none"
-                      stroke="#a855f7"
-                      strokeWidth="10"
-                      strokeDasharray="36 239"
-                      strokeDashoffset="-205"
-                      strokeLinecap="round"
-                      style={{ filter: 'drop-shadow(0 0 8px rgba(168,85,247,0.5))' }}
-                    />
+                    {balance > 0 && (
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="38"
+                        fill="none"
+                        stroke="#4ade80"
+                        strokeWidth="10"
+                        strokeDasharray="239 239"
+                        strokeDashoffset="0"
+                        strokeLinecap="round"
+                        style={{ filter: 'drop-shadow(0 0 8px rgba(74,222,128,0.5))' }}
+                      />
+                    )}
                   </svg>
 
                   {/* Center Emblem */}
@@ -785,30 +758,26 @@ export function CryptoWalletDashboard() {
                     </div>
                   </div>
 
-                  {/* Floating Stat Badges matching screenshot */}
+                  {/* Live Balance Stat Badges */}
                   <div className="absolute -top-1 right-2 rounded-full border border-yellow-500/40 bg-[#121820] px-2 py-0.5 text-[9px] font-mono font-bold text-[#facc15] shadow-md">
-                    $12,473 <span className="text-[8px] text-slate-400">BTC</span>
+                    $0.00 <span className="text-[8px] text-slate-400">BTC</span>
                   </div>
                   <div className="absolute -top-1 left-2 rounded-full border border-emerald-500/40 bg-[#121820] px-2 py-0.5 text-[9px] font-mono font-bold text-[#4ade80] shadow-md">
-                    $2,301 <span className="text-[8px] text-slate-400">BNB</span>
+                    ${balance.toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="text-[8px] text-slate-400">CASH</span>
                   </div>
                   <div className="absolute -bottom-1 right-6 rounded-full border border-purple-500/40 bg-[#121820] px-2 py-0.5 text-[9px] font-mono font-bold text-[#c084fc] shadow-md">
-                    $6,320 <span className="text-[8px] text-slate-400">SOL</span>
+                    ${totalStakedUSD} <span className="text-[8px] text-slate-400">STAKED</span>
                   </div>
                 </div>
 
                 <div className="mt-2 flex items-center justify-around border-t border-white/5 pt-3 text-[10px] font-mono text-slate-400">
                   <div className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-[#facc15]" />
-                    <span>BTC (55%)</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-[#4ade80]" />
-                    <span>BNB (28%)</span>
+                    <span>Cash ({balance > 0 ? '100%' : '0%'})</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-[#a855f7]" />
-                    <span>SOL (17%)</span>
+                    <span>Staked (${totalStakedUSD})</span>
                   </div>
                 </div>
               </div>

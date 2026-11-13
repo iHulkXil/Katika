@@ -1,16 +1,30 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'wouter';
-import { Clock, TrendingUp, Sparkles, ArrowUpRight, CheckCircle2, Trophy, Loader2 } from 'lucide-react';
+import { Clock, ArrowUpRight, Trophy, Loader2, Swords, ShieldCheck } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { fetchPositions, claimWinnings, type Position } from '@/lib/markets-api';
 import { useToast } from '@/hooks/use-toast';
 import { pushNotification } from '@/lib/notifications';
+import { getWalletBalance, setWalletBalance } from '@/lib/balance';
 import { SOLANA_CLUSTER_NAME } from '@/main';
 
+type AutoPvpSettlement = {
+  id: string;
+  matchKey: string;
+  game: 'pool' | 'wheel';
+  stakeUsd: number;
+  cryptoType: string;
+  cryptoAmount: number;
+  won: boolean;
+  payoutUsd: number;
+  settledAt: string;
+};
+
 export function MyBets() {
-  const { user } = usePrivy();
+  const { user, authenticated, getAccessToken } = usePrivy();
   const { toast } = useToast();
   const [positions, setPositions] = useState<Position[]>([]);
+  const [pvpSettlements, setPvpSettlements] = useState<AutoPvpSettlement[]>([]);
   const [loading, setLoading] = useState(true);
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
@@ -20,12 +34,27 @@ export function MyBets() {
     try {
       const data = await fetchPositions(walletAddress);
       setPositions(data);
+
+      if (authenticated) {
+        const token = await getAccessToken();
+        if (token) {
+          const pvpRes = await fetch('/api/pvp/settlements', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (pvpRes.ok) {
+            const pvpData = await pvpRes.json();
+            if (Array.isArray(pvpData?.settlements)) {
+              setPvpSettlements(pvpData.settlements);
+            }
+          }
+        }
+      }
     } catch (err) {
       console.error('Failed to load user positions:', err);
     } finally {
       setLoading(false);
     }
-  }, [walletAddress]);
+  }, [walletAddress, authenticated, getAccessToken]);
 
   useEffect(() => {
     void loadPositions();
@@ -35,10 +64,10 @@ export function MyBets() {
     setClaimingId(posId);
     try {
       const payout = await claimWinnings(posId);
-      // Credit to local balance
-      const currentBal = Number(localStorage.getItem('sidebet_wallet_balance') || '4011');
+      // Credit to user cash balance
+      const currentBal = getWalletBalance(user?.id);
       const payoutUsd = payout * 148.5; // ~148.50 per SOL
-      localStorage.setItem('sidebet_wallet_balance', String(currentBal + payoutUsd));
+      setWalletBalance(user?.id, currentBal + payoutUsd);
 
       toast({
         title: 'Winnings Claimed!',
@@ -50,6 +79,7 @@ export function MyBets() {
         message: `Added +$${payoutUsd.toFixed(2)} (+${payout.toFixed(3)} SOL) to your dollar balance.`,
         type: 'win',
         href: '/wallet',
+        userId: user?.id,
       });
 
       await loadPositions();
@@ -81,7 +111,7 @@ export function MyBets() {
             {loading && <Loader2 size={15} className="animate-spin text-[#4ADE80]" />}
           </h2>
           <p className="mt-0.5 text-xs text-slate-400">
-            Persistent on-chain & backend order ledger across all markets.
+            Market bets are resolved and settled by Sidebet Admin. PvP bets settle automatically on match finish.
           </p>
         </div>
 
@@ -156,7 +186,7 @@ export function MyBets() {
                           : 'bg-[#22c55e]/10 border border-[#22c55e]/20 text-[#4ade80]'
                       }`}
                     >
-                      {p.status}
+                      {p.status === 'open' ? 'OPEN · ADMIN SETTLE' : p.status}
                     </span>
 
                     {/* Claim Button for Won positions */}
@@ -213,6 +243,51 @@ export function MyBets() {
           })}
         </div>
       )}
+
+      {/* Automated PvP Settlements */}
+      <div className="rounded-3xl border border-white/[0.08] bg-[#0E1318] p-5 space-y-3">
+        <div className="flex items-center justify-between border-b border-white/5 pb-3">
+          <div className="flex items-center gap-2">
+            <Swords size={16} className="text-[#4ade80]" />
+            <h3 className="text-sm font-bold text-white">PvP Match History (Auto-Settled)</h3>
+          </div>
+          <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e]/10 border border-[#22c55e]/25 px-2.5 py-0.5 text-[10px] font-mono text-[#4ade80]">
+            <ShieldCheck size={11} /> Automatic Payouts
+          </span>
+        </div>
+
+        {pvpSettlements.length === 0 ? (
+          <p className="text-xs text-slate-400">
+            No settled PvP matches yet. Play <Link href="/games/pool" className="text-[#4ade80] hover:underline">8-Ball Pool</Link> or <Link href="/games/wheel" className="text-[#FACC15] hover:underline">Wheel of Fortune</Link>—winnings settle automatically into your balance.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {pvpSettlements.map((s) => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between rounded-2xl border border-white/5 bg-[#080C0F] px-3.5 py-2.5 text-xs font-mono"
+              >
+                <div>
+                  <span className="font-bold text-white">
+                    {s.game === 'pool' ? '8-Ball Pool' : 'Wheel of Fortune'}
+                  </span>
+                  <span className="block text-[10px] text-slate-400">
+                    Stake: ${s.stakeUsd.toFixed(2)} ({s.cryptoAmount} {s.cryptoType})
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className={s.won ? 'font-bold text-[#4ade80]' : 'font-bold text-rose-400'}>
+                    {s.won ? `+$${s.payoutUsd.toFixed(2)} WON` : 'SETTLED · LOST'}
+                  </span>
+                  <span className="block text-[10px] text-slate-500">
+                    {s.settledAt.slice(0, 10)} · Auto-Settled
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { usePrivy } from '@privy-io/react-auth';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -7,15 +8,14 @@ import { MarketsHome } from '@/components/markets-home';
 import { DiscoverPage } from '@/components/discover-page';
 import { ProfilePage } from '@/components/profile-page';
 import { MyBets } from '@/components/my-bets';
-import { AuthGate } from '@/components/auth-gate';
 import { LayoutShell } from '@/components/layout-shell';
 import { CryptoWalletDashboard } from '@/components/crypto-wallet-dashboard';
 import { PvPLobby } from '@/components/pvp-lobby';
 import { PoolGamePage } from '@/components/pool-game';
 import { PotWheelGamePage } from '@/components/pot-wheel-game';
-import { LudoGamePage } from '@/components/ludo-game';
-import { AdminResolverPage } from '@/components/admin-resolver';
 import { ComplianceModal } from '@/components/compliance-modal';
+import { KycOnboardingModal } from '@/components/kyc-onboarding-modal';
+import { KycProvider, useKyc } from '@/lib/kyc';
 import { fetchStats, type PlatformStats } from '@/lib/markets-api';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 
@@ -44,7 +44,7 @@ function Leaderboard() {
     { rank: 1, name: 'ApexBull (Top Alpha)', returnVal: '+$124,500', pct: '+412%', color: '#facc15' },
     { rank: 2, name: 'SolWhale', returnVal: '+$98,200', pct: '+285%', color: '#4ade80' },
     { rank: 3, name: 'MacroQuant', returnVal: '+$64,300', pct: '+194%', color: '#a855f7' },
-    { rank: 4, name: 'You (Current Session)', returnVal: '+$4,011', pct: '+14.4%', color: '#22c55e' },
+    { rank: 4, name: 'You (Current Session)', returnVal: '$0.00', pct: '0.0%', color: '#22c55e' },
     { rank: 5, name: 'DeltaMaker', returnVal: '+$28,100', pct: '+96%', color: '#ec4899' },
   ];
 
@@ -107,6 +107,27 @@ function NotFoundPage() {
 }
 
 function Router() {
+  const { ready, authenticated } = usePrivy();
+  const { isKycComplete, loading: kycLoading } = useKyc();
+  const [location, setLocation] = useLocation();
+
+  const unlocked = Boolean(authenticated && isKycComplete);
+
+  useEffect(() => {
+    if (ready && !kycLoading && !unlocked && location !== '/') {
+      setLocation('/');
+    }
+  }, [ready, kycLoading, unlocked, location, setLocation]);
+
+  // Until signed in and KYC verified, users remain strictly on the Discover page showing Markets + PvP
+  if (!unlocked) {
+    return (
+      <ErrorRouted>
+        <Discover />
+      </ErrorRouted>
+    );
+  }
+
   return (
     <ErrorRouted>
       <Switch>
@@ -120,9 +141,6 @@ function Router() {
         <Route path="/games/wheel" component={PotWheelGamePage} />
         <Route path="/pvp/wheel" component={PotWheelGamePage} />
         <Route path="/pvp/wheel/:id" component={PotWheelGamePage} />
-        <Route path="/games/ludo" component={LudoGamePage} />
-        <Route path="/pvp/ludo" component={LudoGamePage} />
-        <Route path="/pvp/ludo/:id" component={LudoGamePage} />
         <Route path="/trending">{() => <MarketsHome defaultCategory="All" />}</Route>
         <Route path="/sports">{() => <MarketsHome defaultCategory="Sports" />}</Route>
         <Route path="/crypto">{() => <MarketsHome defaultCategory="Crypto" />}</Route>
@@ -135,7 +153,6 @@ function Router() {
         <Route path="/wallet" component={WalletPortfolio} />
         <Route path="/cashier" component={WalletPortfolio} />
         <Route path="/leaderboard" component={Leaderboard} />
-        <Route path="/admin" component={AdminResolverPage} />
         <Route path="/profile" component={ProfilePage} />
         <Route component={NotFoundPage} />
       </Switch>
@@ -152,15 +169,16 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <LayoutShell>
-            <AuthGate>
+        <KycProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+            <LayoutShell>
               <Router />
-            </AuthGate>
-          </LayoutShell>
-          <ComplianceModal />
-        </WouterRouter>
-        <Toaster />
+            </LayoutShell>
+            <KycOnboardingModal />
+            <ComplianceModal />
+          </WouterRouter>
+          <Toaster />
+        </KycProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

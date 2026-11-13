@@ -50,21 +50,31 @@ function NotificationIcon({ type }: { type: AppNotificationType }) {
 }
 
 export function NotificationsMenu({ size = 'sm' }: { size?: 'sm' | 'md' }) {
-  const { user } = usePrivy();
+  const { authenticated, user } = usePrivy();
   const { wallets } = useWallets();
   const [, setLocation] = useLocation();
   const walletAddress = wallets?.[0]?.address || user?.wallet?.address;
+  const userId = user?.id;
 
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<AppNotification[]>([]);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const refresh = useCallback(async () => {
-    const list = await loadRealNotifications(walletAddress);
+    if (!authenticated) {
+      setItems([]);
+      return;
+    }
+    const list = await loadRealNotifications(walletAddress, authenticated, userId);
     setItems(list);
-  }, [walletAddress]);
+  }, [walletAddress, authenticated, userId]);
 
   useEffect(() => {
+    if (!authenticated) {
+      setItems([]);
+      setOpen(false);
+      return;
+    }
     void refresh();
     const onUpdate = () => void refresh();
     window.addEventListener(NOTIFICATIONS_EVENT, onUpdate);
@@ -75,7 +85,7 @@ export function NotificationsMenu({ size = 'sm' }: { size?: 'sm' | 'md' }) {
       window.removeEventListener('storage', onUpdate);
       clearInterval(poll);
     };
-  }, [refresh]);
+  }, [authenticated, refresh]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -89,6 +99,10 @@ export function NotificationsMenu({ size = 'sm' }: { size?: 'sm' | 'md' }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
 
+  if (!authenticated) {
+    return null;
+  }
+
   const unreadCount = items.filter((i) => !i.read).length;
 
   const handleToggle = () => {
@@ -100,7 +114,7 @@ export function NotificationsMenu({ size = 'sm' }: { size?: 'sm' | 'md' }) {
   };
 
   const handleItemClick = (item: AppNotification) => {
-    markNotificationRead(item.id);
+    markNotificationRead(item.id, userId);
     setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
     setOpen(false);
     if (item.href) {
@@ -109,7 +123,7 @@ export function NotificationsMenu({ size = 'sm' }: { size?: 'sm' | 'md' }) {
   };
 
   const handleMarkAllRead = () => {
-    markAllNotificationsRead(items.map((i) => i.id));
+    markAllNotificationsRead(items.map((i) => i.id), userId);
     setItems((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 

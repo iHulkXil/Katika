@@ -16,8 +16,12 @@ import {
   Play,
   Users,
 } from 'lucide-react';
+import { usePrivy } from '@privy-io/react-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useUserAvatar } from '@/lib/avatar';
+import { getWalletBalance, setWalletBalance } from '@/lib/balance';
+import { useKyc } from '@/lib/kyc';
+import { pushNotification } from '@/lib/notifications';
 
 // Crypto Exchange Rates to $ USD
 const CRYPTO_RATES = {
@@ -77,6 +81,8 @@ const BALL_COLORS: Record<number, string> = {
 
 export function PoolGamePage() {
   const [, setLocation] = useLocation();
+  const { user, getAccessToken } = usePrivy();
+  const { recordGamePlay } = useKyc();
   const { toast } = useToast();
   const { avatarUrl } = useUserAvatar();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -87,6 +93,20 @@ export function PoolGamePage() {
   const [gameMode, setGameMode] = useState<'pvp' | 'practice'>('pvp');
   const [matchStarted, setMatchStarted] = useState<boolean>(false);
   const [matchWinner, setMatchWinner] = useState<string | null>(null);
+
+  const matchSettledRef = useRef(false);
+  const matchKeyRef = useRef(`pool-${Date.now()}`);
+  const matchStartedRef = useRef(matchStarted);
+  const gameModeRef = useRef(gameMode);
+  const prizeUsdRef = useRef(0);
+  const stakeUsdRef = useRef(stakeUsd);
+  const selectedCryptoRef = useRef(selectedCrypto);
+  const cryptoAmountRef = useRef('0');
+
+  useEffect(() => { matchStartedRef.current = matchStarted; }, [matchStarted]);
+  useEffect(() => { gameModeRef.current = gameMode; }, [gameMode]);
+  useEffect(() => { stakeUsdRef.current = stakeUsd; }, [stakeUsd]);
+  useEffect(() => { selectedCryptoRef.current = selectedCrypto; }, [selectedCrypto]);
 
   // Sound
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -144,13 +164,17 @@ export function PoolGamePage() {
   }, [soundEnabled]);
 
   // Crypto conversion calculations
-  const cryptoAmount = (stakeUsd / CRYPTO_RATES[selectedCrypto]).toFixed(
+  const safeStakeUsd = Number.isFinite(stakeUsd) && stakeUsd > 0 ? stakeUsd : 0;
+  const cryptoAmount = (safeStakeUsd / CRYPTO_RATES[selectedCrypto]).toFixed(
     selectedCrypto === 'BTC' ? 6 : selectedCrypto === 'ETH' ? 4 : 2
   );
-  const prizeUsd = stakeUsd * 2 * 0.96; // 4% rake
+  const prizeUsd = gameMode === 'pvp' ? safeStakeUsd * 2 * 0.96 : 0; // 4% rake in PvP
   const prizeCrypto = (prizeUsd / CRYPTO_RATES[selectedCrypto]).toFixed(
     selectedCrypto === 'BTC' ? 6 : selectedCrypto === 'ETH' ? 4 : 2
   );
+
+  useEffect(() => { prizeUsdRef.current = prizeUsd; }, [prizeUsd]);
+  useEffect(() => { cryptoAmountRef.current = cryptoAmount; }, [cryptoAmount]);
 
   // Initialize Billiard Balls in Rack
   const initBalls = useCallback((): Ball[] => {
@@ -224,6 +248,7 @@ export function PoolGamePage() {
   // Restart / Reset
   const handleReset = () => {
     ballsRef.current = initBalls();
+    matchSettledRef.current = false;
     setIsAiming(true);
     setTurn('player1');
     setPlayer1Group(null);
@@ -232,27 +257,50 @@ export function PoolGamePage() {
     setFoulMessage(null);
   };
 
-  // Start Wager Match
+  // Start Wager or Free Practice Match
   const handleStartMatch = () => {
-    // Check balance
-    const currentBal = Number(localStorage.getItem('sidebet_wallet_balance') || '4011');
-    if (currentBal < stakeUsd) {
+    if (gameMode === 'practice') {
+      matchKeyRef.current = `pool-practice-${Date.now()}`;
+      setMatchStarted(true);
+      handleReset();
+      void recordGamePlay('8-Ball Pool (Free Practice)');
+      toast({
+        title: 'Free Practice Table Active',
+        description: 'Rack is ready! Play solo at $0 stake — eligible for Airtel 200MB game play.',
+      });
+      return;
+    }
+
+    if (safeStakeUsd <= 0) {
+      toast({
+        title: 'Invalid Stake',
+        description: 'Enter a stake amount greater than $0.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check balance for PvP Stake
+    const currentBal = getWalletBalance(user?.id);
+    if (currentBal < safeStakeUsd) {
       toast({
         title: 'Insufficient Balance',
-        description: `You need at least $${stakeUsd} (${cryptoAmount} ${selectedCrypto}) to enter this PvP table.`,
+        description: `You need at least $${safeStakeUsd} (${cryptoAmount} ${selectedCrypto}) to enter this PvP table, or switch to Free Practice ($0).`,
         variant: 'destructive',
       });
       return;
     }
 
     // Deduct stake from wallet balance
-    localStorage.setItem('sidebet_wallet_balance', String(currentBal - stakeUsd));
+    setWalletBalance(user?.id, currentBal - safeStakeUsd);
+    matchKeyRef.current = `pool-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     setMatchStarted(true);
     handleReset();
+    void recordGamePlay('8-Ball Pool');
 
     toast({
       title: 'PvP Match Started',
-      description: `Wagered ${cryptoAmount} ${selectedCrypto} ($${stakeUsd}). Prize pot is $${prizeUsd.toFixed(2)} (${prizeCrypto} ${selectedCrypto}).`,
+      description: `Wagered ${cryptoAmount} ${selectedCrypto} ($${safeStakeUsd}). Match settles automatically when the 8-ball drops.`,
     });
   };
 
@@ -347,17 +395,71 @@ export function PoolGamePage() {
                 b.vx = 0;
                 b.vy = 0;
               }, 1200);
-            } else if (b.type === 'eight') {
-              // 8-ball win/loss logic
+            } else if (b.type === 'eight' && !matchSettledRef.current) {
+              // 8-ball win/loss automatic settlement
+              matchSettledRef.current = true;
               const winner = turn === 'player1' ? 'You' : opponent.name;
               setMatchWinner(winner);
-              // Payout winner
-              if (winner === 'You') {
-                const currentBal = Number(localStorage.getItem('sidebet_wallet_balance') || '4011');
-                localStorage.setItem('sidebet_wallet_balance', String(currentBal + prizeUsd));
+
+              if (matchStartedRef.current && gameModeRef.current === 'pvp') {
+                const won = winner === 'You';
+                const settledPrize = prizeUsdRef.current;
+                const settledStake = stakeUsdRef.current;
+                const settledCrypto = selectedCryptoRef.current;
+                const settledCryptoAmt = Number(cryptoAmountRef.current) || 0;
+
+                if (won) {
+                  const currentBal = getWalletBalance(user?.id);
+                  setWalletBalance(user?.id, currentBal + settledPrize);
+                  pushNotification({
+                    id: `pvp-pool-win-${matchKeyRef.current}`,
+                    title: 'PvP 8-Ball Pool Settled: Won!',
+                    message: `+$${settledPrize.toFixed(2)} automatically credited to your dollar balance.`,
+                    type: 'win',
+                    href: '/my-bets',
+                    userId: user?.id,
+                  });
+                  toast({
+                    title: 'VICTORY! Auto-Settled 🎱',
+                    description: `You won the match! +$${settledPrize.toFixed(2)} automatically credited to your balance.`,
+                  });
+                } else {
+                  toast({
+                    title: 'Match Settled',
+                    description: `${opponent.name} sunk the 8-ball. PvP wager settled automatically.`,
+                  });
+                }
+
+                // Persist automated settlement to backend ledger
+                void (async () => {
+                  try {
+                    const token = await getAccessToken();
+                    if (!token) return;
+                    await fetch('/api/pvp/auto-settle', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                      },
+                      body: JSON.stringify({
+                        matchKey: matchKeyRef.current,
+                        game: 'pool',
+                        stakeUsd: settledStake,
+                        cryptoType: settledCrypto,
+                        cryptoAmount: settledCryptoAmt,
+                        won,
+                        payoutUsd: won ? settledPrize : 0,
+                        rakeUsd: Number((settledStake * 2 * 0.04).toFixed(2)),
+                      }),
+                    });
+                  } catch {
+                    // ignore
+                  }
+                })();
+              } else if (matchStartedRef.current && gameModeRef.current === 'practice') {
                 toast({
-                  title: 'VICTORY! 🎱',
-                  description: `You won the match! +$${prizeUsd.toFixed(2)} (${prizeCrypto} ${selectedCrypto}) credited to your onchain wallet.`,
+                  title: 'Practice Frame Complete 🎱',
+                  description: 'Nice shot! Switch to PvP Stake to compete for live payouts.',
                 });
               }
             } else {
@@ -699,86 +801,147 @@ export function PoolGamePage() {
               </p>
             </div>
 
-            {/* Currency Badges */}
-            <div className="flex items-center gap-1.5 bg-[#121820] p-1 rounded-2xl border border-white/5">
-              {(['SOL', 'ETH', 'BTC', 'USDT'] as const).map((curr) => {
-                const isSelected = selectedCrypto === curr;
-                return (
-                  <button
-                    key={curr}
-                    type="button"
-                    onClick={() => setSelectedCrypto(curr)}
-                    className={`rounded-xl px-3 py-1.5 text-xs font-mono font-bold transition-all ${
-                      isSelected
-                        ? 'bg-[#22C55E] text-black shadow-md shadow-[#22C55E]/20'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {curr}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Quick Stake Preset Buttons */}
-          <div>
-            <div className="flex items-center justify-between text-xs mb-2">
-              <span className="font-semibold text-slate-300">Choose Stake Tier</span>
-              <span className="font-mono text-[#4ADE80] font-bold">
-                {cryptoAmount} {selectedCrypto} <span className="text-slate-400 font-normal">(${stakeUsd})</span>
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-              {[5, 10, 25, 50, 100].map((amt) => {
-                const isSelected = stakeUsd === amt;
-                const eqCrypto = (amt / CRYPTO_RATES[selectedCrypto]).toFixed(
-                  selectedCrypto === 'BTC' ? 5 : selectedCrypto === 'ETH' ? 4 : 2
-                );
-
-                return (
-                  <button
-                    key={amt}
-                    type="button"
-                    onClick={() => setStakeUsd(amt)}
-                    className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all ${
-                      isSelected
-                        ? 'border-[#22C55E] bg-[#121B16] shadow-[0_0_15px_rgba(34,197,94,0.15)] ring-1 ring-[#22C55E]/40'
-                        : 'border-white/[0.08] bg-[#121820] hover:border-white/20'
-                    }`}
-                  >
-                    <span className="text-base font-extrabold font-mono text-white">${amt}</span>
-                    <span className="text-[10px] font-mono text-slate-400 mt-0.5">
-                      {eqCrypto} {selectedCrypto}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Pot summary and Match initiation */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl border border-white/5 bg-[#121820] px-4 py-2">
-                <span className="text-[10px] text-slate-400 uppercase font-mono block">Winner Prize Pot</span>
-                <span className="text-base font-extrabold font-mono text-[#FACC15]">
-                  ${prizeUsd.toFixed(2)} <span className="text-xs text-slate-400">({prizeCrypto} {selectedCrypto})</span>
-                </span>
+            {/* Mode & Currency Badges */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1 bg-[#121820] p-1 rounded-2xl border border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setGameMode('pvp')}
+                  className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                    gameMode === 'pvp'
+                      ? 'bg-[#22C55E] text-black shadow-md shadow-[#22C55E]/20'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  PvP Stake
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGameMode('practice')}
+                  className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                    gameMode === 'practice'
+                      ? 'bg-[#FACC15] text-black shadow-md shadow-[#FACC15]/20'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Free Practice ($0)
+                </button>
               </div>
-              <span className="text-[11px] text-slate-500 font-mono">4% protocol rake on payout</span>
-            </div>
 
-            <button
-              type="button"
-              onClick={handleStartMatch}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#22C55E] hover:bg-[#16A34A] px-6 py-3.5 text-xs font-extrabold text-black shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Swords size={16} />
-              <span>Enter Table & Stake {cryptoAmount} {selectedCrypto}</span>
-            </button>
+              <div className="flex items-center gap-1.5 bg-[#121820] p-1 rounded-2xl border border-white/5">
+                {(['SOL', 'ETH', 'BTC', 'USDT'] as const).map((curr) => {
+                  const isSelected = selectedCrypto === curr;
+                  return (
+                    <button
+                      key={curr}
+                      type="button"
+                      onClick={() => setSelectedCrypto(curr)}
+                      className={`rounded-xl px-3 py-1.5 text-xs font-mono font-bold transition-all ${
+                        isSelected
+                          ? 'bg-[#22C55E] text-black shadow-md shadow-[#22C55E]/20'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {curr}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
+
+          {gameMode === 'pvp' ? (
+            <>
+              {/* Quick Stake Preset Buttons */}
+              <div>
+                <div className="flex items-center justify-between text-xs mb-2">
+                  <span className="font-semibold text-slate-300">Choose Stake Tier</span>
+                  <span className="font-mono text-[#4ADE80] font-bold">
+                    {cryptoAmount} {selectedCrypto} <span className="text-slate-400 font-normal">(${stakeUsd})</span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                  {[5, 10, 25, 50, 100].map((amt) => {
+                    const isSelected = stakeUsd === amt;
+                    const eqCrypto = (amt / CRYPTO_RATES[selectedCrypto]).toFixed(
+                      selectedCrypto === 'BTC' ? 5 : selectedCrypto === 'ETH' ? 4 : 2
+                    );
+
+                    return (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => setStakeUsd(amt)}
+                        className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all ${
+                          isSelected
+                            ? 'border-[#22C55E] bg-[#121B16] shadow-[0_0_15px_rgba(34,197,94,0.15)] ring-1 ring-[#22C55E]/40'
+                            : 'border-white/[0.08] bg-[#121820] hover:border-white/20'
+                        }`}
+                      >
+                        <span className="text-base font-extrabold font-mono text-white">${amt}</span>
+                        <span className="text-[10px] font-mono text-slate-400 mt-0.5">
+                          {eqCrypto} {selectedCrypto}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="relative mt-2.5">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold text-xs">$</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10000"
+                    value={stakeUsd || ''}
+                    onChange={(e) => setStakeUsd(Number(e.target.value))}
+                    placeholder="Or enter custom $ stake..."
+                    className="w-full rounded-2xl border border-white/10 bg-[#080C0F] py-2.5 pl-8 pr-4 text-xs font-mono text-white placeholder:text-slate-500 focus:border-[#22C55E] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Pot summary and Match initiation */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-2xl border border-white/5 bg-[#121820] px-4 py-2">
+                    <span className="text-[10px] text-slate-400 uppercase font-mono block">Winner Prize Pot</span>
+                    <span className="text-base font-extrabold font-mono text-[#FACC15]">
+                      ${prizeUsd.toFixed(2)} <span className="text-xs text-slate-400">({prizeCrypto} {selectedCrypto})</span>
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-mono">4% protocol rake on payout</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleStartMatch}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#22C55E] hover:bg-[#16A34A] px-6 py-3.5 text-xs font-extrabold text-black shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <Swords size={16} />
+                  <span>Enter Table &amp; Stake {cryptoAmount} {selectedCrypto}</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-[#FACC15]/25 bg-[#17160F] p-4">
+              <div>
+                <p className="text-xs font-bold text-[#FACC15]">Free Practice Mode ($0 Stake)</p>
+                <p className="text-[11px] text-slate-300 mt-0.5">
+                  Practice cue shots with zero balance required. Counts toward your Airtel 200MB Data Bonus play requirement!
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleStartMatch}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#FACC15] hover:bg-[#eab308] px-6 py-3 text-xs font-extrabold text-black shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0"
+              >
+                <Play size={15} className="fill-current" />
+                <span>Start Free Practice</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -794,12 +957,14 @@ export function PoolGamePage() {
             }`}
           >
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 overflow-hidden rounded-full border border-[#22C55E]/40">
-                <img
-                  src={avatarUrl}
-                  alt="You"
-                  className="h-full w-full object-cover"
-                />
+              <div className="h-10 w-10 overflow-hidden rounded-full border border-[#22C55E]/40 bg-[#121820]">
+                {avatarUrl && (
+                  <img
+                    src={avatarUrl}
+                    alt="You"
+                    className="h-full w-full object-cover"
+                  />
+                )}
               </div>
               <div>
                 <span className="text-xs font-bold text-white flex items-center gap-1.5">

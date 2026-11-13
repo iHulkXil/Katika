@@ -19,8 +19,12 @@ import {
   CircleDollarSign,
   AlertCircle,
 } from 'lucide-react';
+import { usePrivy } from '@privy-io/react-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useUserAvatar } from '@/lib/avatar';
+import { useUserWalletBalance } from '@/lib/balance';
+import { useKyc } from '@/lib/kyc';
+import { pushNotification } from '@/lib/notifications';
 
 // Multi-crypto rates to USD
 const CRYPTO_RATES: Record<string, number> = {
@@ -68,15 +72,16 @@ const CELEBRATE_DURATION_MS = 6000; // 6 seconds win celebration
 
 export function PotWheelGamePage() {
   const [, setLocation] = useLocation();
+  const { user, getAccessToken } = usePrivy();
   const { toast } = useToast();
   const { avatarUrl } = useUserAvatar();
+  const { recordGamePlay } = useKyc();
+  const settledRoundRef = useRef<number | null>(null);
 
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoType>('SOL');
   const [stakeInput, setStakeInput] = useState<number>(25);
-  const [walletBalance, setWalletBalance] = useState<number>(() => {
-    return Number(localStorage.getItem('sidebet_wallet_balance') || '4011');
-  });
+  const { balance: walletBalance, setBalance: setWalletBalance } = useUserWalletBalance();
 
   // Cycle state
   const [now, setNow] = useState<number>(Date.now());
@@ -264,18 +269,57 @@ export function PotWheelGamePage() {
         setPhase('CELEBRATING');
         playWinFanfare();
 
-        if (winner) {
-          // If current user is winner, credit balance!
+        if (winner && settledRoundRef.current !== currentRoundId) {
+          settledRoundRef.current = currentRoundId;
+          const userEntry = players.find((p) => p.isUser);
+
+          // If current user is winner, automatically credit balance & notify
           if (winner.isUser) {
             const wonAmount = netPrizeUsd;
             const newBal = walletBalance + wonAmount;
             setWalletBalance(newBal);
-            localStorage.setItem('sidebet_wallet_balance', newBal.toFixed(2));
+
+            pushNotification({
+              id: `pvp-wheel-win-${currentRoundId}`,
+              title: 'Wheel of Fortune Auto-Settled: Won!',
+              message: `+$${wonAmount.toFixed(2)} automatically credited from Round #${currentRoundId}.`,
+              type: 'win',
+              href: '/my-bets',
+              userId: user?.id,
+            });
 
             toast({
-              title: '🎉 YOU WON THE POT!',
-              description: `Congratulations! +$${wonAmount.toFixed(2)} credited to your wallet balance.`,
+              title: '🎉 YOU WON THE POT! Auto-Settled',
+              description: `+$${wonAmount.toFixed(2)} automatically credited to your wallet balance.`,
             });
+          }
+
+          if (userEntry) {
+            void (async () => {
+              try {
+                const token = await getAccessToken();
+                if (!token) return;
+                await fetch('/api/pvp/auto-settle', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({
+                    matchKey: `wheel-${currentRoundId}`,
+                    game: 'wheel',
+                    stakeUsd: userEntry.stakeUsd,
+                    cryptoType: userEntry.cryptoType,
+                    cryptoAmount: userEntry.cryptoAmount,
+                    won: Boolean(winner.isUser),
+                    payoutUsd: winner.isUser ? Number(netPrizeUsd.toFixed(2)) : 0,
+                    rakeUsd: Number(rakeUsd.toFixed(2)),
+                  }),
+                });
+              } catch {
+                // ignore
+              }
+            })();
           }
 
           // Add to recent history
@@ -299,7 +343,7 @@ export function PotWheelGamePage() {
         setWinner(null);
       }
     }
-  }, [cycleElapsed, bettingDuration, phase, playerShares, winner, netPrizeUsd, walletBalance, totalPotUsd, currentRoundId, playWinFanfare, toast]);
+  }, [cycleElapsed, bettingDuration, phase, playerShares, players, winner, netPrizeUsd, rakeUsd, walletBalance, setWalletBalance, totalPotUsd, currentRoundId, playWinFanfare, toast, user?.id, getAccessToken]);
 
   // Spin animation frame loop
   useEffect(() => {
@@ -468,7 +512,6 @@ export function PotWheelGamePage() {
     // Deduct balance
     const newBal = walletBalance - stakeInput;
     setWalletBalance(newBal);
-    localStorage.setItem('sidebet_wallet_balance', newBal.toFixed(2));
 
     const cryptoEq = Number((stakeInput / CRYPTO_RATES[selectedCrypto]).toFixed(selectedCrypto === 'BTC' ? 5 : selectedCrypto === 'ETH' ? 4 : 2));
 
@@ -487,7 +530,7 @@ export function PotWheelGamePage() {
         const newPlayer: PotPlayer = {
           id: 'user-me',
           name: 'You (Trader)',
-          avatar: avatarUrl,
+          avatar: avatarUrl || '/assets/images/avatar_crypto_trader_1794496493828.jpg',
           color: '#22C55E',
           stakeUsd: stakeInput,
           cryptoType: selectedCrypto,
@@ -497,6 +540,8 @@ export function PotWheelGamePage() {
         return [newPlayer, ...prev];
       }
     });
+
+    void recordGamePlay('Wheel of Fortune');
 
     toast({
       title: 'Stake Added to Pot!',
@@ -532,10 +577,10 @@ export function PotWheelGamePage() {
                 PVP ARENA
               </span>
               <span className="rounded-full bg-[#22C55E]/15 border border-[#22C55E]/30 px-2 py-0.5 text-[9px] font-mono font-bold text-[#4ADE80]">
-                3-MIN POT WHEEL
+                3-MIN CYCLE
               </span>
             </div>
-            <h1 className="text-2xl font-extrabold font-display text-white">Wheel of the Pot</h1>
+            <h1 className="text-2xl font-extrabold font-display text-white">Wheel of Fortune</h1>
           </div>
         </div>
 

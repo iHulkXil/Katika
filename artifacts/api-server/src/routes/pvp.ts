@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { Router, type IRouter } from "express";
 import { desc, eq, or, and } from "drizzle-orm";
 import {
@@ -1180,6 +1182,108 @@ async function handlePenaltySettle(req: any, res: any) {
     return res.status(500).json({ error: "Failed to settle penalty shootout" });
   }
 }
+
+type AutoPvpSettlement = {
+  id: string;
+  matchKey: string;
+  privyUserId: string;
+  game: "pool" | "wheel";
+  stakeUsd: number;
+  cryptoType: string;
+  cryptoAmount: number;
+  won: boolean;
+  payoutUsd: number;
+  rakeUsd: number;
+  settledAt: string;
+};
+
+const PVP_DATA_DIR = path.resolve(process.cwd(), ".data");
+const PVP_SETTLEMENTS_FILE = path.join(PVP_DATA_DIR, "sidebet_pvp_settlements.json");
+
+function loadPvpSettlements(): AutoPvpSettlement[] {
+  try {
+    if (fs.existsSync(PVP_SETTLEMENTS_FILE)) {
+      const raw = fs.readFileSync(PVP_SETTLEMENTS_FILE, "utf-8");
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    }
+  } catch (err) {
+    console.warn("Failed to read sidebet_pvp_settlements.json:", err);
+  }
+  return [];
+}
+
+function savePvpSettlements(items: AutoPvpSettlement[]) {
+  try {
+    if (!fs.existsSync(PVP_DATA_DIR)) {
+      fs.mkdirSync(PVP_DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(PVP_SETTLEMENTS_FILE, JSON.stringify(items.slice(0, 500), null, 2), "utf-8");
+  } catch (err) {
+    console.warn("Failed to save sidebet_pvp_settlements.json:", err);
+  }
+}
+
+const pvpSettlements: AutoPvpSettlement[] = loadPvpSettlements();
+
+// Automated PvP bet settlement ledger (instant automatic settlement on match finish)
+router.post("/pvp/auto-settle", async (req, res) => {
+  try {
+    const identity = await authenticateRequest(req);
+    const { matchKey, game, stakeUsd, cryptoType, cryptoAmount, won, payoutUsd, rakeUsd } = req.body ?? {};
+
+    if (typeof matchKey !== "string" || !matchKey.trim()) {
+      return res.status(400).json({ error: "matchKey is required" });
+    }
+    if (game !== "pool" && game !== "wheel") {
+      return res.status(400).json({ error: "game must be 'pool' or 'wheel'" });
+    }
+
+    const existing = pvpSettlements.find(
+      (s) => s.matchKey === matchKey.trim() && s.privyUserId === identity.privyUserId
+    );
+    if (existing) {
+      return res.json({ success: true, settlement: existing, deduplicated: true });
+    }
+
+    const entry: AutoPvpSettlement = {
+      id: `pvps_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      matchKey: matchKey.trim(),
+      privyUserId: identity.privyUserId,
+      game,
+      stakeUsd: Math.max(0, Number(stakeUsd) || 0),
+      cryptoType: typeof cryptoType === "string" ? cryptoType : "SOL",
+      cryptoAmount: Math.max(0, Number(cryptoAmount) || 0),
+      won: Boolean(won),
+      payoutUsd: Math.max(0, Number(payoutUsd) || 0),
+      rakeUsd: Math.max(0, Number(rakeUsd) || 0),
+      settledAt: new Date().toISOString(),
+    };
+
+    pvpSettlements.unshift(entry);
+    savePvpSettlements(pvpSettlements);
+
+    return res.status(201).json({ success: true, settlement: entry });
+  } catch (error) {
+    if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
+    if (error instanceof AuthError) return res.status(401).json({ error: error.message });
+    return res.status(500).json({ error: "Failed to record automated PvP settlement" });
+  }
+});
+
+router.get("/pvp/settlements", async (req, res) => {
+  try {
+    const identity = await authenticateRequest(req);
+    const mine = pvpSettlements
+      .filter((s) => s.privyUserId === identity.privyUserId)
+      .slice(0, 50);
+    return res.json({ success: true, settlements: mine });
+  } catch (error) {
+    if (error instanceof AuthConfigError) return res.status(503).json({ error: error.message });
+    if (error instanceof AuthError) return res.status(401).json({ error: error.message });
+    return res.status(500).json({ error: "Failed to load PvP settlements" });
+  }
+});
 
 // MOUNT DUAL PATHS (/api/pvp and /api/club alias)
 router.post("/pvp/penalty/settle", handlePenaltySettle);

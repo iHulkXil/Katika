@@ -120,7 +120,7 @@ export function saveCustomAvatar(avatarUrl: string | null) {
 }
 
 export function useUserAvatar() {
-  const { user } = usePrivy();
+  const { authenticated, user } = usePrivy();
   const [customAvatar, setCustomAvatar] = useState<string | null>(() => getCustomAvatar());
 
   useEffect(() => {
@@ -132,6 +132,14 @@ export function useUserAvatar() {
       window.removeEventListener('storage', sync);
     };
   }, []);
+
+  if (!authenticated || !user) {
+    return {
+      avatarUrl: null as string | null,
+      connectedAvatar: null as string | null,
+      hasCustomAvatar: false,
+    };
+  }
 
   const connectedAvatar = getConnectedAccountAvatar(user);
   return {
